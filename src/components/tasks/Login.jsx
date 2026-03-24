@@ -9,12 +9,13 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState(false);
 
   // A senha "794613Ed" disfarçada em Base64
-const HASH_ACESSO = "Nzk0NjEzRWQ=";
+  const HASH_ACESSO = "Nzk0NjEzRWQ=";
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (btoa(password) === HASH_ACESSO) {
-      localStorage.setItem("criarte_auth", "true");
+      // Nova chave genérica de autenticação
+      localStorage.setItem("sistema_auth", "true");
       onLogin();
     } else {
       setError(true);
@@ -26,11 +27,11 @@ const HASH_ACESSO = "Nzk0NjEzRWQ=";
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-primary/20">
+          <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-500/20">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Área Restrita</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Criarte Design</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Painel Administrativo</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -39,7 +40,7 @@ const HASH_ACESSO = "Nzk0NjEzRWQ=";
             placeholder="SENHA DE ACESSO"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-14 bg-slate-900 border-slate-800 text-white text-center tracking-[0.5em] focus:ring-primary/50"
+            className="h-14 bg-slate-900 border-slate-800 text-white text-center tracking-[0.5em] focus:ring-blue-500/50"
           />
           
           {error && (
@@ -49,7 +50,7 @@ const HASH_ACESSO = "Nzk0NjEzRWQ=";
             </motion.div>
           )}
 
-          <Button type="submit" className="w-full h-14 bg-primary text-white font-black uppercase tracking-widest transition-all active:scale-95">
+          <Button type="submit" className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest transition-all active:scale-95">
             Entrar no Painel
           </Button>
         </form>
