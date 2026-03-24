@@ -8,8 +8,8 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
 
-  // A senha "794613Ed" disfarçada em Base64
-  const HASH_ACESSO = "Nzk0NjEzRWQ=";
+  // A senha "794613Er" disfarçada em Base64
+  const HASH_ACESSO = "Nzk0NjEzRXI=";
 
   const handleSubmit = (e) => {
     e.preventDefault();
