@@ -78,7 +78,8 @@ export default function Pedidos() {
     try {
       const dataStr = JSON.stringify({ produtos: uniqueTasks }, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      const exportFileDefaultName = `backup_criarte_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+      // ALTERAÇÃO WHITE LABEL AQUI
+      const exportFileDefaultName = `backup_sistema_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -135,7 +136,6 @@ export default function Pedidos() {
 
     const sortByPriority = (arr) => arr.sort((a, b) => (priorityWeight[a.priority?.toLowerCase()] || 99) - (priorityWeight[b.priority?.toLowerCase()] || 99));
 
-    // NOVA FUNÇÃO: Ordena as próximas entregas primeiro pela data, depois pela prioridade
     const sortByDateAndPriority = (arr) => arr.sort((a, b) => {
       if (a.delivery_date !== b.delivery_date) {
          if (!a.delivery_date) return 1; 
