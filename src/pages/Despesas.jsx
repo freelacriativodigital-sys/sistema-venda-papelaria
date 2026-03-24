@@ -26,7 +26,7 @@ export default function Despesas() {
 
   // --- 1. LER DESPESAS DA NUVEM ---
   const { data: despesas = [], isLoading } = useQuery({
-    queryKey: ["criarte-despesas"],
+    queryKey: ["sistema-despesas"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("despesas")
@@ -68,7 +68,7 @@ export default function Despesas() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-despesas"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
       setIsModalOpen(false);
       setEditingExpense(null);
     },
@@ -80,7 +80,7 @@ export default function Despesas() {
       const { error } = await supabase.from("despesas").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["criarte-despesas"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] }),
   });
 
   // --- 4. REGISTRAR PAGAMENTO (PARCIAL OU TOTAL) ---
@@ -100,7 +100,7 @@ export default function Despesas() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-despesas"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
       setIsPayModalOpen(false);
     },
   });
