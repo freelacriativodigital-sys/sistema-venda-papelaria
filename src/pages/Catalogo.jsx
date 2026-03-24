@@ -157,71 +157,63 @@ const FooterSite = ({ st }) => (
   </footer>
 );
 
-// --- COMPONENTE DE UPLOAD DE ARQUIVO PARA O DRIVE ---
+// --- COMPONENTE DE UPLOAD LIMPO (SEM GOOGLE DRIVE) ---
 const FileUploadField = ({ campo, value, onChange, st }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // SEU LINK DO GOOGLE
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7j23F16fXR8-9wwxiKKOrhziuB4xeqlfxIGlN6FzCe8OBGw0PsGu9wN0ribbleGhI9w/exec";
-
-  const handleFileChange = async (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('O arquivo é muito grande. O tamanho máximo é 5MB.');
-      return;
-    }
-
     setIsUploading(true);
-    setUploadError('');
-    setUploadSuccess(false);
 
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64Data = event.target.result.split(',')[1];
-        
-        try {
-          const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              filename: `${Date.now()}_${file.name}`,
-              mimeType: file.type,
-              base64: base64Data
-            })
-          });
-
-          const result = await response.json();
-          
-          if (result.status === 'success') {
-            onChange(result.url); 
-            setUploadSuccess(true);
-          } else {
-            throw new Error(result.message || 'Erro no upload');
-          }
-        } catch (error) {
-          console.error("Erro no envio para o Drive:", error);
-          setUploadError('Falha ao enviar o arquivo. Tente novamente.');
-        } finally {
-          setIsUploading(false);
-        }
-      };
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
       
-      reader.onerror = () => {
-        setUploadError('Erro ao ler o arquivo localmente.');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000; 
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        onChange(compressedBase64);
         setIsUploading(false);
       };
 
-      reader.readAsDataURL(file);
-
-    } catch (error) {
-      setUploadError('Erro inesperado no processamento do arquivo.');
-      setIsUploading(false);
-    }
+      img.onerror = () => {
+         // Se não for imagem, salva o base64 direto, mas com limite de tamanho pra não travar o zap
+         if(file.size > 2 * 1024 * 1024) {
+            alert("Para arquivos não-imagem (como PDF), o limite é de 2MB.");
+            setIsUploading(false);
+            return;
+         }
+         onChange(event.target.result);
+         setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -238,10 +230,10 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
         <div className="flex items-center justify-between p-3 rounded-md bg-emerald-50 border border-emerald-200">
            <div className="flex items-center gap-2 text-emerald-700">
              <Check size={16} />
-             <span className="text-[10px] font-bold uppercase tracking-widest">Arquivo Enviado</span>
+             <span className="text-[10px] font-bold uppercase tracking-widest">Arquivo Anexado</span>
            </div>
            <button 
-             onClick={() => { onChange(''); setUploadSuccess(false); }} 
+             onClick={() => onChange('')} 
              className="text-[10px] font-bold text-rose-500 uppercase hover:underline"
            >
              Remover
@@ -255,14 +247,12 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
           className="w-full h-11 border-dashed border-2 border-slate-300 text-slate-600 hover:bg-slate-50 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"
         >
           {isUploading ? (
-            <><Loader2 size={16} className="animate-spin text-blue-500" /> Enviando Arquivo...</>
+            <><Loader2 size={16} className="animate-spin text-blue-500" /> Processando...</>
           ) : (
-            <><Upload size={16} /> Selecionar Arquivo (Max. 5MB)</>
+            <><Upload size={16} /> Selecionar Arquivo</>
           )}
         </Button>
       )}
-      
-      {uploadError && <p className="text-[9px] font-bold text-rose-500 mt-1.5 uppercase tracking-widest">{uploadError}</p>}
     </div>
   );
 };
