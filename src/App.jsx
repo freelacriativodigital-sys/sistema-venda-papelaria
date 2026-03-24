@@ -12,7 +12,7 @@ import { Reorder, useDragControls } from "framer-motion";
 import { 
   Home, Package, MessageCircle, LogOut, 
   ChevronRight, Users, ShoppingBag, Settings, Globe, GripVertical, FileText,
-  Image, Upload, Link as LinkIcon, RefreshCcw, Palette, Calculator 
+  Link as LinkIcon, RefreshCcw, Palette, Calculator 
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase"; 
@@ -58,7 +58,7 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
   );
 };
 
-const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
+const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
   
   const [items, setItems] = useState(pagesConfig.menuOrder);
@@ -151,31 +151,21 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
   return (
     <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       
-      <div className="flex justify-center items-center py-4 border-b border-slate-100 mb-4 min-h-[120px] relative group cursor-pointer overflow-hidden">
-        <input 
-          type="file" 
-          accept="image/*" 
-          onChange={onLogoUpload} 
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
-          title="Clique para alterar a logo"
-        />
-        
+      {/* Cabeçalho do Menu Limpo */}
+      <div className="flex justify-center items-center py-6 border-b border-slate-100 mb-4 min-h-[100px]">
         {st.logoUrl ? (
           <img 
             src={st.logoUrl} 
-            alt="Logo" 
-            className="max-h-24 max-w-[85%] object-contain group-hover:opacity-30 transition-opacity" 
+            alt="Logo da Loja" 
+            className="max-h-16 max-w-[80%] object-contain drop-shadow-sm" 
           />
         ) : (
-          <div className="flex flex-col items-center text-slate-300 group-hover:text-blue-500 transition-colors">
-            <Image size={24} />
-            <span className="text-[10px] font-bold uppercase mt-1">Add Logo</span>
+          <div className="flex items-center justify-center w-full px-4">
+            <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
+              {st.nomeLoja || "Painel de Gestão"}
+            </span>
           </div>
         )}
-        
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-          <Upload size={28} className="text-slate-700" />
-        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -196,9 +186,13 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
           })}
         </Reorder.Group>
         
-        <div className="px-5 mt-4">
+        {/* Botões de Acesso Rápido */}
+        <div className="px-5 mt-4 space-y-2">
           <a href="/" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full">
             <Globe size={14} /> Ver Site do Cliente
+          </a>
+          <a href="/bio" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full">
+            <LinkIcon size={14} /> Ver Link da Bio
           </a>
         </div>
       </nav>
@@ -217,7 +211,7 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
   );
 };
 
-const LayoutWrapper = ({ children, currentPageName, st, Layout, onLogoUpload }) => {
+const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -234,7 +228,7 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout, onLogoUpload }) 
         </button>
       )}
 
-      <Sidebar st={st} isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} onLogoUpload={onLogoUpload} />
+      <Sidebar st={st} isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
       
       <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 overflow-y-auto w-full transition-all duration-300">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
@@ -243,7 +237,7 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout, onLogoUpload }) 
   );
 };
 
-const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
+const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const location = useLocation();
   const { Pages, Layout, mainPage } = pagesConfig;
   const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
@@ -256,7 +250,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
 
-  // Controle de acesso simplificado (removida a regra que deixava links passarem direto)
   if (!isVitrine && !isBriefingClient && !isAuthorized) return <Login onLogin={onLogin} />;
   
   if (isLoadingPublicSettings || isLoadingAuth) return <div className="fixed inset-0 flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
@@ -270,11 +263,11 @@ const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
       
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
       
-      <Route path="/app" element={<LayoutWrapper currentPageName={mainPageKey} st={st} Layout={Layout} onLogoUpload={onLogoUpload}>{MainPage ? <MainPage isPublic={false} /> : <PageNotFound />}</LayoutWrapper>} />
+      <Route path="/app" element={<LayoutWrapper currentPageName={mainPageKey} st={st} Layout={Layout}>{MainPage ? <MainPage isPublic={false} /> : <PageNotFound />}</LayoutWrapper>} />
 
       {Pages && Object.entries(Pages).map(([path, PageComponent]) => (
         path !== "" && path !== mainPageKey && path !== "vitrine" && path !== "bio" && ( 
-          <Route key={path} path={`/${path}`} element={<LayoutWrapper currentPageName={path} st={st} Layout={Layout} onLogoUpload={onLogoUpload}><PageComponent isPublic={false} /></LayoutWrapper>} />
+          <Route key={path} path={`/${path}`} element={<LayoutWrapper currentPageName={path} st={st} Layout={Layout}><PageComponent isPublic={false} /></LayoutWrapper>} />
         )
       ))}
       
@@ -320,24 +313,11 @@ export default function App() {
     carregarTemaDinâmico();
   }, []);
 
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Logo = reader.result;
-        setSt(prev => ({ ...prev, logoUrl: base64Logo }));
-        await supabase.from('configuracoes').update({ logo_url: base64Logo }).eq('id', 1);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   if (checkingAuth) return null;
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router><AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} onLogoUpload={handleLogoUpload} /></Router>
+        <Router><AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} /></Router>
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
