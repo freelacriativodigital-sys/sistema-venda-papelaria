@@ -19,14 +19,14 @@ export default function Home() {
 
   // --- ESTADOS DO SALDO BANCÁRIO ---
   const [saldoBancario, setSaldoBancario] = useState(() => {
-    const saved = localStorage.getItem('@criarte_saldo');
+    const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
   });
 
   const handleSaldoChange = (e) => {
     const val = e.target.value;
     setSaldoBancario(val);
-    localStorage.setItem('@criarte_saldo', val);
+    localStorage.setItem('@sistema_saldo', val);
   };
 
   // --- ESTADOS DA LISTA DE COMPRAS ---
