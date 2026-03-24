@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, Link, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -17,9 +17,6 @@ import {
 
 import { supabase } from "./lib/supabase"; 
 import BriefingPublico from './pages/BriefingPublico'; 
-
-// === IMPORTAÇÃO DA PÁGINA DE ENTREGA (ISSO FAZ A MÁGICA ACONTECER) ===
-import EntregaCliente from './pages/EntregaCliente';
 
 const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
   const dragControls = useDragControls();
@@ -74,7 +71,6 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
       "clientes": { path: "/clientes", icon: Users },
       "orcamentos": { path: "/orcamentos", icon: FileText },
       "catalogo": { path: "/catalogo", icon: ShoppingBag },
-      "links": { path: "/links", icon: Globe },
       "minhabio": { path: "/minhabio", icon: LinkIcon }, 
       "configuracoes": { path: "/configuracoes", icon: Settings },
       "whatsapp": { path: "/whatsapp", icon: MessageCircle },
@@ -115,7 +111,6 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
 
         setItems(parsed);
       } catch (err) {
-        console.error("Erro ao carregar ordem do menu:", err);
         setItems([...pagesConfig.menuOrder]); 
       } finally {
         setIsLoaded(true); 
@@ -146,10 +141,9 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
     setItems(padrao);
     try {
       await supabase.from('configuracoes').update({ ordem_menu: padrao }).eq('id', 1);
-      localStorage.removeItem("criarte_menu_order_v3");
+      localStorage.removeItem("sistema_menu_order");
       window.location.reload();
     } catch (err) {
-      console.error(err);
       window.location.reload();
     }
   };
@@ -214,7 +208,7 @@ const Sidebar = ({ st, isOpen, setIsOpen, onLogoUpload }) => {
           className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-50 transition-colors">
           <RefreshCcw size={12} /> Restaurar Menu Padrão
         </button>
-        <button onClick={() => { localStorage.removeItem("criarte_auth"); window.location.reload(); }} 
+        <button onClick={() => { localStorage.removeItem("sistema_auth"); window.location.reload(); }} 
           className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors">
           <LogOut size={14} /> Sair do Sistema
         </button>
@@ -249,59 +243,21 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout, onLogoUpload }) 
   );
 };
 
-const RedirecionadorDrive = () => {
-  const { slug } = useParams();
-  const [erro, setErro] = useState(false);
-
-  useEffect(() => {
-    async function buscarLink() {
-      try {
-        const { data, error } = await supabase
-          .from('encurtador')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-
-        if (data && data.url_destino) {
-          await supabase.from('encurtador').update({ cliques: (data.cliques || 0) + 1 }).eq('id', data.id);
-          window.location.href = data.url_destino;
-        } else {
-          setErro(true);
-        }
-      } catch (err) {
-        setErro(true);
-      }
-    }
-    buscarLink();
-  }, [slug]);
-
-  if (erro) return <PageNotFound />;
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-      <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acessando Arquivos...</p>
-    </div>
-  );
-};
-
 const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
   const location = useLocation();
   const { Pages, Layout, mainPage } = pagesConfig;
   const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
   
-  // === CONFIGURAÇÃO: LIBERA A ROTA DE ENTREGA PARA O CLIENTE ABRIR SEM LOGIN ===
   const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
   const isBriefingClient = location.pathname.startsWith('/briefing/');
-  const isEntregaClient = location.pathname.startsWith('/entrega/'); 
   
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
   const MainPage = Pages[mainPageKey];
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
 
-  // LIBERA O ACESSO PARA ROTAS PÚBLICAS
-  if (!isVitrine && !isBriefingClient && !isEntregaClient && !isAuthorized && !location.pathname.match(/^\/[^/]+$/)) return <Login onLogin={onLogin} />;
+  // Controle de acesso simplificado (removida a regra que deixava links passarem direto)
+  if (!isVitrine && !isBriefingClient && !isAuthorized) return <Login onLogin={onLogin} />;
   
   if (isLoadingPublicSettings || isLoadingAuth) return <div className="fixed inset-0 flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
   if (authError && !isVitrine && authError.type === 'user_not_registered') return <UserNotRegisteredError />;
@@ -314,9 +270,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
       
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
       
-      {/* === ROTA DA ENTREGA REGISTRADA AQUI! === */}
-      <Route path="/entrega/:driveFolderId" element={<EntregaCliente />} />
-      
       <Route path="/app" element={<LayoutWrapper currentPageName={mainPageKey} st={st} Layout={Layout} onLogoUpload={onLogoUpload}>{MainPage ? <MainPage isPublic={false} /> : <PageNotFound />}</LayoutWrapper>} />
 
       {Pages && Object.entries(Pages).map(([path, PageComponent]) => (
@@ -325,7 +278,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
         )
       ))}
       
-      <Route path="/:slug" element={<RedirecionadorDrive />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -334,10 +286,10 @@ const AppRoutes = ({ isAuthorized, onLogin, st, onLogoUpload }) => {
 export default function App() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [st, setSt] = useState({ nomeLoja: 'Criarte', corPrincipal: '#f472b6', logoUrl: '' });
+  const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
   
   useEffect(() => {
-    const auth = localStorage.getItem("criarte_auth");
+    const auth = localStorage.getItem("sistema_auth");
     if (auth === "true") setIsAuthorized(true);
     setCheckingAuth(false);
 
@@ -351,8 +303,8 @@ export default function App() {
 
         if (data && !error) {
           setSt({ 
-            nomeLoja: data.nome_loja || 'Criarte', 
-            corPrincipal: data.cor_orcamento || '#f472b6',
+            nomeLoja: data.nome_loja || 'Minha Loja', 
+            corPrincipal: data.cor_orcamento || '#33BEE8',
             logoUrl: data.logo_url || '' 
           });
 
