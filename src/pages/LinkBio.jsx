@@ -339,8 +339,8 @@ export default function LinkBio({ isPublic = false }) {
   const [config, setConfig] = useState({
     avatar_url: '',
     capa_url: '',
-    titulo: 'Criarte Personalizados',
-    descricao: 'Transformando ideias em momentos inesquecíveis.',
+    titulo: 'Minha Loja Digital',
+    descricao: 'Tudo feito com muito carinho.',
     cor_fundo: '#f8fafc',
     cor_botoes: '#f472b6',
     cor_texto_botoes: '#ffffff',
@@ -547,7 +547,7 @@ export default function LinkBio({ isPublic = false }) {
 
           <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
              <Globe size={12} />
-             <span className="text-[9px] font-bold uppercase tracking-widest">Criarte Personalizados</span>
+             <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Minha Loja Digital'}</span>
           </div>
 
         </div>
