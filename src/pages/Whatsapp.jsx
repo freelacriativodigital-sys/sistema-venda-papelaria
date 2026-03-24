@@ -21,9 +21,9 @@ export default function Whatsapp() {
   
   // --- ESTADOS PARA O GERENCIADOR DE TEMPLATES ---
   const [templates, setTemplates] = useState(() => {
-    const saved = localStorage.getItem("criarte_wa_templates");
+    const saved = localStorage.getItem("app_wa_templates");
     return saved ? JSON.parse(saved) : [
-      { id: 1, titulo: "Boas-vindas", texto: "Olá! Tudo bem? Aqui é da Criarte Personalizados. Como posso te ajudar hoje?" },
+      { id: 1, titulo: "Boas-vindas", texto: "Olá! Tudo bem? Como posso te ajudar hoje?" },
       { id: 2, titulo: "Pedido Pronto", texto: "Oie! Passando para avisar que o seu pedido já está pronto e embalado com muito carinho. Quando desejar, já pode vir retirar/solicitar o envio!" },
       { id: 3, titulo: "Chave Pix", texto: "Segue a nossa chave PIX para pagamento: [SUA CHAVE AQUI]. Assim que realizar a transferência, me envia o comprovante por favor!" },
       { id: 4, titulo: "Aprovação de Arte", texto: "Olá! Segue a prévia da sua arte para aprovação. Por favor, confira todos os detalhes (nomes, datas, cores) antes de iniciarmos a produção." }
@@ -36,12 +36,12 @@ export default function Whatsapp() {
 
   // Salva os templates no LocalStorage sempre que houver alteração
   useEffect(() => {
-    localStorage.setItem("criarte_wa_templates", JSON.stringify(templates));
+    localStorage.setItem("app_wa_templates", JSON.stringify(templates));
   }, [templates]);
 
   // --- LER CLIENTES PARA BUSCA ---
   const { data: clientes = [] } = useQuery({
-    queryKey: ["criarte-clientes"],
+    queryKey: ["app-clientes"],
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome", { ascending: true });
       if (error) throw error;
