@@ -6,7 +6,6 @@ import Clientes from './pages/Clientes';
 import Catalogo from './pages/Catalogo';
 import Orcamentos from './pages/Orcamentos';
 import Despesas from './pages/Despesas';
-import Links from './pages/Links';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
@@ -21,7 +20,6 @@ export const pagesConfig = {
     "orcamentos": Orcamentos,
     "despesas": Despesas,
     "catalogo": Catalogo,
-    "links": Links,
     "minhabio": LinkBio, 
     "briefings": Briefings, 
     "precificacao": Precificacao,
@@ -37,7 +35,6 @@ export const pagesConfig = {
     { id: "precificacao", label: "Precificação" },
     { id: "whatsapp", label: "WhatsApp" },
     { id: "catalogo", label: "Catálogo" },
-    { id: "links", label: "Links (Drive)" },
     { id: "briefings", label: "Briefings" }, 
     { id: "minhabio", label: "Link na Bio" }, 
   ],
