@@ -1,0 +1,74 @@
+{
+  "name": "ArtTask",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da pend\u00eancia"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o ou detalhes da arte"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "baixa",
+        "media",
+        "alta",
+        "urgente"
+      ],
+      "default": "media"
+    },
+    "category": {
+      "type": "string",
+      "default": "ilustracao"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "concluida"
+      ],
+      "default": "pendente"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "em_aberto",
+        "pago"
+      ],
+      "default": "em_aberto"
+    },
+    "service_value": {
+      "type": "number"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "due_date": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "completed_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
