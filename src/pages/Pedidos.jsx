@@ -160,8 +160,8 @@ export default function Pedidos() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between transition-all">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 uppercase leading-none tracking-tight">Criarte</h1>
-              <p className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-widest mt-1">Gerenciador de Pedidos (Nuvem)</p>
+              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
+              <p className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS</p>
             </div>
           </div>
           <div className="flex gap-2">
