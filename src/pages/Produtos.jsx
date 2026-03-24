@@ -75,7 +75,7 @@ export default function Produtos() {
   const [promoPercent, setPromoPercent] = useState('');
 
   const { data: produtos = [], isLoading } = useQuery({
-    queryKey: ["criarte-produtos"],
+    queryKey: ["sistema-produtos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("produtos")
@@ -91,12 +91,12 @@ export default function Produtos() {
   const [editingProduct, setEditingProduct] = useState(null);
   
   const [categorias, setCategorias] = useState(() => {
-    const savedCategorias = localStorage.getItem("criarte_categorias");
+    const savedCategorias = localStorage.getItem("sistema_categorias");
     return savedCategorias ? JSON.parse(savedCategorias) : ['Sem Categoria', 'Papelaria', 'Brindes', 'Festas'];
   });
 
   useEffect(() => {
-    localStorage.setItem("criarte_categorias", JSON.stringify(categorias));
+    localStorage.setItem("sistema_categorias", JSON.stringify(categorias));
   }, [categorias]);
 
   // --- EFEITO PARA CÁLCULO DE PROMOÇÃO POR % ---
@@ -118,7 +118,7 @@ export default function Produtos() {
         preco: Number(prod.preco || 0),
         preco_promocional: Number(prod.preco_promocional || 0),
         custo: Number(prod.custo || 0),
-        qtd_minima: Number(prod.qtd_minima || 1), // <-- AQUI É ONDE ELE SALVA NO BANCO
+        qtd_minima: Number(prod.qtd_minima || 1), 
         sku: prod.sku || '',
         categoria: prod.categoria || 'Sem Categoria',
         descricao: prod.descricao || '',
@@ -128,7 +128,7 @@ export default function Produtos() {
         destaque: prod.destaque ?? false,
         variacoes: prod.variacoes || { ativa: false, atributos: [] },
         atacado: prod.atacado || { ativa: false, regras: [] },
-        campos_personalizados: prod.campos_personalizados || [] // --- NOVO: SALVA CAMPOS PERSONALIZADOS ---
+        campos_personalizados: prod.campos_personalizados || [] 
       };
 
       if (prod.id && typeof prod.id === 'string' && prod.id.length > 20) {
@@ -140,7 +140,7 @@ export default function Produtos() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-produtos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setIsModalOpen(false);
       setEditingProduct(null);
     },
@@ -155,7 +155,7 @@ export default function Produtos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-produtos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
     }
   });
@@ -166,7 +166,7 @@ export default function Produtos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-produtos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setSelectedIds([]);
     }
   });
@@ -177,7 +177,7 @@ export default function Produtos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-produtos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setSelectedIds([]);
       setIsBulkCategoryModalOpen(false);
     }
@@ -189,7 +189,7 @@ export default function Produtos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-produtos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setSelectedIds([]);
     }
   });
@@ -248,7 +248,7 @@ export default function Produtos() {
       imagens: [], categoria: 'Sem Categoria', statusOnline: true,
       destaque: false, variacoes: { ativa: false, atributos: [] },
       atacado: { ativa: false, regras: [] },
-      campos_personalizados: [] // --- NOVO ESTADO INICIAL ---
+      campos_personalizados: [] 
     });
     setPromoType('value');
     setPromoPercent('');
@@ -262,10 +262,10 @@ export default function Produtos() {
       statusOnline: prod.status_online ?? true,
       destaque: prod.destaque ?? false,
       preco_promocional: prod.preco_promocional || 0,
-      qtd_minima: prod.qtd_minima || 1, // <-- AQUI É ONDE ELE LÊ QUANDO EDITA
+      qtd_minima: prod.qtd_minima || 1, 
       variacoes: prod.variacoes || { ativa: false, atributos: [] },
       atacado: prod.atacado || { ativa: false, regras: [] },
-      campos_personalizados: prod.campos_personalizados || [] // --- LÊ DO BANCO ---
+      campos_personalizados: prod.campos_personalizados || [] 
     });
     setPromoType('value');
     setPromoPercent('');
@@ -659,7 +659,7 @@ export default function Produtos() {
               <div className="flex-1 overflow-y-auto p-4 md:p-6">
                 {/* MENU DE ABAS INTERNO */}
                 <div className="flex flex-wrap gap-1 bg-white p-1 rounded-lg border border-slate-200 w-fit mb-6 shadow-sm">
-                  {['dados', 'variacoes', 'atacado', 'personalizacao'].map((tab) => ( // --- NOVO BOTÃO DA ABA ---
+                  {['dados', 'variacoes', 'atacado', 'personalizacao'].map((tab) => ( 
                     <button key={tab} onClick={() => setDrawerTab(tab)} className={`px-4 md:px-5 py-2 rounded-md text-[9px] md:text-[10px] font-semibold uppercase transition-all ${drawerTab === tab ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
                       {tab === 'dados' ? 'Dados Gerais' : tab === 'variacoes' ? 'Variações' : tab === 'atacado' ? 'Regras de Atacado' : 'Personalização'}
                     </button>
