@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function Clientes() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
+  const [viewMode, setViewMode] = useState('grid'); 
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -27,7 +27,7 @@ export default function Clientes() {
   const queryClient = useQueryClient();
 
   const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
-    queryKey: ["criarte-clientes"],
+    queryKey: ["sistema-clientes"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clientes")
@@ -39,7 +39,7 @@ export default function Clientes() {
   });
 
   const { data: links = [], isLoading: isLoadingLinks } = useQuery({
-    queryKey: ["criarte-links-clientes"],
+    queryKey: ["sistema-links-clientes"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("encurtador")
@@ -111,7 +111,7 @@ export default function Clientes() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["criarte-clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-clientes"] });
       setIsModalOpen(false);
       setEditingClient(null);
     },
@@ -122,7 +122,7 @@ export default function Clientes() {
       const { error } = await supabase.from("clientes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["criarte-clientes"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sistema-clientes"] }),
   });
 
   const handleSave = () => {
@@ -218,7 +218,6 @@ export default function Clientes() {
               {filteredClientes.map((cliente) => {
                 const clientLinks = links.filter(l => l.cliente_id === cliente.id);
                 
-                // --- CORREÇÃO: PUXANDO PEDIDOS PELO ID OU PELO NOME IGUAL ---
                 const clientTasks = tasks.filter(t => 
                   t.cliente_id === cliente.id || 
                   (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === cliente.nome.trim().toLowerCase())
