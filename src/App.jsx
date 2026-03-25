@@ -5,9 +5,10 @@ import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Link, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+
+// IMPORTAÇÃO DA NOSSA NOVA TELA DE LOGIN REAL
 import Login from '@/components/tasks/Login';
+
 import { Reorder, useDragControls } from "framer-motion"; 
 import { 
   Home, Package, MessageCircle, LogOut, 
@@ -200,6 +201,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-50 transition-colors">
           <RefreshCcw size={12} /> Restaurar Menu Padrão
         </button>
+        {/* BOTÃO DE SAIR AGORA APAGA A SESSÃO DO NAVEGADOR E VOLTA PRO LOGIN */}
         <button onClick={() => { localStorage.removeItem("sistema_auth"); window.location.reload(); }} 
           className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors">
           <LogOut size={14} /> Sair do Sistema
@@ -238,7 +240,6 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
 const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const location = useLocation();
   const { Pages, Layout, mainPage } = pagesConfig;
-  const { isLoadingAuth, isLoadingPublicSettings, authError } = useAuth();
   
   const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
   const isBriefingClient = location.pathname.startsWith('/briefing/');
@@ -248,11 +249,11 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
 
-  if (!isVitrine && !isBriefingClient && !isAuthorized) return <Login onLogin={onLogin} />;
+  // SE NÃO ESTIVER LOGADO E TENTAR ENTRAR NUMA TELA INTERNA, MOSTRA A TELA DE LOGIN NOVA!
+  if (!isVitrine && !isBriefingClient && !isAuthorized) {
+    return <Login onLogin={onLogin} />;
+  }
   
-  if (isLoadingPublicSettings || isLoadingAuth) return <div className="fixed inset-0 flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div></div>;
-  if (authError && !isVitrine && authError.type === 'user_not_registered') return <UserNotRegisteredError />;
-
   return (
     <Routes>
       <Route path="/" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
@@ -280,6 +281,7 @@ export default function App() {
   const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
   
   useEffect(() => {
+    // Verifica se já passou pelo Login na sessão atual
     const auth = localStorage.getItem("sistema_auth");
     if (auth === "true") setIsAuthorized(true);
     setCheckingAuth(false);
@@ -312,12 +314,13 @@ export default function App() {
   }, []);
 
   if (checkingAuth) return null;
+
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router><AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} /></Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClientInstance}>
+      <Router>
+        <AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} />
+      </Router>
+      <Toaster />
+    </QueryClientProvider>
   );
 }
