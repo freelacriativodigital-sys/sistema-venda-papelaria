@@ -157,7 +157,7 @@ const FooterSite = ({ st }) => (
   </footer>
 );
 
-// --- COMPONENTE DE UPLOAD LIMPO (SEM GOOGLE DRIVE) ---
+// --- COMPONENTE DE UPLOAD ALTAMENTE COMPRIMIDO (CLIENTES) ---
 const FileUploadField = ({ campo, value, onChange, st }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -196,14 +196,15 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Exportando para WebP em 70% (Ultra Performance)
+        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
         
         onChange(compressedBase64);
         setIsUploading(false);
       };
 
       img.onerror = () => {
-         // Se não for imagem, salva o base64 direto, mas com limite de tamanho pra não travar o zap
          if(file.size > 2 * 1024 * 1024) {
             alert("Para arquivos não-imagem (como PDF), o limite é de 2MB.");
             setIsUploading(false);
@@ -690,13 +691,46 @@ export default function Catalogo({ isPublic = false }) {
     alert("Link copiado!");
   };
 
+  // --- COMPRESSÃO ULTRA APLICADA NO PAINEL ADMIN (Banners e Logos) ---
   const handleImageUpload = (e, field) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setSt({ ...st, [field]: reader.result });
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200; // Tamanho ideal para cobrir banners com qualidade
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Exportando para WebP em 70% da qualidade
+        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
+        setSt({ ...st, [field]: compressedBase64 });
+      };
+    };
+    reader.readAsDataURL(file);
   };
 
   const filtered = produtos
