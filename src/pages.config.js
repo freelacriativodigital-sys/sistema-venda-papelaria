@@ -9,6 +9,7 @@ import Despesas from './pages/Despesas';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
+import Seguranca from './pages/Seguranca'; // <-- Nova página importada
 
 export const pagesConfig = {
   Pages: {
@@ -23,20 +24,48 @@ export const pagesConfig = {
     "minhabio": LinkBio, 
     "briefings": Briefings, 
     "precificacao": Precificacao,
+    "seguranca": Seguranca, // <-- Rota de segurança adicionada
   },
 
-  menuOrder: [
-    { id: "", label: "Visão Geral" }, 
-    { id: "pedidos", label: "Pedidos (To-Do)" }, 
-    { id: "clientes", label: "Clientes" },
-    { id: "orcamentos", label: "Orçamentos" },
-    { id: "despesas", label: "Despesas" },
-    { id: "produtos", label: "Produtos" },
-    { id: "precificacao", label: "Precificação" },
-    { id: "whatsapp", label: "WhatsApp" },
-    { id: "catalogo", label: "Catálogo" },
-    { id: "briefings", label: "Briefings" }, 
-    { id: "minhabio", label: "Link na Bio" }, 
+  // NOVO MENU ORGANIZADO POR CATEGORIAS
+  menuCategorias: [
+    {
+      titulo: "Gestão Diária",
+      items: [
+        { id: "", label: "Visão Geral" }, 
+        { id: "pedidos", label: "Painel de Pedidos" }, 
+        { id: "clientes", label: "Meus Clientes" },
+      ]
+    },
+    {
+      titulo: "Financeiro & Vendas",
+      items: [
+        { id: "orcamentos", label: "Orçamentos" },
+        { id: "despesas", label: "Despesas" },
+        { id: "precificacao", label: "Calculadora de Preços" },
+      ]
+    },
+    {
+      titulo: "Catálogo Online",
+      items: [
+        { id: "produtos", label: "Meus Produtos" },
+        { id: "catalogo", label: "Vitrine (Catálogo)" },
+        { id: "minhabio", label: "Link na Bio" }, 
+      ]
+    },
+    {
+      titulo: "Atendimento",
+      items: [
+        { id: "briefings", label: "Briefings" }, 
+        { id: "whatsapp", label: "WhatsApp" },
+      ]
+    },
+    {
+      titulo: "Sistema",
+      items: [
+        { id: "seguranca", label: "Segurança e Acesso" },
+      ]
+    }
   ],
   mainPage: ""
 };

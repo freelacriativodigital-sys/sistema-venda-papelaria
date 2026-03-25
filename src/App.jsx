@@ -6,64 +6,44 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Link, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 
-// IMPORTAÇÃO DA NOSSA NOVA TELA DE LOGIN REAL
+// TELA DE LOGIN
 import Login from '@/components/tasks/Login';
 
-import { Reorder, useDragControls } from "framer-motion"; 
 import { 
   Home, Package, MessageCircle, LogOut, 
-  ChevronRight, Users, ShoppingBag, Settings, Globe, GripVertical, FileText,
-  Link as LinkIcon, RefreshCcw, Palette, Calculator 
+  ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
+  Link as LinkIcon, Palette, Calculator, ShieldCheck 
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase"; 
 import BriefingPublico from './pages/BriefingPublico'; 
 
+// MENU ITEM LIMPO (SEM DRAG AND DROP)
 const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
-  const dragControls = useDragControls();
-
   return (
-    <Reorder.Item 
-      value={item}
-      id={item.id}
-      dragListener={false}
-      dragControls={dragControls}
-      className="relative select-none list-none"
+    <Link to={path} onClick={onClick}
+      className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-bold uppercase text-[10.5px] tracking-tight transition-all ${
+        isActive ? 'shadow-sm border' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+      }`}
+      style={isActive ? { 
+        color: colorPrincipal, 
+        backgroundColor: `${colorPrincipal}10`, 
+        borderColor: `${colorPrincipal}20` 
+      } : {}}
     >
-      <div className="flex items-center gap-2 group mb-1.5 px-3">
-        <div 
-          onPointerDown={(e) => dragControls.start(e)}
-          className="cursor-grab active:cursor-grabbing p-1.5 text-slate-300 hover:text-slate-500 transition-colors"
-        >
-          <GripVertical size={16} />
-        </div>
-
-        <Link to={path} draggable="false" onClick={onClick}
-          className={`flex-1 flex items-center justify-between p-3 rounded-lg font-bold uppercase text-[11px] tracking-tight transition-all ${
-            isActive ? 'shadow-sm border' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-          }`}
-          style={isActive ? { 
-            color: colorPrincipal, 
-            backgroundColor: `${colorPrincipal}10`, 
-            borderColor: `${colorPrincipal}20` 
-          } : {}}
-        >
-          <div className="flex items-center gap-3">
-            <Icon size={16} />
-            {item.label}
-          </div>
-          {isActive && <ChevronRight size={14} />}
-        </Link>
+      <div className="flex items-center gap-3">
+        <Icon size={16} className={isActive ? '' : 'text-slate-400'} />
+        {item.label}
       </div>
-    </Reorder.Item>
+      {isActive && <ChevronRight size={14} />}
+    </Link>
   );
 };
 
+// SIDEBAR ORGANIZADA POR CATEGORIAS
 const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
-  
-  const [items, setItems] = useState(pagesConfig.menuOrder);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const categorias = pagesConfig.menuCategorias;
 
   const getMenuMeta = (id) => {
     const meta = {
@@ -77,82 +57,15 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       "whatsapp": { path: "/whatsapp", icon: MessageCircle },
       "briefings": { path: "/briefings", icon: Palette },
       "precificacao": { path: "/precificacao", icon: Calculator },
+      "seguranca": { path: "/seguranca", icon: ShieldCheck }, // Ícone do novo menu de segurança
     };
     return meta[id] || { path: `/${id}`, icon: Package };
-  };
-
-  useEffect(() => {
-    async function fetchMenuOrder() {
-      try {
-        const { data, error } = await supabase
-          .from('configuracoes')
-          .select('ordem_menu')
-          .eq('id', 1)
-          .single();
-
-        let parsed = [];
-
-        if (data && data.ordem_menu) {
-          parsed = typeof data.ordem_menu === 'string' ? JSON.parse(data.ordem_menu) : data.ordem_menu;
-        } else {
-          parsed = [...pagesConfig.menuOrder];
-        }
-
-        const missingItems = pagesConfig.menuOrder.filter(
-          defaultItem => !parsed.find(savedItem => savedItem.id === defaultItem.id)
-        );
-
-        if (missingItems.length > 0) {
-          parsed = [...parsed, ...missingItems];
-        }
-
-        parsed = parsed.filter(savedItem => 
-          pagesConfig.menuOrder.find(defaultItem => defaultItem.id === savedItem.id)
-        );
-
-        setItems(parsed);
-      } catch (err) {
-        setItems([...pagesConfig.menuOrder]); 
-      } finally {
-        setIsLoaded(true); 
-      }
-    }
-    fetchMenuOrder();
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    
-    const saveTimer = setTimeout(async () => {
-      try {
-        await supabase
-          .from('configuracoes')
-          .update({ ordem_menu: items })
-          .eq('id', 1);
-      } catch (err) {
-        console.error("Erro ao salvar ordem no Supabase", err);
-      }
-    }, 1000);
-
-    return () => clearTimeout(saveTimer);
-  }, [items, isLoaded]);
-
-  const forcarResetDoMenu = async () => {
-    const padrao = [...pagesConfig.menuOrder];
-    setItems(padrao);
-    try {
-      await supabase.from('configuracoes').update({ ordem_menu: padrao }).eq('id', 1);
-      localStorage.removeItem("sistema_menu_order");
-      window.location.reload();
-    } catch (err) {
-      window.location.reload();
-    }
   };
 
   return (
     <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       
-      {/* Cabeçalho do Menu Limpo e Fixo */}
+      {/* Cabeçalho do Menu */}
       <div className="flex justify-center items-center h-24 border-b border-slate-100 shrink-0 px-6">
         {st.logoUrl ? (
           <img 
@@ -167,26 +80,33 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-4">
-        <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-0.5">
-          {items.map((item) => {
-            const { path, icon } = getMenuMeta(item.id);
-            return (
-              <MenuItem 
-                key={item.id}
-                item={item}
-                path={path}
-                Icon={icon}
-                isActive={location.pathname === path}
-                colorPrincipal={st.corPrincipal}
-                onClick={() => setIsOpen && setIsOpen(false)}
-              />
-            );
-          })}
-        </Reorder.Group>
+      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
+        {categorias.map((categoria, idx) => (
+          <div key={idx} className="space-y-1">
+            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-3">
+              {categoria.titulo}
+            </h4>
+            <div className="space-y-1">
+              {categoria.items.map((item) => {
+                const { path, icon } = getMenuMeta(item.id);
+                return (
+                  <MenuItem 
+                    key={item.id}
+                    item={item}
+                    path={path}
+                    Icon={icon}
+                    isActive={location.pathname === path}
+                    colorPrincipal={st.corPrincipal}
+                    onClick={() => setIsOpen && setIsOpen(false)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
         
         {/* Botões de Acesso Rápido */}
-        <div className="px-5 mt-4 space-y-2 pb-4">
+        <div className="pt-4 mt-2 border-t border-slate-100 space-y-2">
           <a href="/" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full">
             <Globe size={14} /> Ver Site do Cliente
           </a>
@@ -197,11 +117,6 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       </nav>
 
       <div className="p-4 border-t border-slate-100 flex flex-col gap-2 shrink-0">
-        <button onClick={forcarResetDoMenu}
-          className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-50 transition-colors">
-          <RefreshCcw size={12} /> Restaurar Menu Padrão
-        </button>
-        {/* BOTÃO DE SAIR AGORA APAGA A SESSÃO DO NAVEGADOR E VOLTA PRO LOGIN */}
         <button onClick={() => { localStorage.removeItem("sistema_auth"); window.location.reload(); }} 
           className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors">
           <LogOut size={14} /> Sair do Sistema
@@ -249,7 +164,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
 
-  // SE NÃO ESTIVER LOGADO E TENTAR ENTRAR NUMA TELA INTERNA, MOSTRA A TELA DE LOGIN NOVA!
+  // TELA DE LOGIN ATIVADA PARA PÁGINAS INTERNAS
   if (!isVitrine && !isBriefingClient && !isAuthorized) {
     return <Login onLogin={onLogin} />;
   }
@@ -281,7 +196,6 @@ export default function App() {
   const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
   
   useEffect(() => {
-    // Verifica se já passou pelo Login na sessão atual
     const auth = localStorage.getItem("sistema_auth");
     if (auth === "true") setIsAuthorized(true);
     setCheckingAuth(false);
@@ -309,7 +223,6 @@ export default function App() {
         console.error("Erro:", err);
       }
     }
-    
     carregarTemaDinâmico();
   }, []);
 
