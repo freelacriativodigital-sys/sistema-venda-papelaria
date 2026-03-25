@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- CARROSSEL DE BANNERS (REVERTIDO PARA O VISUAL PREENCHIDO E BONITO) ---
+// --- CARROSSEL DE BANNERS ---
 const BannerCarousel = ({ banners }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -46,14 +46,12 @@ const BannerCarousel = ({ banners }) => {
         </div>
         {banners.length > 1 && (
           <>
-            {/* Setas Manuais */}
             <button onClick={goToPrevious} className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md z-10">
               <ChevronLeft size={20}/>
             </button>
             <button onClick={goToNext} className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md z-10">
               <ChevronLeft size={20} className="rotate-180"/>
             </button>
-            {/* Indicadores de Paginação */}
             <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-2 z-10">
                {banners.map((_, i) => (
                   <button key={i} onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }} className={`h-1.5 md:h-2 rounded-full transition-all ${i === currentIndex ? 'bg-white w-4 md:w-6 shadow-sm' : 'bg-white/50 w-1.5 md:w-2 hover:bg-white/80'}`} />
@@ -65,17 +63,19 @@ const BannerCarousel = ({ banners }) => {
   )
 };
 
-// --- HEADER ESTILO E-COMMERCE PREMIUM ---
+// --- HEADER ESTILO E-COMMERCE PREMIUM (Ajustado) ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+  // Ajuste do tamanho da logo focado apenas na altura para respeitar logos retangulares
   const logoSizes = {
-    pequena: "w-12 h-12 md:w-14 md:h-14",
-    media: "w-16 h-16 md:w-20 md:h-20",
-    grande: "w-20 h-20 md:w-28 md:h-28"
+    pequena: "h-8 md:h-10",
+    media: "h-12 md:h-16",
+    grande: "h-16 md:h-24"
   };
-  const currentLogoSize = logoSizes[st?.tamanho_logo] || logoSizes.media;
+  const currentLogoHeight = logoSizes[st?.tamanho_logo] || logoSizes.media;
 
   return (
-    <div className="w-full relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100 transition-colors duration-300" style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
+    // Removido o md:sticky e ajustado o z-index
+    <div className="w-full relative z-30 shadow-sm border-b border-slate-100 transition-colors duration-300" style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
       {!isPublic && (
         <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
           Painel Administrativo • Modo de Visualização (Live Preview)
@@ -84,25 +84,31 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
       
       <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
       
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
+      {/* Container com paddings menores e organização mais equilibrada */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8">
+        
+        {/* Logo mais livre, sendo o destaque */}
         <div 
           onClick={goHome}
-          className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
+          className="flex items-center shrink-0 cursor-pointer group justify-center md:justify-start"
         >
-          <div className={`${currentLogoSize} rounded-full overflow-hidden flex items-center justify-center shadow-sm transition-transform group-hover:scale-105`} style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
-            {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
-          </div>
+          {st?.logo_url ? (
+             <img src={st.logo_url} className={`object-contain transition-transform group-hover:scale-105 ${currentLogoHeight}`} alt="Logo" />
+          ) : (
+             <ShoppingBag size={36} style={{ color: st?.cor_principal }} className="transition-transform group-hover:scale-105" />
+          )}
         </div>
 
-        <div className="flex-1 w-full max-w-4xl relative group">
+        {/* Barra de pesquisa menor e mais discreta */}
+        <div className="w-full md:w-96 lg:w-[450px] relative group shrink-0">
           <input 
             type="text" 
             placeholder="O que você procura hoje?" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
+            className="w-full h-10 md:h-11 bg-slate-50/50 hover:bg-slate-50 rounded-full px-5 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-medium text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
           />
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={18} />
         </div>
       </div>
 
@@ -383,7 +389,6 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
   };
 
   return (
-    // Z-INDEX AUMENTADO NO HEADER PARA EVITAR O BUG DA LIXEIRA E PB-40 PARA NÃO CORTAR O FINAL
     <div className="space-y-6 pb-40 p-4 md:p-6 animate-in fade-in duration-700 w-full">
       <div className="flex flex-col gap-4 bg-white p-5 rounded-lg border border-slate-100 shadow-sm sticky top-0 z-40">
         <div className="flex items-start justify-between">
@@ -572,7 +577,6 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
           </h3>
           <div className="space-y-4">
             
-            {/* AVISO DO TAMANHO RECOMENDADO EM PX */}
             <p className="text-[10px] text-slate-600 font-medium bg-blue-50 p-3 rounded-md border border-blue-100 flex items-start gap-2">
               <span className="text-blue-500 shrink-0 text-sm">💡</span>
               <span>Para um visual perfeito e sem cortes na loja, recomendamos que suas imagens tenham o tamanho de <strong className="text-blue-700">1200 x 400 pixels</strong>.</span>
@@ -580,7 +584,6 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
 
             {(st.banners || []).map((banner, index) => (
               <div key={banner.id || index} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3 relative group/banner">
-                 {/* Z-INDEX 10 AQUI PARA NÃO FICAR POR CIMA DO HEADER */}
                  <button onClick={() => {
                     const newBanners = [...st.banners];
                     newBanners.splice(index, 1);
@@ -588,7 +591,6 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
                  }} className="absolute top-2 right-2 p-1.5 bg-white text-rose-500 border border-slate-200 rounded-md hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm z-10">
                     <Trash2 size={14} />
                  </button>
-                 {/* VISUALIZAÇÃO DO BANNER COM OBJECT-COVER NO PAINEL */}
                  <div className="aspect-[21/9] rounded-md overflow-hidden bg-slate-200 border border-slate-300 relative w-full flex items-center justify-center">
                     <img src={banner.imagem} className="w-full h-full object-cover" />
                  </div>
@@ -1074,7 +1076,6 @@ export default function Catalogo({ isPublic = false }) {
               
               {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
-                 {/* IMAGEM PRINCIPAL: ASPECT-SQUARE (1:1) */}
                  <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group p-2 flex items-center justify-center">
                    {selectedProduct.destaque && (
                       <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
@@ -1315,7 +1316,6 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      {/* IMAGENS VEJA TAMBEM: ASPECT-SQUARE (1:1) */}
                       <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                         {prod.destaque && (
                           <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
@@ -1375,7 +1375,6 @@ export default function Catalogo({ isPublic = false }) {
                   return (
                   <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
                     
-                    {/* IMAGENS DA VITRINE: ASPECT-SQUARE (1:1) */}
                     <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                       {prod.destaque && (
                          <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
@@ -1447,7 +1446,6 @@ export default function Catalogo({ isPublic = false }) {
     return renderCatalog();
   }
 
-  // --- VISÃO ADMINISTRATIVA: MODO SPLIT COM OPÇÃO DE OCULTAR ---
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#f8fafc] relative overflow-hidden">
       
