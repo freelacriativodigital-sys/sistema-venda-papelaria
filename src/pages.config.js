@@ -31,7 +31,7 @@ export const pagesConfig = {
     {
       titulo: "Gestão Diária",
       items: [
-        { id: "", label: "Visão Geral", roles: ['admin', 'padrao'] }, 
+        { id: "", label: "Visão Geral", roles: ['admin'] }, // <-- AGORA É SÓ ADMIN
         { id: "pedidos", label: "Painel de Pedidos", roles: ['admin', 'padrao'] }, 
         { id: "clientes", label: "Meus Clientes", roles: ['admin', 'padrao'] },
       ]
@@ -40,8 +40,8 @@ export const pagesConfig = {
       titulo: "Financeiro & Vendas",
       items: [
         { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
-        { id: "despesas", label: "Despesas", roles: ['admin'] }, // SÓ ADMIN
-        { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, // SÓ ADMIN
+        { id: "despesas", label: "Despesas", roles: ['admin'] }, 
+        { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
       ]
     },
     {
@@ -62,7 +62,7 @@ export const pagesConfig = {
     {
       titulo: "Sistema",
       items: [
-        { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, // SÓ ADMIN
+        { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, 
       ]
     }
   ],

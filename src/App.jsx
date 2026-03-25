@@ -37,7 +37,7 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
 const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
   const categorias = pagesConfig.menuCategorias;
-  const userRole = localStorage.getItem('sistema_user_role') || 'padrao'; // Lê o perfil do utilizador
+  const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
   const getMenuMeta = (id) => {
     const meta = {
@@ -64,9 +64,8 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
 
       <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
         {categorias.map((categoria, idx) => {
-          // Filtra os itens do menu baseados no perfil do utilizador
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
-          if (filteredItems.length === 0) return null; // Se a categoria ficar vazia, esconde-a
+          if (filteredItems.length === 0) return null;
 
           return (
             <div key={idx} className="space-y-1">
@@ -127,10 +126,13 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
     return <Login onLogin={onLogin} />;
   }
 
-  // BLOQUEIO DE SEGURANÇA NA BARRA DE ENDEREÇOS (URL)
-  const paginasProibidasParaPadrao = ['/despesas', '/precificacao', '/seguranca'];
+  // --- BLOQUEIO DE SEGURANÇA ATUALIZADO ---
+  // A rota '/app' (Visão Geral) agora também é proibida para o perfil padrão
+  const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca'];
+  
   if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
-    return <Navigate to="/app" replace />;
+    // Redireciona o funcionário direto para a tela de Pedidos ao invés da Visão Geral
+    return <Navigate to="/pedidos" replace />;
   }
   
   return (
