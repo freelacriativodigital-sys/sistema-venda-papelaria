@@ -3,8 +3,8 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, Search, Plus, MessageCircle, Trash2, Edit3, 
-  ExternalLink, Wallet, CheckCircle2, AlertCircle, X, Save,
-  ArrowRight, Loader2, Link as LinkIcon, Copy, Palette, Gift,
+  Wallet, CheckCircle2, AlertCircle, X, Save,
+  ArrowRight, Loader2, Copy, Palette, Gift,
   LayoutGrid, List
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,6 @@ export default function Clientes() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  
-  const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
-  const [selectedClientForLinks, setSelectedClientForLinks] = useState(null);
 
   const [isPedidosModalOpen, setIsPedidosModalOpen] = useState(false);
   const [selectedClientForPedidos, setSelectedClientForPedidos] = useState(null);
@@ -35,18 +32,6 @@ export default function Clientes() {
         .order("nome", { ascending: true });
       if (error) throw error;
       return data;
-    },
-  });
-
-  const { data: links = [], isLoading: isLoadingLinks } = useQuery({
-    queryKey: ["sistema-links-clientes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("encurtador")
-        .select("*")
-        .not("cliente_id", "is", null);
-      if (error) throw error;
-      return data || [];
     },
   });
 
@@ -130,12 +115,6 @@ export default function Clientes() {
     saveMutation.mutate(editingClient);
   };
 
-  const copiarLink = (slugDaVez) => {
-    const urlCompleta = window.location.origin + "/" + slugDaVez;
-    navigator.clipboard.writeText(urlCompleta);
-    alert("Link encurtado copiado!");
-  };
-
   const filteredClientes = clientes.filter(c => 
     c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.whatsapp.includes(searchTerm)
@@ -145,7 +124,7 @@ export default function Clientes() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
-  const isLoading = isLoadingClientes || isLoadingLinks || isLoadingTasks;
+  const isLoading = isLoadingClientes || isLoadingTasks;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
@@ -216,8 +195,6 @@ export default function Clientes() {
           >
             <AnimatePresence mode="popLayout">
               {filteredClientes.map((cliente) => {
-                const clientLinks = links.filter(l => l.cliente_id === cliente.id);
-                
                 const clientTasks = tasks.filter(t => 
                   t.cliente_id === cliente.id || 
                   (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === cliente.nome.trim().toLowerCase())
@@ -315,10 +292,6 @@ export default function Clientes() {
                           <div className="flex items-center gap-2"><Palette size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">Pedidos</span></div>
                           {clientTasks.length > 0 ? <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1.5">{clientTasks.length} <span className="opacity-40">|</span> {formatCurrency(totalGastoReal + totalPendenteReal)}</span> : <span className="text-[10px] font-semibold text-slate-400 uppercase">Vazio</span>}
                         </Button>
-                        <Button variant="outline" onClick={() => { setSelectedClientForLinks(cliente); setIsLinksModalOpen(true); }} className="w-full h-9 md:h-8 border-dashed border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors flex justify-between items-center px-3">
-                          <div className="flex items-center gap-2"><LinkIcon size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">Links e Arquivos</span></div>
-                          {clientLinks.length > 0 ? <span className="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-md">{clientLinks.length}</span> : <span className="text-[10px] font-semibold text-slate-400 uppercase">Vazio</span>}
-                        </Button>
                       </div>
 
                       <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" className="mt-3 w-full h-10 md:h-8 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg md:rounded-md flex items-center justify-center gap-2 transition-colors font-semibold uppercase text-[10px] md:text-xs border border-slate-100 hover:border-emerald-200">
@@ -372,10 +345,6 @@ export default function Clientes() {
                         <Button variant="ghost" size="icon" title="Pedidos" onClick={() => { setSelectedClientForPedidos(cliente); setIsPedidosModalOpen(true); }} className="h-9 w-9 text-purple-600 bg-purple-50 hover:bg-purple-100 relative rounded-lg">
                           <Palette size={16} />
                           {clientTasks.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[9px] font-bold text-white shadow-sm">{clientTasks.length}</span>}
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Links e Arquivos" onClick={() => { setSelectedClientForLinks(cliente); setIsLinksModalOpen(true); }} className="h-9 w-9 text-blue-600 bg-blue-50 hover:bg-blue-100 relative rounded-lg">
-                          <LinkIcon size={16} />
-                          {clientLinks.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-sm">{clientLinks.length}</span>}
                         </Button>
                         <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" title="WhatsApp" className="h-9 w-9 flex items-center justify-center rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
                           <MessageCircle size={16} />
@@ -437,53 +406,6 @@ export default function Clientes() {
                 <Button onClick={handleSave} className="w-full h-12 md:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase text-xs mt-2 shadow-sm">
                   {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar Cliente"}
                 </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL: VER LINKS DO CLIENTE */}
-      <AnimatePresence>
-        {isLinksModalOpen && selectedClientForLinks && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsLinksModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-lg rounded-2xl md:rounded-xl p-6 md:p-6 shadow-xl relative z-10 flex flex-col max-h-[85vh]">
-              
-              <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-                <div>
-                  <h2 className="text-lg md:text-xl font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                    <LinkIcon className="text-blue-500 w-5 h-5" /> Links do Cliente
-                  </h2>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 tracking-widest">{selectedClientForLinks.nome}</p>
-                </div>
-                <button onClick={() => setIsLinksModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pr-1">
-                {links.filter(l => l.cliente_id === selectedClientForLinks.id).length === 0 ? (
-                  <div className="text-center py-10 bg-slate-50 rounded-lg border border-slate-100">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Nenhum link vinculado.</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Crie na aba "Links".</p>
-                  </div>
-                ) : (
-                  links.filter(l => l.cliente_id === selectedClientForLinks.id).map(link => (
-                    <div key={link.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
-                      <div className="flex-1 min-w-0 pr-4">
-                         <span className="text-xs font-semibold text-blue-600 truncate block">/{link.slug}</span>
-                         <span className="text-[9px] font-medium text-slate-400 truncate block mt-0.5">Destino: {link.url_destino}</span>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <button onClick={() => copiarLink(link.slug)} className="p-2 text-slate-500 hover:text-slate-800 bg-white border border-slate-200 hover:border-slate-300 rounded-md transition-colors shadow-sm" title="Copiar Link Encurtado">
-                          <Copy size={14} />
-                        </button>
-                        <a href={link.url_destino} target="_blank" rel="noreferrer" className="p-2 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-md transition-colors shadow-sm" title="Abrir no Drive">
-                          <ExternalLink size={14} />
-                        </a>
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             </motion.div>
           </div>
