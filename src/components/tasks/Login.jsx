@@ -15,7 +15,6 @@ export default function Login({ onLogin }) {
     setErro('');
 
     try {
-      // Consulta a tabela que acabamos de criar no Supabase
       const { data, error } = await supabase
         .from('usuarios_painel')
         .select('*')
@@ -26,8 +25,9 @@ export default function Login({ onLogin }) {
       if (error || !data) {
         setErro('Usuário ou senha incorretos.');
       } else {
-        // Se achou, salva no navegador e libera o acesso!
+        // --- MÁGICA DO CRONÔMETRO DE SESSÃO AQUI ---
         localStorage.setItem('sistema_auth', 'true');
+        localStorage.setItem('sistema_auth_time', Date.now().toString()); // Grava o milissegundo exato do login
         onLogin();
       }
     } catch (err) {
@@ -39,7 +39,6 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Elementos decorativos de fundo */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
 
