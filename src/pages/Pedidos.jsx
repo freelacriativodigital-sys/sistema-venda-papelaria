@@ -63,8 +63,18 @@ export default function Pedidos() {
   };
 
   const handleCreate = async (data) => {
-    const { error } = await supabase.from("pedidos").insert([{ ...data, status: 'pendente' }]);
-    if (!error) queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+    // Remove qualquer ID ou data de criação que o NewTaskForm possa estar gerando
+    // Isso evita conflitos com a geração automática do Supabase
+    const { id, created_at, ...dadosLimpos } = data;
+    
+    const { error } = await supabase.from("pedidos").insert([{ ...dadosLimpos, status: 'pendente' }]);
+    
+    if (error) {
+      console.error("Erro detalhado do Supabase:", error);
+      alert("Erro ao salvar o pedido: " + error.message);
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+    }
   };
 
   const handleDelete = async (task) => {
@@ -78,7 +88,6 @@ export default function Pedidos() {
     try {
       const dataStr = JSON.stringify({ produtos: uniqueTasks }, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      // ALTERAÇÃO WHITE LABEL AQUI
       const exportFileDefaultName = `backup_sistema_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
