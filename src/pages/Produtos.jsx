@@ -2,13 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Package, Box, Archive, Search, Globe, Layers, AlertTriangle, ChevronDown, 
   ArrowUpDown, Tag, Upload, Plus, Edit3, Copy, Trash2, X, Save, TrendingUp, 
-  ShoppingBag, Image, GripVertical, Eye, EyeOff, Loader2, Star, CheckSquare, Square, Percent, DollarSign, FileText
+  ShoppingBag, Image, GripVertical, Eye, EyeOff, Loader2, Star, CheckSquare, Square, Percent, DollarSign, FileText, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+// --- CONSTANTES DO SISTEMA ---
+const LIMITE_PRODUTOS = 150;
 
 // --- FUNÇÃO AUXILIAR DE FORMATAÇÃO E CÁLCULO DE DESCONTO ---
 const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,7 +22,7 @@ const calcularDescontoAtacado = (precoAtacado, precoBase) => {
   return desconto.toFixed(0);
 };
 
-// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS ---
+// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS (NÍVEL MÁXIMO DE EFICIÊNCIA) ---
 const compressImage = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -29,8 +32,9 @@ const compressImage = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
+        // Reduzido para 600px para máxima performance sem perder qualidade no mobile
+        const MAX_WIDTH = 600; 
+        const MAX_HEIGHT = 600;
         let width = img.width;
         let height = img.height;
 
@@ -51,7 +55,8 @@ const compressImage = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        resolve(canvas.toDataURL('image/webp', 0.7));
+        // Qualidade 0.6 em WebP entrega imagens muito leves (~40kb) e bonitas
+        resolve(canvas.toDataURL('image/webp', 0.6));
       };
     };
   });
@@ -233,6 +238,10 @@ export default function Produtos() {
   };
 
   const handleDuplicate = (prod) => {
+    if (produtos.length >= LIMITE_PRODUTOS) {
+      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido. Exclua alguns produtos para adicionar novos.`);
+      return;
+    }
     const { id, created_at, ...rest } = prod;
     const duplicated = { 
       ...rest, 
@@ -243,6 +252,10 @@ export default function Produtos() {
   };
 
   const handleNewProduct = () => {
+    if (produtos.length >= LIMITE_PRODUTOS) {
+      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido. Exclua alguns produtos para adicionar novos.`);
+      return;
+    }
     setEditingProduct({
       nome: '', preco: 0, preco_promocional: 0, custo: 0, qtd_minima: 1, sku: '',
       imagens: [], categoria: 'Sem Categoria', statusOnline: true,
@@ -396,6 +409,8 @@ export default function Produtos() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-slate-400" size={40} /></div>;
 
+  const limiteAtingido = produtos.length >= LIMITE_PRODUTOS;
+
   return (
     <div className="min-h-screen bg-slate-50 relative text-slate-900 pb-32">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 px-4 sm:px-6">
@@ -404,10 +419,19 @@ export default function Produtos() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 md:pt-8 gap-4">
           <div>
              <h1 className="text-xl md:text-2xl font-bold md:font-semibold uppercase text-slate-800 tracking-tight">Gestão de Produtos</h1>
-             <p className="text-[10px] md:text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">Gerencie seu catálogo e preços</p>
+             <p className="text-[10px] md:text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-1">
+               Gerencie seu catálogo • <span className={limiteAtingido ? "text-red-500 font-bold" : "text-blue-500 font-bold"}>{produtos.length}/{LIMITE_PRODUTOS}</span>
+             </p>
           </div>
-          <Button onClick={handleNewProduct} className="h-11 md:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase text-[10px] md:text-xs gap-2 px-5 shadow-sm transition-all w-full sm:w-auto">
-            <Plus size={16} /> <span className="inline">Novo Produto</span>
+          <Button 
+            onClick={handleNewProduct} 
+            disabled={limiteAtingido}
+            className={`h-11 md:h-10 text-white rounded-md font-semibold uppercase text-[10px] md:text-xs gap-2 px-5 shadow-sm transition-all w-full sm:w-auto ${
+              limiteAtingido ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            {limiteAtingido ? <Lock size={16} /> : <Plus size={16} />} 
+            <span className="inline">{limiteAtingido ? 'Limite Atingido' : 'Novo Produto'}</span>
           </Button>
         </div>
 
@@ -871,7 +895,6 @@ export default function Produtos() {
                                    >
                                       <option value="texto_curto">Texto Curto (Nome, etc)</option>
                                       <option value="texto_longo">Texto Longo (Mensagem)</option>
-                                      <option value="upload">Upload de Arte/Foto</option>
                                       <option value="data">Data (Evento)</option>
                                       <option value="hora">Hora</option>
                                    </select>
