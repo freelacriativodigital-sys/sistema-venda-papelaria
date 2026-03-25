@@ -9,7 +9,7 @@ import Despesas from './pages/Despesas';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
-import Seguranca from './pages/Seguranca'; // <-- Nova página importada
+import Seguranca from './pages/Seguranca';
 
 export const pagesConfig = {
   Pages: {
@@ -24,46 +24,45 @@ export const pagesConfig = {
     "minhabio": LinkBio, 
     "briefings": Briefings, 
     "precificacao": Precificacao,
-    "seguranca": Seguranca, // <-- Rota de segurança adicionada
+    "seguranca": Seguranca,
   },
 
-  // NOVO MENU ORGANIZADO POR CATEGORIAS
   menuCategorias: [
     {
       titulo: "Gestão Diária",
       items: [
-        { id: "", label: "Visão Geral" }, 
-        { id: "pedidos", label: "Painel de Pedidos" }, 
-        { id: "clientes", label: "Meus Clientes" },
+        { id: "", label: "Visão Geral", roles: ['admin', 'padrao'] }, 
+        { id: "pedidos", label: "Painel de Pedidos", roles: ['admin', 'padrao'] }, 
+        { id: "clientes", label: "Meus Clientes", roles: ['admin', 'padrao'] },
       ]
     },
     {
       titulo: "Financeiro & Vendas",
       items: [
-        { id: "orcamentos", label: "Orçamentos" },
-        { id: "despesas", label: "Despesas" },
-        { id: "precificacao", label: "Calculadora de Preços" },
+        { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
+        { id: "despesas", label: "Despesas", roles: ['admin'] }, // SÓ ADMIN
+        { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, // SÓ ADMIN
       ]
     },
     {
       titulo: "Catálogo Online",
       items: [
-        { id: "produtos", label: "Meus Produtos" },
-        { id: "catalogo", label: "Vitrine (Catálogo)" },
-        { id: "minhabio", label: "Link na Bio" }, 
+        { id: "produtos", label: "Meus Produtos", roles: ['admin', 'padrao'] },
+        { id: "catalogo", label: "Vitrine (Catálogo)", roles: ['admin', 'padrao'] },
+        { id: "minhabio", label: "Link na Bio", roles: ['admin', 'padrao'] }, 
       ]
     },
     {
       titulo: "Atendimento",
       items: [
-        { id: "briefings", label: "Briefings" }, 
-        { id: "whatsapp", label: "WhatsApp" },
+        { id: "briefings", label: "Briefings", roles: ['admin', 'padrao'] }, 
+        { id: "whatsapp", label: "WhatsApp", roles: ['admin', 'padrao'] },
       ]
     },
     {
       titulo: "Sistema",
       items: [
-        { id: "seguranca", label: "Segurança e Acesso" },
+        { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, // SÓ ADMIN
       ]
     }
   ],
