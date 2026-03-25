@@ -32,7 +32,6 @@ const compressImage = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Reduzido para 600px para máxima performance sem perder qualidade no mobile
         const MAX_WIDTH = 600; 
         const MAX_HEIGHT = 600;
         let width = img.width;
@@ -55,7 +54,6 @@ const compressImage = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Qualidade 0.6 em WebP entrega imagens muito leves (~40kb) e bonitas
         resolve(canvas.toDataURL('image/webp', 0.6));
       };
     };
@@ -75,16 +73,17 @@ export default function Produtos() {
   const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
   const [bulkCategory, setBulkCategory] = useState('');
 
-  // --- NOVOS ESTADOS PARA CONTROLE DE PROMOÇÃO ---
   const [promoType, setPromoType] = useState('value');
   const [promoPercent, setPromoPercent] = useState('');
 
+  // --- BUSCA APENAS PRODUTOS NÃO ARQUIVADOS ---
   const { data: produtos = [], isLoading } = useQuery({
     queryKey: ["sistema-produtos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("produtos")
         .select("*")
+        .neq('arquivado', true) // O SEGREDO ESTÁ AQUI
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -104,7 +103,6 @@ export default function Produtos() {
     localStorage.setItem("sistema_categorias", JSON.stringify(categorias));
   }, [categorias]);
 
-  // --- EFEITO PARA CÁLCULO DE PROMOÇÃO POR % ---
   useEffect(() => {
     if (promoType === 'percent' && editingProduct?.preco > 0 && promoPercent !== '') {
       const novoPreco = editingProduct.preco * (1 - Number(promoPercent) / 100);
@@ -154,9 +152,10 @@ export default function Produtos() {
     }
   });
 
+  // --- LIXEIRA INTELIGENTE: APENAS ATUALIZA O STATUS ---
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("produtos").delete().eq("id", id);
+      const { error } = await supabase.from("produtos").update({ arquivado: true }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -188,9 +187,10 @@ export default function Produtos() {
     }
   });
 
+  // --- LIXEIRA INTELIGENTE EM MASSA ---
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('produtos').delete().in('id', selectedIds);
+      const { error } = await supabase.from('produtos').update({ arquivado: true }).in('id', selectedIds);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -212,7 +212,7 @@ export default function Produtos() {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`Tem certeza que deseja excluir os ${selectedIds.length} produtos selecionados?`)) {
+    if (window.confirm(`Tem certeza que deseja remover os ${selectedIds.length} produtos selecionados? Eles serão movidos para o arquivo.`)) {
       bulkDeleteMutation.mutate();
     }
   };
@@ -232,14 +232,14 @@ export default function Produtos() {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Deseja realmente excluir este produto?")) {
+    if (window.confirm("Deseja realmente remover este produto da loja? (Ele ficará arquivado com segurança no banco de dados)")) {
       deleteMutation.mutate(id);
     }
   };
 
   const handleDuplicate = (prod) => {
     if (produtos.length >= LIMITE_PRODUTOS) {
-      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido. Exclua alguns produtos para adicionar novos.`);
+      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
       return;
     }
     const { id, created_at, ...rest } = prod;
@@ -253,7 +253,7 @@ export default function Produtos() {
 
   const handleNewProduct = () => {
     if (produtos.length >= LIMITE_PRODUTOS) {
-      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido. Exclua alguns produtos para adicionar novos.`);
+      alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
       return;
     }
     setEditingProduct({
@@ -286,7 +286,6 @@ export default function Produtos() {
     setIsModalOpen(true);
   };
 
-  // --- FUNÇÕES DE CAMPOS PERSONALIZADOS ---
   const adicionarCampoPersonalizado = () => {
     setEditingProduct(prev => ({
       ...prev,
@@ -389,7 +388,6 @@ export default function Produtos() {
   const lucro = precoBaseCalculo - (editingProduct?.custo || 0);
   const margem = precoBaseCalculo > 0 ? ((lucro / precoBaseCalculo) * 100).toFixed(1) : 0;
 
-  // --- WIDGET DE REFERÊNCIA (APARECE EM VARIAÇÕES E ATACADO) ---
   const InfoReferencia = () => (
     <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
       <div className="flex flex-col">
@@ -415,7 +413,6 @@ export default function Produtos() {
     <div className="min-h-screen bg-slate-50 relative text-slate-900 pb-32">
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 px-4 sm:px-6">
         
-        {/* TOPO: TÍTULO E BOTÃO */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 md:pt-8 gap-4">
           <div>
              <h1 className="text-xl md:text-2xl font-bold md:font-semibold uppercase text-slate-800 tracking-tight">Gestão de Produtos</h1>
@@ -435,7 +432,6 @@ export default function Produtos() {
           </Button>
         </div>
 
-        {/* FILTROS DE BUSCA */}
         <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="relative w-full md:flex-1">
@@ -460,7 +456,6 @@ export default function Produtos() {
           </div>
         </div>
 
-        {/* OPÇÃO DE SELECIONAR TODOS */}
         <div className="flex items-center gap-3 px-1">
           <button onClick={selectAll} className="flex items-center gap-2 text-[11px] md:text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest">
             {selectedIds.length === filteredProducts.length && filteredProducts.length > 0 ? (
@@ -472,7 +467,6 @@ export default function Produtos() {
           </button>
         </div>
 
-        {/* GRID DE PRODUTOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
           {filteredProducts.map((prod) => {
              const precoAtivo = prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco;
@@ -483,7 +477,6 @@ export default function Produtos() {
              return (
               <div key={prod.id} className={`bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col relative ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'}`}>
                 
-                {/* CHECKBOX FLUTUANTE */}
                 <button 
                   onClick={() => toggleSelection(prod.id)}
                   className="absolute top-2 left-2 z-30 bg-white/90 backdrop-blur rounded-md p-1 shadow-sm hover:scale-105 transition-transform"
@@ -491,12 +484,10 @@ export default function Produtos() {
                   {isSelected ? <CheckSquare size={18} className="text-blue-600" /> : <Square size={18} className="text-slate-400" />}
                 </button>
 
-                {/* STATUS ONLINE/OFFLINE NO TOPO DIREITO */}
                 <div className={`absolute top-2 right-2 z-20 text-white text-[8px] md:text-[9px] font-semibold px-2 py-0.5 rounded-md uppercase flex items-center gap-1 shadow-sm ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`}>
                   {isOnline ? <Eye size={10} /> : <EyeOff size={10} />} {isOnline ? 'Online' : 'Offline'}
                 </div>
 
-                {/* IMAGEM */}
                 <div className="aspect-square bg-slate-50 relative overflow-hidden group cursor-pointer border-b border-slate-100" onClick={() => handleEdit(prod)}>
                   <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 z-10">
                     <div className="bg-white text-slate-800 px-4 py-1.5 rounded-md font-semibold text-[10px] md:text-xs uppercase flex items-center gap-1.5 shadow-md"><Edit3 size={14} /> Editar</div>
@@ -504,10 +495,8 @@ export default function Produtos() {
                   <img src={prod.imagens?.[0] || `https://placehold.co/400x400/f8fafc/94a3b8?text=${prod.nome.split(' ')[0]}`} alt={prod.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 
-                {/* DADOS DO PRODUTO */}
                 <div className="p-3 md:p-4 flex flex-col flex-1">
                   
-                  {/* ETIQUETAS ORGANIZADAS */}
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {prod.destaque && (
                       <span className="bg-amber-50 text-amber-600 text-[8px] md:text-[9px] font-semibold px-1.5 py-0.5 rounded-sm uppercase flex items-center gap-1 border border-amber-100">
@@ -524,7 +513,6 @@ export default function Produtos() {
                         <Layers size={8}/> Variações
                       </span>
                     )}
-                    {/* LABEL DOS CAMPOS PERSONALIZADOS */}
                     {prod.campos_personalizados && prod.campos_personalizados.length > 0 && (
                       <span className="bg-emerald-50 text-emerald-600 text-[8px] md:text-[9px] font-semibold px-1.5 py-0.5 rounded-sm uppercase flex items-center gap-1 border border-emerald-100">
                         <FileText size={8}/> Personalizável
@@ -555,7 +543,6 @@ export default function Produtos() {
                     </div>
                   </div>
                   
-                  {/* BOTÕES RÁPIDOS DE AÇÃO ABAIXO */}
                   <div className="flex gap-1.5 mt-3">
                     <button onClick={() => handleDuplicate(prod)} className="flex-1 h-8 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-md text-[9px] font-semibold uppercase flex items-center justify-center gap-1 transition-colors border border-slate-200">
                        <Copy size={12}/> Duplicar
@@ -572,7 +559,6 @@ export default function Produtos() {
         </div>
       </div>
 
-      {/* --- BARRA FLUTUANTE DE AÇÕES EM MASSA (BULK EDIT) --- */}
       <AnimatePresence>
         {selectedIds.length > 0 && (
           <motion.div 
@@ -611,7 +597,7 @@ export default function Produtos() {
                 onClick={handleBulkDelete} 
                 className="px-3 md:px-4 h-8 md:h-9 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md text-[9px] md:text-[10px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-red-500/20"
               >
-                <Trash2 size={14} /> Excluir
+                <Trash2 size={14} /> Remover
               </button>
               <button 
                 onClick={() => setSelectedIds([])} 
@@ -624,7 +610,6 @@ export default function Produtos() {
         )}
       </AnimatePresence>
 
-      {/* --- MODAL PARA MUDAR CATEGORIA EM MASSA --- */}
       <AnimatePresence>
         {isBulkCategoryModalOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
@@ -658,7 +643,6 @@ export default function Produtos() {
         )}
       </AnimatePresence>
 
-      {/* --- MODAL DE EDIÇÃO DE PRODUTO ÚNICO --- */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
@@ -681,7 +665,6 @@ export default function Produtos() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                {/* MENU DE ABAS INTERNO */}
                 <div className="flex flex-wrap gap-1 bg-white p-1 rounded-lg border border-slate-200 w-fit mb-6 shadow-sm">
                   {['dados', 'variacoes', 'atacado', 'personalizacao'].map((tab) => ( 
                     <button key={tab} onClick={() => setDrawerTab(tab)} className={`px-4 md:px-5 py-2 rounded-md text-[9px] md:text-[10px] font-semibold uppercase transition-all ${drawerTab === tab ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
@@ -690,12 +673,10 @@ export default function Produtos() {
                   ))}
                 </div>
 
-                {/* ABA GERAL (DADOS) */}
                 {drawerTab === 'dados' && (
                   <div className="space-y-4 md:space-y-5 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
                       
-                      {/* COLUNA ESQUERDA: INFOS BÁSICAS E PRECIFICAÇÃO */}
                       <div className="lg:col-span-2 space-y-4 md:space-y-5">
                          
                          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:space-y-5">
@@ -760,7 +741,6 @@ export default function Produtos() {
                                 </div>
                               </div>
                               
-                              {/* --- CAMPO NOVO: QUANTIDADE MÍNIMA --- */}
                               <div className="space-y-1.5">
                                 <label className="text-[9px] md:text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Qtd. Mínima</label>
                                 <div className="relative">
@@ -780,14 +760,12 @@ export default function Produtos() {
                          </div>
                       </div>
 
-                      {/* COLUNA DIREITA: ORGANIZAÇÃO E MÍDIA */}
                       <div className="space-y-4 md:space-y-5">
                          
                          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:space-y-5">
                             <h3 className="text-xs font-semibold uppercase text-slate-700 border-b border-slate-100 pb-2.5">Organização</h3>
                             
                             <div className="space-y-4">
-                              {/* STATUS ONLINE */}
                               <div className="flex items-center justify-between bg-slate-50 p-3 rounded-md border border-slate-100">
                                 <div>
                                    <p className="text-[10px] md:text-[11px] font-semibold uppercase text-slate-800 mb-0.5">Visível no Site</p>
@@ -798,7 +776,6 @@ export default function Produtos() {
                                 </button>
                               </div>
 
-                              {/* PRODUTO EM DESTAQUE */}
                               <div className="flex items-center justify-between bg-amber-50/50 p-3 rounded-md border border-amber-100">
                                 <div>
                                    <p className="text-[10px] md:text-[11px] font-semibold uppercase text-slate-800 mb-0.5 flex items-center gap-1.5"><Star size={10} className="text-amber-500" fill="currentColor"/> Destaque</p>
@@ -837,7 +814,6 @@ export default function Produtos() {
                                 </div>
                               ))}
                               
-                              {/* INPUT DE FOTOS COM COMPRESSÃO ATIVADA */}
                               <input type="file" ref={fileInputRef} onChange={async (e) => {
                                 const files = Array.from(e.target.files);
                                 for (const file of files) {
@@ -857,7 +833,6 @@ export default function Produtos() {
                   </div>
                 )}
 
-                {/* --- NOVA ABA: PERSONALIZAÇÃO --- */}
                 {drawerTab === 'personalizacao' && (
                   <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <InfoReferencia />
@@ -930,7 +905,6 @@ export default function Produtos() {
                   </div>
                 )}
 
-                {/* ABA VARIAÇÕES */}
                 {drawerTab === 'variacoes' && (
                   <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <InfoReferencia />
@@ -1079,7 +1053,6 @@ export default function Produtos() {
                   </div>
                 )}
                 
-                {/* ABA ATACADO */}
                 {drawerTab === 'atacado' && (
                   <div className="space-y-6 md:space-y-8 animate-in fade-in duration-300">
                     <InfoReferencia />
@@ -1140,7 +1113,6 @@ export default function Produtos() {
         )}
       </AnimatePresence>
 
-      {/* --- MODAL PARA GERENCIAR CATEGORIAS --- */}
       <AnimatePresence>
         {isCategoryModalOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
