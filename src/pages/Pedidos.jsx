@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import TaskItem from "@/components/tasks/TaskItem";
 import NewTaskForm from "@/components/tasks/NewTaskForm";
 import EmptyState from "@/components/tasks/EmptyState";
+import FinancialSummary from "@/components/tasks/FinancialSummary";
 import FinancialTab from "@/components/tasks/FinancialTab";
 
 const priorityWeight = {
@@ -225,6 +226,11 @@ export default function Pedidos() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
+        {!isLoading && (
+          <div className="mb-6 md:mb-8">
+            <FinancialSummary tasks={uniqueTasks} />
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 md:mb-8">
           <TabsList className="w-full bg-secondary/60 h-12 md:h-12 border border-border/40 p-1.5 rounded-lg flex">
