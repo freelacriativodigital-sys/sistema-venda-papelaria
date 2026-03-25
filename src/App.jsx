@@ -151,24 +151,22 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   return (
     <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       
-      {/* Cabeçalho do Menu Limpo */}
-      <div className="flex justify-center items-center py-6 border-b border-slate-100 mb-4 min-h-[100px]">
+      {/* Cabeçalho do Menu Limpo e Fixo */}
+      <div className="flex justify-center items-center h-24 border-b border-slate-100 shrink-0 px-6">
         {st.logoUrl ? (
           <img 
             src={st.logoUrl} 
             alt="Logo da Loja" 
-            className="max-h-16 max-w-[80%] object-contain drop-shadow-sm" 
+            className="max-h-12 w-auto object-contain drop-shadow-sm" 
           />
         ) : (
-          <div className="flex items-center justify-center w-full px-4">
-            <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
-              {st.nomeLoja || "Painel de Gestão"}
-            </span>
-          </div>
+          <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
+            {st.nomeLoja || "Painel de Gestão"}
+          </span>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-4">
         <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-0.5">
           {items.map((item) => {
             const { path, icon } = getMenuMeta(item.id);
@@ -187,7 +185,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
         </Reorder.Group>
         
         {/* Botões de Acesso Rápido */}
-        <div className="px-5 mt-4 space-y-2">
+        <div className="px-5 mt-4 space-y-2 pb-4">
           <a href="/" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full">
             <Globe size={14} /> Ver Site do Cliente
           </a>
@@ -197,7 +195,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
         </div>
       </nav>
 
-      <div className="p-4 border-t border-slate-100 flex flex-col gap-2">
+      <div className="p-4 border-t border-slate-100 flex flex-col gap-2 shrink-0">
         <button onClick={forcarResetDoMenu}
           className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-50 transition-colors">
           <RefreshCcw size={12} /> Restaurar Menu Padrão
