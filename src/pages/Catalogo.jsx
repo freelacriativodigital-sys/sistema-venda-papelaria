@@ -859,7 +859,7 @@ export default function Catalogo({ isPublic = false }) {
                       onClick={() => selecionarOpcao(atrib.nome, opcao)}
                       className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
                     >
-                      {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-cover"/></div>}
+                      {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-contain"/></div>}
                       {opcao.nome}
                     </button>
                   )
@@ -884,20 +884,20 @@ export default function Catalogo({ isPublic = false }) {
               
               {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
-                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group">
+                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group p-2 flex items-center justify-center">
                    {selectedProduct.destaque && (
                       <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                         <Star size={12} fill="currentColor" /> Destaque
                       </div>
                    )}
-                   <img key={activeImage} src={activeImage} className="w-full h-full object-cover animate-in fade-in duration-300" alt={selectedProduct.nome} />
+                   <img key={activeImage} src={activeImage} className="w-full h-full object-contain animate-in fade-in duration-300" alt={selectedProduct.nome} />
                  </div>
                  
                  {galleryImages.length > 1 && (
                    <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
                      {galleryImages.map((img, idx) => (
-                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-0.5 transition-all ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}>
-                         <img src={img} className="w-full h-full object-cover rounded-md" />
+                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-1 transition-all flex items-center justify-center ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}>
+                         <img src={img} className="w-full h-full object-contain rounded-md" />
                        </button>
                      ))}
                    </div>
@@ -1124,13 +1124,13 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
+                      <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                         {prod.destaque && (
                           <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                             <Star size={10} fill="currentColor" /> Destaque
                           </div>
                         )}
-                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" />
                       </div>
                       
                       <div className="flex flex-col flex-1 p-3 md:p-4">
@@ -1187,13 +1187,13 @@ export default function Catalogo({ isPublic = false }) {
                   return (
                   <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
                     
-                    <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
+                    <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                       {prod.destaque && (
                          <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                            <Star size={10} fill="currentColor" /> Destaque
                          </span>
                       )}
-                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
                     </div>
                     
                     <div className="flex flex-col flex-1 p-3 md:p-4">
