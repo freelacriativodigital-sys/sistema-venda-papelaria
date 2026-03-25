@@ -130,20 +130,36 @@ const ConfigSidebarBio = ({ config, setConfig, handleSave, saved, setIsSidebarOp
         
         {/* FOTO E CAPA */}
         <div className="flex flex-col gap-5 border-b border-slate-100 pb-5">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-               <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Imagem da Capa</label>
+               <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Fundo da Capa</label>
                <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">800 x 300 px</span>
             </div>
-            <div className="relative group w-full h-24 shrink-0">
-              <div className="w-full h-full rounded-md border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden transition-all group-hover:border-blue-400">
-                {config.capa_url ? <img src={config.capa_url} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-slate-300" />}
-              </div>
-              <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-              {config.capa_url && (
-                <button onClick={() => setConfig({...config, capa_url: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full z-20 shadow-sm opacity-0 group-hover:opacity-100"><X size={10}/></button>
-              )}
+
+            <div className="flex gap-4">
+               {/* Color Picker da Capa */}
+               <div className="space-y-1.5 shrink-0">
+                 <label className="text-[9px] font-semibold uppercase text-slate-500">Cor</label>
+                 <div className="relative w-12 h-12 rounded-md overflow-hidden border border-slate-200 shadow-sm" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+                   <input type="color" value={config.cor_capa || '#cbd5e1'} onChange={e => setConfig({...config, cor_capa: e.target.value})} className="absolute -inset-2 w-16 h-16 cursor-pointer" />
+                 </div>
+               </div>
+
+               {/* Imagem da Capa */}
+               <div className="space-y-1.5 flex-1">
+                 <label className="text-[9px] font-semibold uppercase text-slate-500">Imagem (Opcional)</label>
+                 <div className="relative group w-full h-12 shrink-0">
+                    <div className="w-full h-full rounded-md border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden transition-all group-hover:border-blue-400">
+                      {config.capa_url ? <img src={config.capa_url} className="w-full h-full object-cover" /> : <ImageIcon size={18} className="text-slate-300" />}
+                    </div>
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                    {config.capa_url && (
+                      <button onClick={(e) => { e.preventDefault(); setConfig({...config, capa_url: ''}); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full z-20 shadow-sm opacity-0 group-hover:opacity-100"><X size={10}/></button>
+                    )}
+                 </div>
+               </div>
             </div>
+            <p className="text-[9px] text-slate-400 leading-tight">Dica: Se não anexar imagem, a cor sólida será o fundo.</p>
           </div>
 
           <div className="space-y-2">
@@ -339,6 +355,7 @@ export default function LinkBio({ isPublic = false }) {
   const [config, setConfig] = useState({
     avatar_url: '',
     capa_url: '',
+    cor_capa: '#cbd5e1', // Nova cor padrão para quem não tem imagem
     titulo: 'Minha Loja Digital',
     descricao: 'Tudo feito com muito carinho.',
     cor_fundo: '#f8fafc',
@@ -361,6 +378,7 @@ export default function LinkBio({ isPublic = false }) {
       if (configData) {
         setConfig({
           ...configData,
+          cor_capa: configData.cor_capa || '#cbd5e1',
           links: configData.links || [],
           banners: configData.banners || [] 
         });
@@ -409,16 +427,18 @@ export default function LinkBio({ isPublic = false }) {
       >
         <div className="w-full max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative">
           
-          {/* CAPA DE FUNDO */}
-          {config.capa_url && (
-             <div className="w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0">
-               <img src={config.capa_url} className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-             </div>
-          )}
+          {/* CAPA DE FUNDO (Sempre renderizada para manter o alinhamento da foto) */}
+          <div className="w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+             {config.capa_url && (
+               <>
+                 <img src={config.capa_url} className="w-full h-full object-cover" />
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+               </>
+             )}
+          </div>
 
-          {/* AVATAR (SOBREPOSTO SE TIVER CAPA) */}
-          <div className={`w-24 h-24 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 ${config.capa_url ? '-mt-12' : 'mt-12'}`} style={{ borderColor: config.cor_fundo }}>
+          {/* AVATAR (Sempre com margem negativa pois a capa agora sempre existe) */}
+          <div className="w-24 h-24 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12" style={{ borderColor: config.cor_fundo }}>
             {config.avatar_url ? (
               <img src={config.avatar_url} className="w-full h-full object-cover" alt={config.titulo} />
             ) : (
@@ -437,7 +457,7 @@ export default function LinkBio({ isPublic = false }) {
                </p>
              )}
 
-             {/* MÚLTIPLOS BANNERS PROMOCIONAIS (MOVIDOS PARA CIMA) */}
+             {/* MÚLTIPLOS BANNERS PROMOCIONAIS */}
              {config.banners?.length > 0 && (
                <div className="w-full flex flex-col gap-6 mb-6">
                  {config.banners.map(banner => {
@@ -469,7 +489,7 @@ export default function LinkBio({ isPublic = false }) {
                </div>
              )}
 
-             {/* LINKS COM CORES E ÍCONES INDIVIDUAIS COM w-10 h-10 */}
+             {/* LINKS */}
              <div className="w-full flex flex-col gap-4">
                {config.links?.map((link, i) => (
                  <a 
@@ -483,23 +503,22 @@ export default function LinkBio({ isPublic = false }) {
                    {link.imagem_icone ? (
                       <img src={link.imagem_icone} className="w-10 h-10 object-contain" alt="" />
                    ) : (
-                      <div className="w-10 h-10" /> // Espaçador invisível
+                      <div className="w-10 h-10" /> 
                    )}
                    <span className="flex-1 text-center text-[13px] uppercase tracking-wide">{link.titulo}</span>
-                   <div className="w-10 h-10" /> {/* Espaçador direito */}
+                   <div className="w-10 h-10" /> 
                  </a>
                ))}
              </div>
           </div>
 
-          {/* GALERIA DE DESTAQUES (TIPO MOSAICO FIXO EM 3 PRODUTOS) */}
+          {/* GALERIA DE DESTAQUES */}
           {produtosDestaque.length > 0 && (
             <div className="w-full mt-10 mb-2 flex flex-col items-center px-4">
               <h3 className="text-xs font-black uppercase tracking-widest mb-4 opacity-80 flex items-center gap-2" style={{ color: config.cor_texto }}>
                 <Star size={14}/> Destaques da Loja
               </h3>
               
-              {/* BOTÃO DE CATÁLOGO EM CIMA E DESTACADO */}
               <a 
                 href="/vitrine" 
                 onClick={(e) => {
@@ -512,12 +531,9 @@ export default function LinkBio({ isPublic = false }) {
                 <ShoppingBag size={18}/> Acessar o Catálogo
               </a>
 
-              {/* GRID ESTILO GALERIA (1 Grande, 2 pequenos) - LIMITADO A 3 PRODUTOS */}
               <div className="grid grid-cols-2 gap-3 w-full">
                 {produtosDestaque.slice(0, 3).map((prod, index) => {
                    const imgUrl = prod.imagens?.[0] || prod.imagem_url;
-                   
-                   // O Primeiro produto (index 0) é o grande. Os outros (1 e 2) são pequenos.
                    const isLarge = index === 0; 
                    
                    return (
@@ -530,7 +546,6 @@ export default function LinkBio({ isPublic = false }) {
                        key={prod.id} 
                        className={`bg-white rounded-xl overflow-hidden shadow-md flex flex-col hover:scale-[1.02] transition-transform text-left ${isLarge ? 'col-span-2' : 'col-span-1'}`}
                      >
-                       {/* aspect-[4/3] garante que a imagem fique retangular e o object-cover garante que preencha as laterais */}
                        <div className="w-full bg-slate-50 overflow-hidden aspect-[4/3]">
                          <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover" />
                        </div>
