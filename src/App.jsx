@@ -3,10 +3,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 
-// TELA DE LOGIN
 import Login from '@/components/tasks/Login';
 
 import { 
@@ -18,18 +17,13 @@ import {
 import { supabase } from "./lib/supabase"; 
 import BriefingPublico from './pages/BriefingPublico'; 
 
-// MENU ITEM LIMPO (SEM DRAG AND DROP)
 const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
   return (
     <Link to={path} onClick={onClick}
       className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-bold uppercase text-[10.5px] tracking-tight transition-all ${
         isActive ? 'shadow-sm border' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
       }`}
-      style={isActive ? { 
-        color: colorPrincipal, 
-        backgroundColor: `${colorPrincipal}10`, 
-        borderColor: `${colorPrincipal}20` 
-      } : {}}
+      style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
       <div className="flex items-center gap-3">
         <Icon size={16} className={isActive ? '' : 'text-slate-400'} />
@@ -40,10 +34,10 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
   );
 };
 
-// SIDEBAR ORGANIZADA POR CATEGORIAS
 const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
   const categorias = pagesConfig.menuCategorias;
+  const userRole = localStorage.getItem('sistema_user_role') || 'padrao'; // Lê o perfil do utilizador
 
   const getMenuMeta = (id) => {
     const meta = {
@@ -57,68 +51,44 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       "whatsapp": { path: "/whatsapp", icon: MessageCircle },
       "briefings": { path: "/briefings", icon: Palette },
       "precificacao": { path: "/precificacao", icon: Calculator },
-      "seguranca": { path: "/seguranca", icon: ShieldCheck }, // Ícone do novo menu de segurança
+      "seguranca": { path: "/seguranca", icon: ShieldCheck },
     };
     return meta[id] || { path: `/${id}`, icon: Package };
   };
 
   return (
     <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-      
-      {/* Cabeçalho do Menu */}
       <div className="flex justify-center items-center h-24 border-b border-slate-100 shrink-0 px-6">
-        {st.logoUrl ? (
-          <img 
-            src={st.logoUrl} 
-            alt="Logo da Loja" 
-            className="max-h-12 w-auto object-contain drop-shadow-sm" 
-          />
-        ) : (
-          <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
-            {st.nomeLoja || "Painel de Gestão"}
-          </span>
-        )}
+        {st.logoUrl ? <img src={st.logoUrl} alt="Logo" className="max-h-12 w-auto object-contain drop-shadow-sm" /> : <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">{st.nomeLoja || "Painel de Gestão"}</span>}
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
-        {categorias.map((categoria, idx) => (
-          <div key={idx} className="space-y-1">
-            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-3">
-              {categoria.titulo}
-            </h4>
-            <div className="space-y-1">
-              {categoria.items.map((item) => {
-                const { path, icon } = getMenuMeta(item.id);
-                return (
-                  <MenuItem 
-                    key={item.id}
-                    item={item}
-                    path={path}
-                    Icon={icon}
-                    isActive={location.pathname === path}
-                    colorPrincipal={st.corPrincipal}
-                    onClick={() => setIsOpen && setIsOpen(false)}
-                  />
-                );
-              })}
+        {categorias.map((categoria, idx) => {
+          // Filtra os itens do menu baseados no perfil do utilizador
+          const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
+          if (filteredItems.length === 0) return null; // Se a categoria ficar vazia, esconde-a
+
+          return (
+            <div key={idx} className="space-y-1">
+              <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-3">{categoria.titulo}</h4>
+              <div className="space-y-1">
+                {filteredItems.map((item) => {
+                  const { path, icon } = getMenuMeta(item.id);
+                  return <MenuItem key={item.id} item={item} path={path} Icon={icon} isActive={location.pathname === path} colorPrincipal={st.corPrincipal} onClick={() => setIsOpen && setIsOpen(false)} />;
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         
-        {/* Botões de Acesso Rápido */}
         <div className="pt-4 mt-2 border-t border-slate-100 space-y-2">
-          <a href="/" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full">
-            <Globe size={14} /> Ver Site do Cliente
-          </a>
-          <a href="/bio" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full">
-            <LinkIcon size={14} /> Ver Link da Bio
-          </a>
+          <a href="/" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full"><Globe size={14} /> Ver Site do Cliente</a>
+          <a href="/bio" target="_blank" className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full"><LinkIcon size={14} /> Ver Link da Bio</a>
         </div>
       </nav>
 
       <div className="p-4 border-t border-slate-100 flex flex-col gap-2 shrink-0">
-        <button onClick={() => { localStorage.removeItem("sistema_auth"); window.location.reload(); }} 
-          className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors">
+        <button onClick={() => { localStorage.removeItem("sistema_auth"); localStorage.removeItem("sistema_auth_time"); localStorage.removeItem("sistema_user_role"); window.location.reload(); }} className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors">
           <LogOut size={14} /> Sair do Sistema
         </button>
       </div>
@@ -128,23 +98,11 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
 
 const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 relative overflow-x-hidden">
-      {isMobileMenuOpen && (
-        <div onClick={() => setIsMobileMenuOpen(false)} className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90]" />
-      )}
-      {!isMobileMenuOpen && (
-        <button 
-          onClick={() => setIsMobileMenuOpen(true)} 
-          className="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-[80] bg-white text-slate-800 p-1 py-4 rounded-r-lg shadow-xl border border-l-0 border-slate-200"
-        >
-          <ChevronRight size={24} />
-        </button>
-      )}
-
+      {isMobileMenuOpen && <div onClick={() => setIsMobileMenuOpen(false)} className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90]" />}
+      {!isMobileMenuOpen && <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-[80] bg-white text-slate-800 p-1 py-4 rounded-r-lg shadow-xl border border-l-0 border-slate-200"><ChevronRight size={24} /></button>}
       <Sidebar st={st} isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
-      
       <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 overflow-y-auto w-full transition-all duration-300">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
       </main>
@@ -158,15 +116,21 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   
   const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
   const isBriefingClient = location.pathname.startsWith('/briefing/');
+  const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
   
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
   const MainPage = Pages[mainPageKey];
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
 
-  // TELA DE LOGIN ATIVADA PARA PÁGINAS INTERNAS
   if (!isVitrine && !isBriefingClient && !isAuthorized) {
     return <Login onLogin={onLogin} />;
+  }
+
+  // BLOQUEIO DE SEGURANÇA NA BARRA DE ENDEREÇOS (URL)
+  const paginasProibidasParaPadrao = ['/despesas', '/precificacao', '/seguranca'];
+  if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
+    return <Navigate to="/app" replace />;
   }
   
   return (
@@ -174,9 +138,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       <Route path="/" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
-      
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
-      
       <Route path="/app" element={<LayoutWrapper currentPageName={mainPageKey} st={st} Layout={Layout}>{MainPage ? <MainPage isPublic={false} /> : <PageNotFound />}</LayoutWrapper>} />
 
       {Pages && Object.entries(Pages).map(([path, PageComponent]) => (
@@ -184,7 +146,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
           <Route key={path} path={`/${path}`} element={<LayoutWrapper currentPageName={path} st={st} Layout={Layout}><PageComponent isPublic={false} /></LayoutWrapper>} />
         )
       ))}
-      
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -197,31 +158,34 @@ export default function App() {
   
   useEffect(() => {
     const auth = localStorage.getItem("sistema_auth");
-    if (auth === "true") setIsAuthorized(true);
+    const authTime = localStorage.getItem("sistema_auth_time");
+    const TEMPO_LIMITE_MS = 24 * 60 * 60 * 1000;
+
+    if (auth === "true" && authTime) {
+      const tempoLogado = Date.now() - parseInt(authTime);
+      if (tempoLogado < TEMPO_LIMITE_MS) {
+        setIsAuthorized(true);
+      } else {
+        localStorage.removeItem("sistema_auth");
+        localStorage.removeItem("sistema_auth_time");
+        localStorage.removeItem("sistema_user_role");
+        setIsAuthorized(false);
+      }
+    } else {
+      setIsAuthorized(false);
+    }
     setCheckingAuth(false);
 
     async function carregarTemaDinâmico() {
       try {
-        const { data, error } = await supabase
-          .from('configuracoes')
-          .select('*')
-          .eq('id', 1)
-          .single();
-
+        const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (data && !error) {
-          setSt({ 
-            nomeLoja: data.nome_loja || 'Minha Loja', 
-            corPrincipal: data.cor_orcamento || '#33BEE8',
-            logoUrl: data.logo_url || '' 
-          });
-
+          setSt({ nomeLoja: data.nome_loja || 'Minha Loja', corPrincipal: data.cor_orcamento || '#33BEE8', logoUrl: data.logo_url || '' });
           const root = document.documentElement;
           if (data.cor_orcamento) root.style.setProperty('--brand-color', data.cor_orcamento);
           if (data.cor_nome_empresa) root.style.setProperty('--brand-dark', data.cor_nome_empresa);
         }
-      } catch (err) {
-        console.error("Erro:", err);
-      }
+      } catch (err) {}
     }
     carregarTemaDinâmico();
   }, []);
@@ -230,9 +194,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClientInstance}>
-      <Router>
-        <AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} />
-      </Router>
+      <Router><AppRoutes isAuthorized={isAuthorized} onLogin={() => setIsAuthorized(true)} st={st} /></Router>
       <Toaster />
     </QueryClientProvider>
   );
