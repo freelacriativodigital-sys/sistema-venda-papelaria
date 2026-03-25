@@ -18,6 +18,13 @@ const priorityWeight = {
   baixa: 4,
 };
 
+// Lista exata de colunas que existem na tabela 'pedidos' no Supabase
+const COLUNAS_PERMITIDAS = [
+  'title', 'description', 'priority', 'category', 'service_value', 
+  'checklist', 'status', 'kanban_stage', 'payment_status', 'valor_pago', 
+  'delivery_date', 'completed_date', 'cliente_id', 'cliente_nome'
+];
+
 export default function Pedidos() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
@@ -42,6 +49,40 @@ export default function Pedidos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["art-tasks"] }),
   });
 
+  // Função para limpar os dados antes de enviar ao banco
+  const blindarDados = (dadosBrutos) => {
+    const dadosLimpos = {};
+    
+    // Tratamento de segurança caso o form envie com chaves diferentes
+    if (dadosBrutos.nome && !dadosBrutos.title) dadosLimpos.title = dadosBrutos.nome;
+    if (dadosBrutos.valor && dadosBrutos.service_value === undefined) dadosLimpos.service_value = dadosBrutos.valor;
+
+    Object.keys(dadosBrutos).forEach(key => {
+      if (COLUNAS_PERMITIDAS.includes(key)) {
+        let valor = dadosBrutos[key];
+
+        // Se for string vazia em campos de ID ou Data, o Supabase exige que seja null
+        if ((key === 'cliente_id' || key === 'delivery_date') && valor === "") {
+          valor = null;
+        }
+        
+        // Se for campo de valor, garante que seja número
+        if ((key === 'service_value' || key === 'valor_pago') && (valor === "" || isNaN(valor))) {
+          valor = 0;
+        }
+
+        dadosLimpos[key] = valor;
+      }
+    });
+
+    // Garante que o title (obrigatório no banco) nunca vá vazio
+    if (!dadosLimpos.title || dadosLimpos.title.trim() === "") {
+      dadosLimpos.title = "Pedido sem título";
+    }
+
+    return dadosLimpos;
+  };
+
   const handleUpdate = async (arg1, arg2) => {
     let finalId, finalData;
     if (typeof arg1 === 'object' && arg1 !== null) {
@@ -58,13 +99,22 @@ export default function Pedidos() {
     }
     
     if (!finalId) return;
-    const { id, created_at, ...dataToUpdate } = finalData;
-    await updateMutation.mutateAsync({ id: finalId, data: dataToUpdate });
+    
+    const dadosBlindados = blindarDados(finalData);
+    await updateMutation.mutateAsync({ id: finalId, data: dadosBlindados });
   };
 
   const handleCreate = async (data) => {
-    const { error } = await supabase.from("pedidos").insert([{ ...data, status: 'pendente' }]);
-    if (!error) queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+    const dadosBlindados = blindarDados(data);
+    
+    const { error } = await supabase.from("pedidos").insert([{ ...dadosBlindados, status: 'pendente' }]);
+    
+    if (error) {
+      console.error("Erro detalhado do Supabase:", error);
+      alert("Erro ao salvar o pedido no banco de dados:\n" + error.message);
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+    }
   };
 
   const handleDelete = async (task) => {
@@ -78,7 +128,6 @@ export default function Pedidos() {
     try {
       const dataStr = JSON.stringify({ produtos: uniqueTasks }, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      // ALTERAÇÃO WHITE LABEL AQUI
       const exportFileDefaultName = `backup_sistema_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
@@ -102,7 +151,7 @@ export default function Pedidos() {
         if (Array.isArray(itemsToImport)) {
           for (const item of itemsToImport) {
             const { id, created_at, ...dataToImport } = item;
-            await supabase.from("pedidos").insert([dataToImport]);
+            await supabase.from("pedidos").insert([blindarDados(dataToImport)]);
           }
           queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
           alert("Backup enviado para a NUVEM com sucesso!");
