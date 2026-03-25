@@ -28,7 +28,8 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
         onClick={goHome}
         className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
       >
-        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-slate-100 overflow-hidden flex items-center justify-center bg-white shadow-sm transition-transform group-hover:scale-105" style={{ borderColor: st?.cor_principal }}>
+        {/* LOGO AJUSTADA: Sem borda colorida */}
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-sm transition-transform group-hover:scale-105">
           {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
         </div>
       </div>
@@ -197,7 +198,6 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Exportando para WebP em 70% (Ultra Performance)
         const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
         
         onChange(compressedBase64);
@@ -918,7 +918,8 @@ export default function Catalogo({ isPublic = false }) {
               
               {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
-                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group p-2 flex items-center justify-center">
+                 {/* IMAGEM PRINCIPAL: ASPECT-SQUARE (1:1) */}
+                 <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group p-2 flex items-center justify-center">
                    {selectedProduct.destaque && (
                       <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                         <Star size={12} fill="currentColor" /> Destaque
@@ -1158,7 +1159,8 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
+                      {/* IMAGENS VEJA TAMBEM: ASPECT-SQUARE (1:1) */}
+                      <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                         {prod.destaque && (
                           <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                             <Star size={10} fill="currentColor" /> Destaque
@@ -1221,7 +1223,8 @@ export default function Catalogo({ isPublic = false }) {
                   return (
                   <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
                     
-                    <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
+                    {/* IMAGENS DA VITRINE: ASPECT-SQUARE (1:1) */}
+                    <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
                       {prod.destaque && (
                          <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                            <Star size={10} fill="currentColor" /> Destaque
