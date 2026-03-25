@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- CARROSSEL DE BANNERS ---
+// --- CARROSSEL DE BANNERS (REVERTIDO PARA O VISUAL PREENCHIDO E BONITO) ---
 const BannerCarousel = ({ banners }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -20,7 +20,7 @@ const BannerCarousel = ({ banners }) => {
     if (!banners || banners.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % banners.length);
-    }, 5000); // Roda a cada 5 segundos
+    }, 5000); 
     return () => clearInterval(interval);
   }, [banners]);
 
@@ -66,68 +66,77 @@ const BannerCarousel = ({ banners }) => {
 };
 
 // --- HEADER ESTILO E-COMMERCE PREMIUM ---
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
-  <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
-    {!isPublic && (
-      <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
-        Painel Administrativo • Modo de Visualização (Live Preview)
-      </div>
-    )}
-    
-    <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
-    
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
-      <div 
-        onClick={goHome}
-        className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
-      >
-        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-sm transition-transform group-hover:scale-105">
-          {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+  const logoSizes = {
+    pequena: "w-12 h-12 md:w-14 md:h-14",
+    media: "w-16 h-16 md:w-20 md:h-20",
+    grande: "w-20 h-20 md:w-28 md:h-28"
+  };
+  const currentLogoSize = logoSizes[st?.tamanho_logo] || logoSizes.media;
+
+  return (
+    <div className="w-full relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100 transition-colors duration-300" style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
+      {!isPublic && (
+        <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
+          Painel Administrativo • Modo de Visualização (Live Preview)
+        </div>
+      )}
+      
+      <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
+      
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
+        <div 
+          onClick={goHome}
+          className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
+        >
+          <div className={`${currentLogoSize} rounded-full overflow-hidden flex items-center justify-center shadow-sm transition-transform group-hover:scale-105`} style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
+            {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+          </div>
+        </div>
+
+        <div className="flex-1 w-full max-w-4xl relative group">
+          <input 
+            type="text" 
+            placeholder="O que você procura hoje?" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
+          />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
         </div>
       </div>
 
-      <div className="flex-1 w-full max-w-4xl relative group">
-        <input 
-          type="text" 
-          placeholder="O que você procura hoje?" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
-        />
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
-      </div>
+      {/* MENU DE CATEGORIAS */}
+      {view !== 'detalhe' && (
+        <div className="border-t border-slate-100 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
+            <button 
+              onClick={() => changeCategory('Todas')}
+              className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+            >
+              <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
+              Todas as Categorias
+            </button>
+            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+              return (
+                <button 
+                  key={cat}
+                  onClick={() => changeCategory(cat)}
+                  className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+                >
+                  {cat}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
-
-    {/* MENU DE CATEGORIAS */}
-    {view !== 'detalhe' && (
-      <div className="border-t border-slate-100 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => changeCategory('Todas')}
-            className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-            style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-          >
-            <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-            Todas as Categorias
-          </button>
-          {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-            const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-            return (
-              <button 
-                key={cat}
-                onClick={() => changeCategory(cat)}
-                className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-                style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-              >
-                {cat}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 // --- FAIXA DE BENEFÍCIOS ---
 const BenefitsBar = ({ st }) => {
@@ -210,7 +219,7 @@ const FooterSite = ({ st }) => (
   </footer>
 );
 
-// --- COMPONENTE DE UPLOAD ALTAMENTE COMPRIMIDO (CLIENTES) ---
+// --- COMPONENTE DE UPLOAD ALTAMENTE COMPRIMIDO ---
 const FileUploadField = ({ campo, value, onChange, st }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -370,12 +379,13 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
       };
     };
     reader.readAsDataURL(file);
-    e.target.value = ''; // Limpa o input para poder subir a mesma imagem novamente se precisar
+    e.target.value = ''; 
   };
 
   return (
-    <div className="space-y-6 pb-20 p-4 md:p-6 animate-in fade-in duration-700 w-full">
-      <div className="flex flex-col gap-4 bg-white p-5 rounded-lg border border-slate-100 shadow-sm sticky top-0 z-10">
+    // Z-INDEX AUMENTADO NO HEADER PARA EVITAR O BUG DA LIXEIRA E PB-40 PARA NÃO CORTAR O FINAL
+    <div className="space-y-6 pb-40 p-4 md:p-6 animate-in fade-in duration-700 w-full">
+      <div className="flex flex-col gap-4 bg-white p-5 rounded-lg border border-slate-100 shadow-sm sticky top-0 z-40">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800 uppercase tracking-tight leading-none">Edição Visual</h1>
@@ -419,7 +429,8 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
               <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
               <Input value={st.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-9 text-xs" />
             </div>
-            <div className="flex gap-4">
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Logo</label>
                 <div className="relative group w-16 h-16">
@@ -429,16 +440,41 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                 </div>
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Tamanho da Logo</label>
+                <select 
+                  value={st.tamanho_logo || 'media'} 
+                  onChange={(e) => setSt({...st, tamanho_logo: e.target.value})}
+                  className="w-full h-9 border border-slate-200 rounded-md text-xs font-medium bg-slate-50 text-slate-700 px-2 outline-none focus:border-blue-500"
+                >
+                  <option value="pequena">Pequena</option>
+                  <option value="media">Média</option>
+                  <option value="grande">Grande</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Cor Principal</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative w-9 h-9 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
                     <Input type="color" value={st.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
                   </div>
-                  <Input value={st.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-9 font-mono text-[10px] uppercase" />
+                  <Input value={st.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-9 font-mono text-[10px] uppercase w-full" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Cor do Topo</label>
+                <div className="flex gap-2 items-center">
+                  <div className="relative w-9 h-9 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
+                    <Input type="color" value={st.cor_topo || '#ffffff'} onChange={(e) => setSt({...st, cor_topo: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
+                  </div>
+                  <Input value={st.cor_topo || '#ffffff'} onChange={(e) => setSt({...st, cor_topo: e.target.value})} className="h-9 font-mono text-[10px] uppercase w-full" />
                 </div>
               </div>
             </div>
+
           </div>
         </div>
 
@@ -535,8 +571,16 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
             <ImageIcon size={16} className="text-purple-500" /> Banners (Carrossel)
           </h3>
           <div className="space-y-4">
+            
+            {/* AVISO DO TAMANHO RECOMENDADO EM PX */}
+            <p className="text-[10px] text-slate-600 font-medium bg-blue-50 p-3 rounded-md border border-blue-100 flex items-start gap-2">
+              <span className="text-blue-500 shrink-0 text-sm">💡</span>
+              <span>Para um visual perfeito e sem cortes na loja, recomendamos que suas imagens tenham o tamanho de <strong className="text-blue-700">1200 x 400 pixels</strong>.</span>
+            </p>
+
             {(st.banners || []).map((banner, index) => (
               <div key={banner.id || index} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3 relative group/banner">
+                 {/* Z-INDEX 10 AQUI PARA NÃO FICAR POR CIMA DO HEADER */}
                  <button onClick={() => {
                     const newBanners = [...st.banners];
                     newBanners.splice(index, 1);
@@ -544,6 +588,7 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
                  }} className="absolute top-2 right-2 p-1.5 bg-white text-rose-500 border border-slate-200 rounded-md hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm z-10">
                     <Trash2 size={14} />
                  </button>
+                 {/* VISUALIZAÇÃO DO BANNER COM OBJECT-COVER NO PAINEL */}
                  <div className="aspect-[21/9] rounded-md overflow-hidden bg-slate-200 border border-slate-300 relative w-full flex items-center justify-center">
                     <img src={banner.imagem} className="w-full h-full object-cover" />
                  </div>
@@ -675,7 +720,6 @@ export default function Catalogo({ isPublic = false }) {
       try {
         const { data: configData } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (configData) {
-          // Garante que clientes antigos que tinham apenas 1 banner não percam a imagem
           if (!configData.banners || configData.banners.length === 0) {
             if (configData.banner_url) {
               configData.banners = [{ id: 'legacy', imagem: configData.banner_url, link: configData.banner_link || '' }];
@@ -1005,7 +1049,7 @@ export default function Catalogo({ isPublic = false }) {
                       onClick={() => selecionarOpcao(atrib.nome, opcao)}
                       className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
                     >
-                      {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-contain"/></div>}
+                      {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-cover"/></div>}
                       {opcao.nome}
                     </button>
                   )
