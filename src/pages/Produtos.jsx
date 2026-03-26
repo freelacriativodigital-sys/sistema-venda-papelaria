@@ -22,8 +22,8 @@ const calcularDescontoAtacado = (precoAtacado, precoBase) => {
   return desconto.toFixed(0);
 };
 
-// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS (NÍVEL MÁXIMO DE EFICIÊNCIA) ---
-const compressImage = (file) => {
+// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS (GERA BLOB PARA STORAGE) ---
+const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -54,7 +54,10 @@ const compressImage = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        resolve(canvas.toDataURL('image/webp', 0.6));
+        // Em vez de toDataURL (Base64), gera um Blob (Arquivo Leve)
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, 'image/webp', 0.6);
       };
     };
   });
@@ -68,6 +71,7 @@ export default function Produtos() {
   const fileInputRef = useRef(null);
   const opcaoImgRef = useRef(null); 
   const [uploadTarget, setUploadTarget] = useState(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
@@ -365,11 +369,23 @@ export default function Produtos() {
     if (opcaoImgRef.current) opcaoImgRef.current.click();
   };
 
+  // --- UPLOAD IMAGEM DE VARIAÇÃO PARA O STORAGE ---
   const handleOpcaoImgChange = async (e) => {
     if (e.target.files && e.target.files[0] && uploadTarget) {
       const file = e.target.files[0];
-      const compressedBase64 = await compressImage(file);
-      updateOpcao(uploadTarget.atribId, uploadTarget.opcaoId, 'imagem', compressedBase64);
+      const blob = await compressImageToBlob(file);
+      const fileName = `variacao-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      
+      const { data, error } = await supabase.storage
+        .from('produtos')
+        .upload(fileName, blob, { contentType: 'image/webp' });
+
+      if (error) {
+        alert("Erro ao subir foto da variação: " + error.message);
+        return;
+      }
+      const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
+      updateOpcao(uploadTarget.atribId, uploadTarget.opcaoId, 'imagem', publicUrlData.publicUrl);
     }
   };
 
@@ -814,17 +830,42 @@ export default function Produtos() {
                                 </div>
                               ))}
                               
+                              {/* --- UPLOAD DE FOTOS PARA O STORAGE DO SUPABASE --- */}
                               <input type="file" ref={fileInputRef} onChange={async (e) => {
                                 const files = Array.from(e.target.files);
+                                setIsUploadingImages(true);
+                                
                                 for (const file of files) {
-                                  const compressedBase64 = await compressImage(file);
-                                  setEditingProduct(prev => ({...prev, imagens: [...(prev.imagens || []), compressedBase64]}));
+                                  const blob = await compressImageToBlob(file);
+                                  const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                                  
+                                  const { data, error } = await supabase.storage
+                                    .from('produtos')
+                                    .upload(fileName, blob, { contentType: 'image/webp' });
+
+                                  if (error) {
+                                    alert("Erro ao fazer upload da imagem: " + error.message);
+                                    continue;
+                                  }
+
+                                  const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
+                                  setEditingProduct(prev => ({...prev, imagens: [...(prev.imagens || []), publicUrlData.publicUrl]}));
                                 }
+                                setIsUploadingImages(false);
                               }} className="hidden" multiple accept="image/*" />
                               
-                              <button onClick={() => fileInputRef.current.click()} className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all bg-slate-50">
-                                <Plus size={20} />
-                                <span className="text-[8px] md:text-[9px] font-semibold uppercase text-slate-400">Add Foto</span>
+                              <button disabled={isUploadingImages} onClick={() => fileInputRef.current.click()} className="aspect-square rounded-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all bg-slate-50">
+                                {isUploadingImages ? (
+                                  <>
+                                    <Loader2 size={20} className="animate-spin text-blue-500" />
+                                    <span className="text-[8px] md:text-[9px] font-semibold uppercase text-slate-400">Enviando...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus size={20} />
+                                    <span className="text-[8px] md:text-[9px] font-semibold uppercase text-slate-400">Add Foto</span>
+                                  </>
+                                )}
                               </button>
                             </div>
                          </div>
@@ -870,6 +911,7 @@ export default function Produtos() {
                                    >
                                       <option value="texto_curto">Texto Curto (Nome, etc)</option>
                                       <option value="texto_longo">Texto Longo (Mensagem)</option>
+                                      <option value="upload">Upload de Arte/Foto</option>
                                       <option value="data">Data (Evento)</option>
                                       <option value="hora">Hora</option>
                                    </select>
