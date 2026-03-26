@@ -117,36 +117,41 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   
   const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
   const isBriefingClient = location.pathname.startsWith('/briefing/');
-  const isEntregaPortal = location.pathname.startsWith('/entrega/'); // Liberação pública para entrega
+  const isEntregaPortal = location.pathname.startsWith('/entrega/'); 
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
   
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
   const MainPage = Pages[mainPageKey];
   const VitrinePage = Pages["catalogo"];
   const BioPage = Pages["minhabio"]; 
+  const EntregaPage = Pages["entrega/:driveFolderId"]; // Pega a referência da página de entrega
 
-  // Ajuste no bloqueio de login: permite Vitrine, Briefing e Entrega sem autorização
+  // Bloqueio de login apenas para as áreas internas do sistema
   if (!isVitrine && !isBriefingClient && !isEntregaPortal && !isAuthorized) {
     return <Login onLogin={onLogin} />;
   }
 
-  // --- BLOQUEIO DE SEGURANÇA ATUALIZADO ---
+  // Bloqueio para usuário padrão
   const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca', '/assinantes', '/links'];
-  
   if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
     return <Navigate to="/pedidos" replace />;
   }
   
   return (
     <Routes>
+      {/* ROTAS PÚBLICAS (SEM SIDEBAR) */}
       <Route path="/" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
+      <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage /> : <PageNotFound />} />
+
+      {/* ROTAS INTERNAS (COM SIDEBAR) */}
       <Route path="/app" element={<LayoutWrapper currentPageName={mainPageKey} st={st} Layout={Layout}>{MainPage ? <MainPage isPublic={false} /> : <PageNotFound />}</LayoutWrapper>} />
 
       {Pages && Object.entries(Pages).map(([path, PageComponent]) => (
-        path !== "" && path !== mainPageKey && path !== "vitrine" && path !== "bio" && ( 
+        // Filtramos para não renderizar novamente as rotas públicas que já definimos acima
+        path !== "" && path !== mainPageKey && path !== "vitrine" && path !== "bio" && !path.startsWith("entrega/") && ( 
           <Route key={path} path={`/${path}`} element={<LayoutWrapper currentPageName={path} st={st} Layout={Layout}><PageComponent isPublic={false} /></LayoutWrapper>} />
         )
       ))}
