@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FileText, Settings, Plus, Search, Trash2, Copy, 
   Download, ChevronLeft, Save, Loader2, Building2, 
-  History, Package, X, Minus, UserSquare2, CheckCircle2
+  History, Package, X, Minus, UserSquare2, CheckCircle2,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +24,18 @@ export default function Orcamentos() {
   const [clienteAtual, setClienteAtual] = useState({ nome: '', telefone: '' });
   const [mostrarDropdownCliente, setMostrarDropdownCliente] = useState(false);
   
-  const [itens, setItens] = useState([]);
-  const [termo, setTermo] = useState({ validade: 7, prazo: '5 a 7 dias úteis', entrada_percentual: 50, desconto: 0 });
+  // --- NOVO SISTEMA DE ABAS (OPÇÕES) ---
+  const [opcoes, setOpcoes] = useState([{ id: '1', titulo: 'Opção 1', itens: [], desconto: 0 }]);
+  const [abaAtiva, setAbaAtiva] = useState('1');
+  
+  const [termo, setTermo] = useState({ validade: 7, prazo: '5 a 7 dias úteis', entrada_percentual: 50 });
   const [buscaProduto, setBuscaProduto] = useState('');
   
   const [produtoSendoAdicionado, setProdutoSendoAdicionado] = useState(null);
   const [selecoesVariacao, setSelecoesVariacao] = useState({});
 
   const [orcamentoAprovado, setOrcamentoAprovado] = useState(null);
+  const [modalAprovacaoMult, setModalAprovacaoMult] = useState(null); // Para aprovar orçamentos com múltiplas opções
   const navigate = useNavigate();
 
   const printRef = useRef();
@@ -55,14 +60,37 @@ export default function Orcamentos() {
     setLoading(false);
   }
 
-  const subtotal = itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
-  const descontoReal = Number(termo.desconto) || 0;
-  const totalOrcamento = Math.max(0, subtotal - descontoReal);
-  const valorEntrada = (totalOrcamento * termo.entrada_percentual) / 100;
-  const valorRestante = totalOrcamento - valorEntrada;
-  
   const corBase = config?.cor_orcamento || '#0f172a';
   const corNomeEmpresa = config?.cor_nome_empresa || corBase;
+
+  // --- FUNÇÕES DE GERENCIAMENTO DE OPÇÕES (ABAS) ---
+  const opcaoAtual = opcoes.find(o => o.id === abaAtiva) || opcoes[0];
+
+  const adicionarOpcao = () => {
+    const newId = Date.now().toString();
+    setOpcoes([...opcoes, { id: newId, titulo: `Opção ${opcoes.length + 1}`, itens: [], desconto: 0 }]);
+    setAbaAtiva(newId);
+  };
+
+  const removerOpcao = (id) => {
+    if (opcoes.length === 1) return alert("O orçamento precisa ter pelo menos uma opção.");
+    const novasOpcoes = opcoes.filter(o => o.id !== id);
+    setOpcoes(novasOpcoes);
+    if (abaAtiva === id) setAbaAtiva(novasOpcoes[0].id);
+  };
+
+  const atualizarTituloOpcao = (id, novoTitulo) => {
+    setOpcoes(opcoes.map(o => o.id === id ? { ...o, titulo: novoTitulo } : o));
+  };
+
+  const atualizarDescontoOpcao = (valor) => {
+    setOpcoes(opcoes.map(o => o.id === abaAtiva ? { ...o, desconto: valor } : o));
+  };
+
+  // --- FUNÇÕES DE ITENS DIRECIONADAS PARA A ABA ATIVA ---
+  const atualizarItensDaAba = (novosItens) => {
+    setOpcoes(opcoes.map(o => o.id === abaAtiva ? { ...o, itens: novosItens } : o));
+  };
 
   const selecionarClienteExistente = (cli) => {
     setClienteAtual({ nome: cli.nome, telefone: cli.whatsapp || '' });
@@ -120,11 +148,13 @@ export default function Orcamentos() {
       nomeFormatado += ` (${varsStr})`;
     }
 
-    const jaExiste = itens.find(i => i.produto_id === prod.id && JSON.stringify(i.selecoes) === JSON.stringify(selecoes));
+    const itensAtuais = opcaoAtual.itens;
+    const jaExiste = itensAtuais.find(i => i.produto_id === prod.id && JSON.stringify(i.selecoes) === JSON.stringify(selecoes));
+    
     if (jaExiste) {
       atualizarQuantidade(jaExiste.id, jaExiste.quantidade + 1);
     } else {
-      setItens([...itens, { 
+      atualizarItensDaAba([...itensAtuais, { 
         id: Date.now().toString(), 
         produto_id: prod.id, 
         produto_original: prod, 
@@ -139,14 +169,14 @@ export default function Orcamentos() {
   };
 
   const adicionarItemAvulso = () => {
-    setItens([...itens, { id: Date.now().toString(), nome: 'Item Personalizado', preco: 0, quantidade: 1 }]);
+    atualizarItensDaAba([...opcaoAtual.itens, { id: Date.now().toString(), nome: 'Item Personalizado', preco: 0, quantidade: 1 }]);
     setBuscaProduto('');
   };
 
-  const removerItem = (id) => setItens(itens.filter(i => i.id !== id));
+  const removerItem = (id) => atualizarItensDaAba(opcaoAtual.itens.filter(i => i.id !== id));
 
   const atualizarQuantidade = (id, novaQtd) => {
-    setItens(itens.map(item => {
+    atualizarItensDaAba(opcaoAtual.itens.map(item => {
       if (item.id === id) {
         let novoPreco = item.preco;
         if (item.produto_original) {
@@ -158,23 +188,29 @@ export default function Orcamentos() {
     }));
   };
 
-  const atualizarPrecoManual = (id, novoPreco) => setItens(itens.map(i => i.id === id ? { ...i, preco: novoPreco, produto_original: null } : i));
-  const atualizarNomeManual = (id, novoNome) => setItens(itens.map(i => i.id === id ? { ...i, nome: novoNome } : i));
+  const atualizarPrecoManual = (id, novoPreco) => atualizarItensDaAba(opcaoAtual.itens.map(i => i.id === id ? { ...i, preco: novoPreco, produto_original: null } : i));
+  const atualizarNomeManual = (id, novoNome) => atualizarItensDaAba(opcaoAtual.itens.map(i => i.id === id ? { ...i, nome: novoNome } : i));
 
   const salvarOrcamento = async () => {
-    if (!clienteAtual.nome || itens.length === 0) return alert("Preencha o cliente e adicione pelo menos um item.");
+    if (!clienteAtual.nome) return alert("Preencha o nome do cliente.");
+    if (opcoes.some(op => op.itens.length === 0)) return alert("Todas as opções devem ter pelo menos um item.");
     
     const clienteExistente = clientes.find(c => c.nome.toLowerCase() === clienteAtual.nome.toLowerCase());
     if (!clienteExistente) {
       await supabase.from('clientes').insert([{ nome: clienteAtual.nome, whatsapp: clienteAtual.telefone }]);
     }
 
+    // Calcula total baseando-se na primeira opção (para os cards de listagem continuarem funcionando)
+    const subtotalPrimeira = opcoes[0].itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+    const totalPrimeira = Math.max(0, subtotalPrimeira - (opcoes[0].desconto || 0));
+
     const novoOrcamento = {
       cliente_nome: clienteAtual.nome,
       cliente_telefone: clienteAtual.telefone,
-      itens: itens,
-      total: totalOrcamento,
-      entrada_valor: valorEntrada,
+      itens: opcoes[0].itens, // Fallback para sistemas antigos
+      opcoes: opcoes, // Nova estrutura de múltiplas opções
+      total: totalPrimeira,
+      entrada_valor: (totalPrimeira * termo.entrada_percentual) / 100,
       validade_dias: termo.validade,
       prazo_producao: termo.prazo
     };
@@ -184,24 +220,33 @@ export default function Orcamentos() {
       alert("Orçamento salvo com sucesso!");
       fetchData();
       setView('lista');
-      setItens([]);
+      setOpcoes([{ id: '1', titulo: 'Opção 1', itens: [], desconto: 0 }]);
+      setAbaAtiva('1');
       setClienteAtual({ nome: '', telefone: '' });
-      setTermo({...termo, desconto: 0});
     }
   };
 
   const gerarTextoWhatsApp = () => {
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    let texto = `*ORÇAMENTO - ${config?.nome_loja}*\nData: ${dataAtual}\n\n👤 *Cliente:* ${clienteAtual.nome}\n\n🛍️ *ITENS:*\n`;
-    itens.forEach(item => { 
-      texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${(item.preco * item.quantidade).toFixed(2)}\n`; 
+    let texto = `*ORÇAMENTO - ${config?.nome_loja}*\nData: ${dataAtual}\n\n👤 *Cliente:* ${clienteAtual.nome}\n`;
+    
+    opcoes.forEach((opcao, index) => {
+      const subtotal = opcao.itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+      const desconto = opcao.desconto || 0;
+      const totalOpt = Math.max(0, subtotal - desconto);
+      
+      texto += `\n${opcoes.length > 1 ? `🔹 *${opcao.titulo.toUpperCase()}*` : `🛍️ *ITENS:*`}\n`;
+      opcao.itens.forEach(item => { 
+        texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${(item.preco * item.quantidade).toFixed(2)}\n`; 
+      });
+      
+      texto += `\n*Valor ${opcoes.length > 1 ? 'desta opção' : 'Final'}:* R$ ${totalOpt.toFixed(2)}\n`;
+      if (desconto > 0) texto += `_(Desconto aplicado: -R$ ${desconto.toFixed(2)})_\n`;
+      if (opcoes.length > 1 && index < opcoes.length - 1) texto += `---------------------\n`;
     });
+
+    texto += `\n⏱️ *PRAZO DE PRODUÇÃO:* ${termo.prazo}\n💳 *PIX:* ${config?.chave_pix || 'A combinar'}\n\nQualquer dúvida sobre as opções, estou à disposição!`;
     
-    texto += `\n💰 *VALORES:*\n*Subtotal:* R$ ${subtotal.toFixed(2)}\n`;
-    if (descontoReal > 0) texto += `*Desconto:* -R$ ${descontoReal.toFixed(2)}\n`;
-    
-    texto += `*Total Final:* R$ ${totalOrcamento.toFixed(2)}\n*Sinal (${termo.entrada_percentual}%):* R$ ${valorEntrada.toFixed(2)}\n*Restante:* R$ ${valorRestante.toFixed(2)}\n\n`;
-    texto += `💳 *PIX:* ${config?.chave_pix || 'A combinar'}\n⏱️ *PRAZO:* ${termo.prazo}\n\nQualquer dúvida, estou à disposição!`;
     navigator.clipboard.writeText(texto);
     alert("Texto copiado! É só colar no WhatsApp.");
   };
@@ -216,6 +261,7 @@ export default function Orcamentos() {
       filename:     nomeArquivo,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, logging: false },
+      // Deixamos a altura da página livre para gerar múltiplas folhas se necessário
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -235,23 +281,34 @@ export default function Orcamentos() {
     setView('lista');
   };
 
-  // --- NOVA LÓGICA: APROVAR ORÇAMENTO ---
-  const handleAprovarOrcamento = async (orc) => {
-    if (!window.confirm("Deseja aprovar este orçamento e gerar um novo pedido?")) return;
+  // --- LÓGICA DE APROVAÇÃO COM MÚLTIPLAS OPÇÕES ---
+  const iniciarAprovacao = (orc) => {
+    const orcOpcoes = orc.opcoes && orc.opcoes.length > 0 
+      ? orc.opcoes 
+      : [{ id: '1', titulo: 'Opção Única', itens: orc.itens, desconto: 0 }];
+    
+    if (orcOpcoes.length === 1) {
+      efetivarAprovacao(orc, orcOpcoes[0]);
+    } else {
+      setModalAprovacaoMult({ orcamento: orc, opcoes: orcOpcoes });
+    }
+  };
 
-    // Transforma os itens do orçamento no formato do checklist de pedidos
-    const checklist = orc.itens.map(item => ({
+  const efetivarAprovacao = async (orc, opcaoEscolhida) => {
+    const subtotal = opcaoEscolhida.itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+    const totalFinal = Math.max(0, subtotal - (opcaoEscolhida.desconto || 0));
+
+    const checklist = opcaoEscolhida.itens.map(item => ({
       name: `${item.quantidade}x ${item.nome}`,
       value: Number((item.preco * item.quantidade).toFixed(2)),
       done: false
     }));
 
-    // Criação da estrutura do pedido provisório
     const novoPedido = {
       title: `Pedido de ${orc.cliente_nome}`,
-      description: `Orçamento aprovado #${String(orc.numero || 1).padStart(4, '0')}\nPrazo: ${orc.prazo_producao || '--'}`,
+      description: `Orçamento aprovado #${String(orc.numero || 1).padStart(4, '0')} (${opcaoEscolhida.titulo})\nPrazo: ${orc.prazo_producao || '--'}`,
       cliente_nome: orc.cliente_nome,
-      service_value: orc.total,
+      service_value: totalFinal,
       valor_pago: 0,
       payment_status: "em_aberto",
       status: "pendente",
@@ -261,31 +318,41 @@ export default function Orcamentos() {
     };
 
     try {
-      // Salva o pedido no banco primeiro para pegar o ID real
       const { data, error } = await supabase.from('pedidos').insert([novoPedido]).select().single();
       if (error) throw error;
-      
-      // Abre o modal com o pedido criado
+      setModalAprovacaoMult(null);
       setOrcamentoAprovado(data);
     } catch (err) {
-      console.error("Erro ao gerar pedido:", err);
-      alert("Erro ao aprovar orçamento e gerar o pedido.");
+      alert("Erro ao gerar o pedido.");
     }
   };
 
-  // Atualiza os dados que você editar no Modal Flutuante
   const handleSavePedido = async (id, dataEditada) => {
-    try {
-      await supabase.from('pedidos').update(dataEditada).eq('id', id);
-    } catch (err) {
-      console.error("Erro ao atualizar pedido:", err);
-    }
+    try { await supabase.from('pedidos').update(dataEditada).eq('id', id); } 
+    catch (err) { console.error(err); }
   };
 
-  // Ao fechar o Modal, vai direto para a tela de Pedidos
   const handleCloseModal = () => {
     setOrcamentoAprovado(null);
     navigate('/pedidos');
+  };
+
+  const abrirOrcamentoParaEdicao = (orc) => {
+    setClienteAtual({ nome: orc.cliente_nome, telefone: orc.cliente_telefone });
+    
+    const orcOpcoes = orc.opcoes && orc.opcoes.length > 0 
+      ? orc.opcoes 
+      : [{ 
+          id: '1', 
+          titulo: 'Opção Única', 
+          itens: orc.itens || [], 
+          desconto: orc.total < (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0)) ? (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0) - orc.total) : 0 
+        }];
+        
+    setOpcoes(orcOpcoes);
+    setAbaAtiva(orcOpcoes[0].id);
+    setTermo({ validade: orc.validade_dias, prazo: orc.prazo_producao, entrada_percentual: Math.round((orc.entrada_valor / orc.total) * 100) });
+    setView('novo');
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
@@ -311,7 +378,7 @@ export default function Orcamentos() {
               <div className="space-y-1.5"><label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500">Chave Pix</label><Input value={config?.chave_pix || ''} onChange={e => setConfig({...config, chave_pix: e.target.value})} placeholder="CPF, CNPJ, Email ou Celular" className="h-11 md:h-10 font-medium bg-emerald-50 border-emerald-200 rounded-md" /></div>
               
               <div className="space-y-1.5">
-                <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500">Cor do Layout (Tabelas)</label>
+                <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500">Cor do Layout</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative w-10 h-10 md:w-10 md:h-10 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
                     <Input type="color" value={config?.cor_orcamento || '#000000'} onChange={e => setConfig({...config, cor_orcamento: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
@@ -320,7 +387,7 @@ export default function Orcamentos() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500">Cor do Nome da Empresa</label>
+                <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500">Cor do Nome</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative w-10 h-10 md:w-10 md:h-10 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
                     <Input type="color" value={config?.cor_nome_empresa || '#000000'} onChange={e => setConfig({...config, cor_nome_empresa: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
@@ -451,12 +518,37 @@ export default function Orcamentos() {
             </div>
 
             <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3 relative z-10">
-              <h3 className="text-xs font-semibold uppercase text-slate-700 tracking-widest border-b border-slate-100 pb-2.5 flex items-center gap-1.5"><Package size={14} className="text-emerald-500"/> Itens do Pedido</h3>
-              <div className="relative pt-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 mt-0.5 text-slate-400" size={16} />
-                <Input value={buscaProduto} onChange={e => setBuscaProduto(e.target.value)} placeholder="Buscar produto do catálogo..." className="h-11 md:h-10 pl-9 font-medium border-slate-200 rounded-md text-sm" />
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h3 className="text-xs font-semibold uppercase text-slate-700 tracking-widest flex items-center gap-1.5"><Layers size={14} className="text-emerald-500"/> Itens do Pedido</h3>
+              </div>
+              
+              {/* --- ABAS DE OPÇÕES --- */}
+              <div className="flex gap-2 overflow-x-auto pb-1 mt-2 no-scrollbar">
+                {opcoes.map(op => (
+                  <div key={op.id} onClick={() => setAbaAtiva(op.id)} className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer border shadow-sm shrink-0 transition-colors ${abaAtiva === op.id ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                    <input
+                      value={op.titulo}
+                      onChange={(e) => atualizarTituloOpcao(op.id, e.target.value)}
+                      className={`bg-transparent outline-none w-28 text-[10px] font-bold uppercase tracking-widest ${abaAtiva === op.id ? 'text-white' : 'text-slate-700'}`}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    {opcoes.length > 1 && (
+                      <button onClick={(e) => { e.stopPropagation(); removerOpcao(op.id); }} className={`p-0.5 rounded-sm ${abaAtiva === op.id ? 'text-slate-300 hover:text-white hover:bg-slate-700' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}>
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={adicionarOpcao} className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 px-3 rounded-md border border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 flex items-center gap-1 shrink-0 transition-colors">
+                  <Plus size={14}/> Nova Opção
+                </button>
+              </div>
+
+              <div className="relative pt-2">
+                <Search className="absolute left-3 top-[calc(50%+4px)] -translate-y-1/2 text-slate-400" size={16} />
+                <Input value={buscaProduto} onChange={e => setBuscaProduto(e.target.value)} placeholder={`Buscar produto para a ${opcaoAtual.titulo}...`} className="h-11 md:h-10 pl-9 font-medium border-slate-200 rounded-md text-sm" />
                 {buscaProduto && (
-                  <div className="absolute top-12 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 p-1.5 space-y-0.5">
+                  <div className="absolute top-14 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 p-1.5 space-y-0.5">
                     {produtos.filter(p => p.nome.toLowerCase().includes(buscaProduto.toLowerCase())).map(prod => (
                       <div key={prod.id} onClick={() => processarCliqueProduto(prod)} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-md cursor-pointer">
                         <div className="flex flex-col">
@@ -471,7 +563,7 @@ export default function Orcamentos() {
                 )}
               </div>
               <div className="space-y-2.5 mt-3">
-                {itens.map((item) => (
+                {opcaoAtual.itens.map((item) => (
                   <div key={item.id} className="bg-slate-50 p-2.5 rounded-md border border-slate-200 flex flex-col gap-2.5 group relative">
                     <button onClick={() => removerItem(item.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"><X size={12}/></button>
                     
@@ -490,22 +582,22 @@ export default function Orcamentos() {
                     </div>
                   </div>
                 ))}
-                {itens.length === 0 && <p className="text-[10px] font-medium text-slate-400 uppercase text-center py-3">Nenhum item adicionado</p>}
+                {opcaoAtual.itens.length === 0 && <p className="text-[10px] font-medium text-slate-400 uppercase text-center py-3">Nenhum item adicionado na {opcaoAtual.titulo}</p>}
               </div>
             </div>
 
             <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
-              <h3 className="text-xs font-semibold uppercase text-slate-700 tracking-widest border-b border-slate-100 pb-2.5 flex items-center gap-1.5"><FileText size={14} className="text-amber-500"/> Condições</h3>
+              <h3 className="text-xs font-semibold uppercase text-slate-700 tracking-widest border-b border-slate-100 pb-2.5 flex items-center gap-1.5"><FileText size={14} className="text-amber-500"/> Condições de Pagamento</h3>
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1"><label className="text-[10px] font-semibold uppercase text-slate-500">Validade (Dias)</label><Input type="number" value={termo.validade} onChange={e => setTermo({...termo, validade: Number(e.target.value)})} className="h-10 md:h-9 font-medium bg-slate-50 rounded-md" /></div>
                 <div className="space-y-1"><label className="text-[10px] font-semibold uppercase text-slate-500">Sinal (%)</label><div className="relative"><Input type="number" value={termo.entrada_percentual} onChange={e => setTermo({...termo, entrada_percentual: Number(e.target.value)})} className="h-10 md:h-9 font-medium bg-emerald-50 text-emerald-700 border-emerald-200 pl-7 rounded-md" /><span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-xs">%</span></div></div>
                 <div className="space-y-1 col-span-2"><label className="text-[10px] font-semibold uppercase text-slate-500">Prazo de Produção</label><Input value={termo.prazo} onChange={e => setTermo({...termo, prazo: e.target.value})} placeholder="Ex: 5 a 7 dias úteis" className="h-10 md:h-9 font-medium bg-slate-50 rounded-md" /></div>
                 
-                <div className="space-y-1 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-semibold uppercase text-slate-500">Desconto (R$)</label>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[10px] font-semibold uppercase text-red-500 tracking-widest">Dar Desconto na "{opcaoAtual.titulo}" (R$)</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 font-semibold text-xs">R$</span>
-                    <Input type="number" value={termo.desconto || ''} onChange={e => setTermo({...termo, desconto: Number(e.target.value)})} className="h-10 md:h-9 font-medium bg-red-50 text-red-600 border-red-200 pl-8 rounded-md" placeholder="0.00" />
+                    <Input type="number" value={opcaoAtual.desconto || ''} onChange={e => atualizarDescontoOpcao(Number(e.target.value))} className="h-10 md:h-9 font-semibold bg-red-50 text-red-600 border-red-200 pl-8 rounded-md" placeholder="0.00" />
                   </div>
                 </div>
               </div>
@@ -517,22 +609,19 @@ export default function Orcamentos() {
           {/* ========================================== */}
           <div className="fixed -left-[9999px] xl:static w-full xl:w-[55%] z-10">
              <div className="sticky top-24 space-y-3">
-                
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Visualização Real do PDF</h3>
+                  <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Visualização do PDF</h3>
                 </div>
 
-                <div className="w-full bg-slate-200/50 p-4 md:p-6 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
+                <div className="w-full bg-slate-200/50 p-4 md:p-6 rounded-xl border border-slate-200 flex justify-center overflow-auto max-h-[80vh]">
                   
-                  {/* --- A FOLHA A4 STRICT LIMPA --- */}
+                  {/* --- A FOLHA DINÂMICA --- */}
                   <div 
                     ref={printRef} 
                     className="bg-white shadow-lg flex flex-col shrink-0 relative mx-auto"
                     style={{ 
                       width: '210mm', 
                       minHeight: '295mm', 
-                      maxHeight: '296mm', 
-                      overflow: 'hidden', 
                       padding: '15mm', 
                       boxSizing: 'border-box' 
                     }}
@@ -569,34 +658,74 @@ export default function Orcamentos() {
                         </div>
                      </div>
 
-                     <div className="mb-10 flex-1">
-                        <table className="w-full text-left border-collapse rounded-lg overflow-hidden shadow-sm border border-slate-200">
-                           <thead>
-                              <tr style={{ backgroundColor: corBase }}>
-                                 <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white">Descrição do Item</th>
-                                 <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-center w-16">Qtd</th>
-                                 <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-right w-28">V. Unitário</th>
-                                 <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-right w-32">Total</th>
-                              </tr>
-                           </thead>
-                           <tbody className="bg-white">
-                              {itens.map((item, i) => (
-                                 <tr key={i} className="border-b border-slate-100 last:border-0">
-                                    <td className="py-2.5 px-3 text-xs font-medium text-slate-800">{item.nome}</td>
-                                    <td className="py-2.5 px-3 text-xs font-medium text-slate-800 text-center bg-slate-50">{item.quantidade}</td>
-                                    <td className="py-2.5 px-3 text-xs font-medium text-slate-600 text-right">R$ {Number(item.preco).toFixed(2)}</td>
-                                    <td className="py-2.5 px-3 text-xs font-semibold text-slate-900 text-right bg-slate-50">R$ {(item.preco * item.quantidade).toFixed(2)}</td>
-                                 </tr>
-                              ))}
-                              {itens.length === 0 && (
-                                <tr><td colSpan="4" className="py-6 text-center text-[10px] font-medium uppercase text-slate-400 bg-slate-50">Adicione itens ao orçamento para preencher a tabela</td></tr>
-                              )}
-                           </tbody>
-                        </table>
+                     {/* LOOP DAS OPÇÕES NO PDF */}
+                     <div className="flex-1 space-y-10">
+                       {opcoes.map((opcao, index) => {
+                          const subtotal = opcao.itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+                          const descontoReal = opcao.desconto || 0;
+                          const totalOpt = Math.max(0, subtotal - descontoReal);
+                          const entOpt = (totalOpt * termo.entrada_percentual) / 100;
+                          const restOpt = totalOpt - entOpt;
+
+                          return (
+                            <div key={opcao.id} className={index > 0 ? "pt-10 border-t-2 border-dashed border-slate-200" : ""}>
+                               {opcoes.length > 1 && (
+                                 <h3 className="text-sm font-bold uppercase mb-3 px-3 py-1.5 bg-slate-100 rounded-md inline-block tracking-widest" style={{ color: corBase }}>
+                                   {opcao.titulo}
+                                 </h3>
+                               )}
+                               <table className="w-full text-left border-collapse rounded-lg overflow-hidden shadow-sm border border-slate-200 mb-4">
+                                  <thead>
+                                     <tr style={{ backgroundColor: corBase }}>
+                                        <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white">Descrição do Item</th>
+                                        <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-center w-16">Qtd</th>
+                                        <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-right w-28">V. Unitário</th>
+                                        <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-white text-right w-32">Total</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody className="bg-white">
+                                     {opcao.itens.map((item, i) => (
+                                        <tr key={i} className="border-b border-slate-100 last:border-0">
+                                           <td className="py-2.5 px-3 text-xs font-medium text-slate-800">{item.nome}</td>
+                                           <td className="py-2.5 px-3 text-xs font-medium text-slate-800 text-center bg-slate-50">{item.quantidade}</td>
+                                           <td className="py-2.5 px-3 text-xs font-medium text-slate-600 text-right">R$ {Number(item.preco).toFixed(2)}</td>
+                                           <td className="py-2.5 px-3 text-xs font-semibold text-slate-900 text-right bg-slate-50">R$ {(item.preco * item.quantidade).toFixed(2)}</td>
+                                        </tr>
+                                     ))}
+                                     {opcao.itens.length === 0 && (
+                                       <tr><td colSpan="4" className="py-4 text-center text-[10px] font-medium uppercase text-slate-400">Nenhum item nesta opção</td></tr>
+                                     )}
+                                  </tbody>
+                               </table>
+
+                               <div className="flex justify-end">
+                                 <div className="w-64 bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                    <div className="flex justify-between text-[11px] text-slate-600 font-medium mb-1.5">
+                                       <span>Subtotal</span><span>R$ {subtotal.toFixed(2)}</span>
+                                    </div>
+                                    {descontoReal > 0 && (
+                                      <div className="flex justify-between text-[11px] text-red-500 font-semibold mb-1.5">
+                                         <span>Desconto</span><span>- R$ {descontoReal.toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between text-[11px] font-semibold mb-1.5" style={{ color: corBase }}>
+                                       <span>Sinal ({termo.entrada_percentual}%)</span><span>R$ {entOpt.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-medium text-slate-500 pb-3 border-b border-slate-200">
+                                       <span>Restante</span><span>R$ {restOpt.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-end pt-2.5">
+                                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Valor {opcoes.length > 1 ? 'da Opção' : 'Final'}</span>
+                                       <span className="text-lg font-bold tracking-tight" style={{ color: corBase }}>R$ {totalOpt.toFixed(2)}</span>
+                                    </div>
+                                 </div>
+                               </div>
+                            </div>
+                          )
+                       })}
                      </div>
 
-                     <div className="flex gap-6 mt-auto pt-5 border-t-2" style={{ borderColor: corBase }}>
-                        
+                     <div className="flex gap-6 mt-10 pt-5 border-t-2" style={{ borderColor: corBase }}>
                         <div className="flex-1 space-y-4">
                            <div>
                               <p className="text-[10px] font-semibold uppercase text-slate-400 mb-1">Prazo de Produção</p>
@@ -607,34 +736,9 @@ export default function Orcamentos() {
                               <p className="text-xs font-mono font-medium text-slate-800 break-all">{config?.chave_pix || 'A combinar'}</p>
                            </div>
                         </div>
-
-                        <div className="w-64 bg-slate-50 rounded-lg p-4 border border-slate-200">
-                           <div className="flex justify-between text-[11px] text-slate-600 font-medium mb-1.5">
-                              <span>Subtotal</span>
-                              <span>R$ {subtotal.toFixed(2)}</span>
-                           </div>
-                           {descontoReal > 0 && (
-                             <div className="flex justify-between text-[11px] text-red-500 font-semibold mb-1.5">
-                                <span>Desconto</span>
-                                <span>- R$ {descontoReal.toFixed(2)}</span>
-                             </div>
-                           )}
-                           <div className="flex justify-between text-[11px] font-semibold mb-1.5" style={{ color: corBase }}>
-                              <span>Sinal ({termo.entrada_percentual}%)</span>
-                              <span>R$ {valorEntrada.toFixed(2)}</span>
-                           </div>
-                           <div className="flex justify-between text-[11px] font-medium text-slate-500 pb-3 border-b border-slate-200">
-                              <span>Restante</span>
-                              <span>R$ {valorRestante.toFixed(2)}</span>
-                           </div>
-                           <div className="flex justify-between items-end pt-2.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Total Final</span>
-                              <span className="text-lg font-bold tracking-tight" style={{ color: corBase }}>R$ {totalOrcamento.toFixed(2)}</span>
-                           </div>
-                        </div>
                      </div>
 
-                     <div className="mt-6 text-center pt-3 border-t border-slate-100">
+                     <div className="mt-8 text-center pt-3 border-t border-slate-100">
                         <p className="text-[10px] font-medium text-slate-500">
                           {config?.whatsapp && `WhatsApp: ${config.whatsapp}`}
                           {config?.whatsapp && config?.instagram && '   |   '}
@@ -685,103 +789,134 @@ export default function Orcamentos() {
                   <tr className="border-b border-slate-200 bg-slate-50/50">
                     <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Nº / Data</th>
                     <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Cliente</th>
-                    <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Itens</th>
-                    <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest text-right">Total</th>
+                    <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest">Tipo</th>
+                    <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest text-right">A partir de</th>
                     <th className="p-4 text-[10px] font-semibold uppercase text-slate-500 tracking-widest text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {orcamentos.map((orc) => (
-                    <tr key={orc.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-4">
-                        <p className="text-sm font-semibold text-slate-800">#{String(orc.numero || 1).padStart(4, '0')}</p>
-                        <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{new Date(orc.created_at).toLocaleDateString('pt-BR')}</p>
-                      </td>
-                      <td className="p-4">
-                        <p className="text-sm font-medium text-slate-800 uppercase">{orc.cliente_nome}</p>
-                        <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{orc.cliente_telefone || 'Sem contato'}</p>
-                      </td>
-                      <td className="p-4 text-sm font-medium text-slate-600">
-                        {orc.itens.length} {orc.itens.length === 1 ? 'item' : 'itens'}
-                      </td>
-                      <td className="p-4 text-right text-sm font-semibold text-slate-900">
-                        R$ {Number(orc.total).toFixed(2)}
-                      </td>
-                      <td className="p-4 text-center flex justify-center gap-1.5">
-                         <Button variant="ghost" onClick={() => handleAprovarOrcamento(orc)} className="h-8 px-2.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold text-[10px] uppercase">
-                           Aprovar
-                         </Button>
-                         <Button variant="ghost" onClick={() => {
-                           setClienteAtual({ nome: orc.cliente_nome, telefone: orc.cliente_telefone });
-                           setItens(orc.itens);
-                           setTermo({ validade: orc.validade_dias, prazo: orc.prazo_producao, entrada_percentual: Math.round((orc.entrada_valor / orc.total) * 100), desconto: orc.total < (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0)) ? (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0) - orc.total) : 0 });
-                           setView('novo');
-                         }} className="h-8 px-3 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-[10px] uppercase">
-                           Visualizar
-                         </Button>
-                         <Button variant="ghost" onClick={async () => {
-                           if(confirm("Excluir este orçamento?")) {
-                             await supabase.from('orcamentos').delete().eq('id', orc.id);
-                             fetchData();
-                           }
-                         }} className="h-8 px-2.5 rounded-md bg-red-50 text-red-500 hover:bg-red-100 font-semibold text-[10px] uppercase">
-                           <Trash2 size={14}/>
-                         </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {orcamentos.map((orc) => {
+                    const temOpcoes = orc.opcoes && orc.opcoes.length > 1;
+                    return (
+                      <tr key={orc.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-4">
+                          <p className="text-sm font-semibold text-slate-800">#{String(orc.numero || 1).padStart(4, '0')}</p>
+                          <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{new Date(orc.created_at).toLocaleDateString('pt-BR')}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm font-medium text-slate-800 uppercase">{orc.cliente_nome}</p>
+                          <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{orc.cliente_telefone || 'Sem contato'}</p>
+                        </td>
+                        <td className="p-4 text-sm font-medium text-slate-600">
+                          {temOpcoes ? <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase">{orc.opcoes.length} Opções</span> : 'Opção Única'}
+                        </td>
+                        <td className="p-4 text-right text-sm font-semibold text-slate-900">
+                          R$ {Number(orc.total).toFixed(2)}
+                        </td>
+                        <td className="p-4 text-center flex justify-center gap-1.5">
+                           <Button variant="ghost" onClick={() => iniciarAprovacao(orc)} className="h-8 px-2.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold text-[10px] uppercase">
+                             Aprovar
+                           </Button>
+                           <Button variant="ghost" onClick={() => abrirOrcamentoParaEdicao(orc)} className="h-8 px-3 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-[10px] uppercase">
+                             Visualizar
+                           </Button>
+                           <Button variant="ghost" onClick={async () => {
+                             if(confirm("Excluir este orçamento?")) {
+                               await supabase.from('orcamentos').delete().eq('id', orc.id);
+                               fetchData();
+                             }
+                           }} className="h-8 px-2.5 rounded-md bg-red-50 text-red-500 hover:bg-red-100 font-semibold text-[10px] uppercase">
+                             <Trash2 size={14}/>
+                           </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             <div className="md:hidden flex flex-col gap-3">
-               {orcamentos.map((orc) => (
-                  <div key={orc.id} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex flex-col gap-3">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                      <div>
-                        <p className="text-xs font-semibold text-slate-800">#{String(orc.numero || 1).padStart(4, '0')}</p>
-                        <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{new Date(orc.created_at).toLocaleDateString('pt-BR')}</p>
+               {orcamentos.map((orc) => {
+                  const temOpcoes = orc.opcoes && orc.opcoes.length > 1;
+                  return (
+                    <div key={orc.id} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex flex-col gap-3">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-800">#{String(orc.numero || 1).padStart(4, '0')}</p>
+                          <p className="text-[10px] font-medium uppercase text-slate-500 mt-0.5">{new Date(orc.created_at).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-medium text-slate-500 uppercase">A partir de</p>
+                          <p className="text-sm font-semibold text-slate-900">R$ {Number(orc.total).toFixed(2)}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-900">R$ {Number(orc.total).toFixed(2)}</p>
-                        <p className="text-[10px] font-medium text-slate-500 uppercase">{orc.itens.length} {orc.itens.length === 1 ? 'item' : 'itens'}</p>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-[9px] font-semibold text-slate-400 uppercase mb-0.5">Cliente</p>
+                          <p className="text-xs font-medium text-slate-800 uppercase">{orc.cliente_nome}</p>
+                          <p className="text-[10px] font-bold uppercase mt-1">
+                             {temOpcoes ? <span className="text-blue-500">{orc.opcoes.length} Opções de Preço</span> : <span className="text-slate-400">Opção Única</span>}
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5">
+                           <Button variant="ghost" onClick={() => iniciarAprovacao(orc)} className="h-8 px-3 rounded-md bg-emerald-50 text-emerald-600 font-semibold text-[10px] uppercase">
+                             Aprovar
+                           </Button>
+                           <Button variant="ghost" onClick={() => abrirOrcamentoParaEdicao(orc)} className="h-8 px-3 rounded-md bg-blue-50 text-blue-600 font-semibold text-[10px] uppercase">
+                             Ver
+                           </Button>
+                           <Button variant="ghost" onClick={async () => {
+                             if(confirm("Excluir este orçamento?")) {
+                               await supabase.from('orcamentos').delete().eq('id', orc.id);
+                               fetchData();
+                             }
+                           }} className="h-8 px-2.5 rounded-md bg-red-50 text-red-500 font-semibold text-[10px] uppercase">
+                             <Trash2 size={14}/>
+                           </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase mb-0.5">Cliente</p>
-                        <p className="text-xs font-medium text-slate-800 uppercase">{orc.cliente_nome}</p>
-                        <p className="text-[10px] font-medium uppercase text-slate-500">{orc.cliente_telefone || 'Sem contato'}</p>
-                      </div>
-                      <div className="flex gap-1.5">
-                         <Button variant="ghost" onClick={() => handleAprovarOrcamento(orc)} className="h-8 px-3 rounded-md bg-emerald-50 text-emerald-600 font-semibold text-[10px] uppercase">
-                           Aprovar
-                         </Button>
-                         <Button variant="ghost" onClick={() => {
-                           setClienteAtual({ nome: orc.cliente_nome, telefone: orc.cliente_telefone });
-                           setItens(orc.itens);
-                           setTermo({ validade: orc.validade_dias, prazo: orc.prazo_producao, entrada_percentual: Math.round((orc.entrada_valor / orc.total) * 100), desconto: orc.total < (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0)) ? (orc.itens.reduce((a,b)=>a+(b.preco*b.quantidade),0) - orc.total) : 0 });
-                           setView('novo');
-                         }} className="h-8 px-3 rounded-md bg-blue-50 text-blue-600 font-semibold text-[10px] uppercase">
-                           Ver
-                         </Button>
-                         <Button variant="ghost" onClick={async () => {
-                           if(confirm("Excluir este orçamento?")) {
-                             await supabase.from('orcamentos').delete().eq('id', orc.id);
-                             fetchData();
-                           }
-                         }} className="h-8 px-2.5 rounded-md bg-red-50 text-red-500 font-semibold text-[10px] uppercase">
-                           <Trash2 size={14}/>
-                         </Button>
-                      </div>
-                    </div>
-                  </div>
-               ))}
+                  )
+               })}
             </div>
 
           </div>
         )}
       </div>
+
+      {/* MODAL DE SELEÇÃO DE OPÇÃO AO APROVAR (Quando há mais de 1 opção) */}
+      {modalAprovacaoMult && (
+         <div className="fixed inset-0 z-[300] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in-95">
+               <div className="flex justify-between items-center mb-5">
+                 <h3 className="font-bold uppercase text-slate-800 tracking-tight">Qual opção o cliente aprovou?</h3>
+                 <button onClick={() => setModalAprovacaoMult(null)} className="text-slate-400 hover:text-slate-700"><X size={18}/></button>
+               </div>
+               <div className="space-y-3">
+                 {modalAprovacaoMult.opcoes.map(opcao => {
+                    const subtotal = opcao.itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+                    const total = Math.max(0, subtotal - (opcao.desconto || 0));
+                    return (
+                      <button 
+                         key={opcao.id} 
+                         onClick={() => efetivarAprovacao(modalAprovacaoMult.orcamento, opcao)}
+                         className="w-full text-left p-4 rounded-lg border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors flex justify-between items-center group"
+                      >
+                         <div>
+                            <p className="font-bold text-slate-800 text-sm group-hover:text-emerald-700">{opcao.titulo}</p>
+                            <p className="text-[10px] font-medium text-slate-500 uppercase">{opcao.itens.length} itens</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="font-bold text-emerald-600">R$ {total.toFixed(2)}</p>
+                         </div>
+                      </button>
+                    )
+                 })}
+               </div>
+            </div>
+         </div>
+      )}
 
       {/* MODAL DE EDIÇÃO DE PEDIDO AO APROVAR ORÇAMENTO */}
       {orcamentoAprovado && (
