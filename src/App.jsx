@@ -192,12 +192,10 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const BioPage = Pages["minhabio"];
   const EntregaPage = Pages["entrega/:driveFolderId"];
 
-  // Bloqueio de login apenas para as áreas internas do sistema
   if (!isVitrine && !isBriefingClient && !isEntregaPortal && !isAuthorized) {
     return <Login onLogin={onLogin} />;
   }
 
-  // Bloqueio para usuário padrão
   const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca', '/assinantes', '/links'];
   if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
     return <Navigate to="/pedidos" replace />;
@@ -205,14 +203,12 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
 
   return (
     <Routes>
-      {/* ROTAS PÚBLICAS (SEM SIDEBAR) */}
       <Route path="/" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
       <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage /> : <PageNotFound />} />
 
-      {/* ROTAS INTERNAS (COM SIDEBAR) */}
       <Route
         path="/app"
         element={
@@ -247,18 +243,60 @@ export default function App() {
   const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
 
   useEffect(() => {
+    const carregarPerfilUsuario = async (session) => {
+      if (!session?.user?.email) {
+        localStorage.setItem('sistema_user_role', 'padrao');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('usuarios_painel')
+          .select('usuario, perfil');
+
+        if (error) {
+          console.error('Erro ao buscar perfil do usuário:', error);
+          localStorage.setItem('sistema_user_role', 'padrao');
+          return;
+        }
+
+        const usuarioEncontrado = (data || []).find(
+          (item) =>
+            String(item.usuario || '').trim().toLowerCase() ===
+            String(session.user.email || '').trim().toLowerCase()
+        );
+
+        localStorage.setItem(
+          'sistema_user_role',
+          usuarioEncontrado?.perfil || 'padrao'
+        );
+      } catch (err) {
+        console.error('Erro inesperado ao carregar perfil:', err);
+        localStorage.setItem('sistema_user_role', 'padrao');
+      }
+    };
+
     const verificarSessao = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('Erro ao verificar sessão:', error);
+          localStorage.removeItem('sistema_user_role');
           setIsAuthorized(false);
         } else {
-          setIsAuthorized(!!data.session);
+          const temSessao = !!data.session;
+          setIsAuthorized(temSessao);
+
+          if (temSessao) {
+            await carregarPerfilUsuario(data.session);
+          } else {
+            localStorage.removeItem('sistema_user_role');
+          }
         }
       } catch (err) {
         console.error('Erro inesperado ao verificar sessão:', err);
+        localStorage.removeItem('sistema_user_role');
         setIsAuthorized(false);
       } finally {
         setCheckingAuth(false);
@@ -269,8 +307,16 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthorized(!!session);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const temSessao = !!session;
+      setIsAuthorized(temSessao);
+
+      if (temSessao) {
+        await carregarPerfilUsuario(session);
+      } else {
+        localStorage.removeItem('sistema_user_role');
+      }
+
       setCheckingAuth(false);
     });
 
