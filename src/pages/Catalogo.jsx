@@ -732,7 +732,11 @@ export default function Catalogo({ isPublic = false }) {
           setSt(configData);
         }
 
-        const { data: prodData } = await supabase.from('produtos').select('*').eq('status_online', true).order('created_at', { ascending: false });
+        const { data: prodData } = await supabase.from('produtos')
+  .select('*')
+  .eq('status_online', true)
+  .is('excluido', false) // <-- Adicione este filtro (ajuste o nome da coluna se você usar algo como 'ativo' em vez de 'excluido')
+  .order('created_at', { ascending: false });
         if (prodData) {
           setProdutos(prodData);
           const uniqueCats = [...new Set(prodData.map(p => p.categoria))];
