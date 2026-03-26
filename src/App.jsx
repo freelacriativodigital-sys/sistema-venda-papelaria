@@ -11,7 +11,7 @@ import Login from '@/components/tasks/Login';
 import {
   Home, Package, MessageCircle, LogOut,
   ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
-  Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2 as Link2Icon
+  Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase";
@@ -243,39 +243,6 @@ export default function App() {
   const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
 
   useEffect(() => {
-    const carregarPerfilUsuario = async (session) => {
-      if (!session?.user?.email) {
-        localStorage.setItem('sistema_user_role', 'padrao');
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('usuarios_painel')
-          .select('usuario, perfil');
-
-        if (error) {
-          console.error('Erro ao buscar perfil do usuário:', error);
-          localStorage.setItem('sistema_user_role', 'padrao');
-          return;
-        }
-
-        const usuarioEncontrado = (data || []).find(
-          (item) =>
-            String(item.usuario || '').trim().toLowerCase() ===
-            String(session.user.email || '').trim().toLowerCase()
-        );
-
-        localStorage.setItem(
-          'sistema_user_role',
-          usuarioEncontrado?.perfil || 'padrao'
-        );
-      } catch (err) {
-        console.error('Erro inesperado ao carregar perfil:', err);
-        localStorage.setItem('sistema_user_role', 'padrao');
-      }
-    };
-
     const verificarSessao = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -289,7 +256,7 @@ export default function App() {
           setIsAuthorized(temSessao);
 
           if (temSessao) {
-            await carregarPerfilUsuario(data.session);
+            localStorage.setItem('sistema_user_role', 'admin');
           } else {
             localStorage.removeItem('sistema_user_role');
           }
@@ -307,12 +274,12 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       const temSessao = !!session;
       setIsAuthorized(temSessao);
 
       if (temSessao) {
-        await carregarPerfilUsuario(session);
+        localStorage.setItem('sistema_user_role', 'admin');
       } else {
         localStorage.removeItem('sistema_user_role');
       }
@@ -320,7 +287,7 @@ export default function App() {
       setCheckingAuth(false);
     });
 
-    async function carregarTemaDinâmico() {
+    async function carregarTemaDinamico() {
       try {
         const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (data && !error) {
@@ -339,7 +306,7 @@ export default function App() {
       }
     }
 
-    carregarTemaDinâmico();
+    carregarTemaDinamico();
 
     return () => {
       subscription.unsubscribe();
