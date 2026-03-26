@@ -11,6 +11,9 @@ import Briefings from './pages/Briefings';
 import Precificacao from './pages/Precificacao'; 
 import Seguranca from './pages/Seguranca';
 
+// Importação da página de Entrega para o Cliente
+import EntregaCliente from './pages/EntregaCliente';
+
 // Importação das páginas Master
 import Assinantes from './pages/Assinantes';
 import Links from './pages/Links';
@@ -31,6 +34,8 @@ export const pagesConfig = {
     "briefings": Briefings, 
     "precificacao": Precificacao,
     "seguranca": Seguranca,
+    // Rota pública de entrega (não precisa de isMaster)
+    "entrega/:driveFolderId": EntregaCliente,
     // Rotas master só entram no objeto se for a sua Vercel
     ...(isMaster && { 
         "assinantes": Assinantes, 
