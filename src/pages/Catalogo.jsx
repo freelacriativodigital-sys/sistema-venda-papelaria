@@ -243,8 +243,8 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
       
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000; 
-        const MAX_HEIGHT = 1000;
+        const MAX_WIDTH = 1200; 
+        const MAX_HEIGHT = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -1157,7 +1157,7 @@ export default function Catalogo({ isPublic = false }) {
                     {atacadoData.nextRule ? (
                       <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                          <p className="text-[11px] font-semibold text-slate-600 mb-2">
-                            🔥 Adicione mais <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> e o valor cai para <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
+                           🔥 Adicione mais <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> e o valor cai para <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
                          </p>
                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1">
                             <div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
@@ -1264,7 +1264,7 @@ export default function Catalogo({ isPublic = false }) {
                 {/* --- NOVA BARRA DE COMPRA (Horizontal no Desktop, Fixa no Mobile) --- */}
                 <div className="fixed inset-x-0 bottom-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50 md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
                    <div className="flex flex-col max-w-6xl mx-auto">
-                      
+                     
                       {atacadoData && atacadoData.nextRule && (
                         <div className="md:hidden flex flex-col gap-1 mb-2 px-1">
                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
