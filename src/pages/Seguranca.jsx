@@ -89,7 +89,7 @@ export default function Seguranca() {
       setEditingUser(user);
       setNovoUsuario(user.usuario || '');
       setNovaSenha('');
-      setNovoPerfil(user.perfil || 'admin');
+      setNovoPerfil('admin');
     } else {
       setEditingUser(null);
       setNovoUsuario('');
@@ -147,7 +147,7 @@ export default function Seguranca() {
             emailAtual: editingUser.usuario,
             novoEmail: novoUsuario,
             novaSenha: novaSenha,
-            perfil: novoPerfil,
+            perfil: 'admin',
           }),
         });
 
@@ -165,7 +165,7 @@ export default function Seguranca() {
           body: JSON.stringify({
             email: novoUsuario,
             senha: novaSenha,
-            perfil: novoPerfil,
+            perfil: 'admin',
           }),
         });
 
@@ -189,12 +189,39 @@ export default function Seguranca() {
     }
   };
 
-  const handleDelete = async (id, perfil) => {
-    if (perfil === 'admin' && usuarios.filter((u) => u.perfil === 'admin').length === 1) {
+  const handleDelete = async (id, email, perfil) => {
+    const admins = usuarios.filter((u) => u.perfil === 'admin');
+
+    if (perfil === 'admin' && admins.length === 1) {
       return alert('Não pode excluir o único Administrador do sistema.');
     }
 
-    alert('Exclusão do Auth deixamos para o próximo passo.');
+    if (!window.confirm('Deseja realmente remover este acesso?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/excluir-usuario', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id,
+          email,
+        }),
+      });
+
+      const result = await parseResponse(response);
+
+      if (!result.ok) {
+        throw new Error(result.data?.error || 'Erro ao excluir utilizador.');
+      }
+
+      fetchUsuarios();
+    } catch (err) {
+      alert(err.message || 'Erro ao excluir utilizador.');
+    }
   };
 
   if (isLoading && !isUnlocked) {
@@ -309,14 +336,14 @@ export default function Seguranca() {
                     className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-slate-100 hover:bg-slate-50 transition-colors gap-4"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${u.perfil === 'admin' ? 'bg-amber-50 border-amber-200 text-amber-500' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
-                        {u.perfil === 'admin' ? <ShieldCheck size={20} /> : <User size={20} />}
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 bg-amber-50 border-amber-200 text-amber-500">
+                        <ShieldCheck size={20} />
                       </div>
 
                       <div>
                         <p className="font-bold text-slate-800 text-sm">{u.usuario}</p>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest mt-0.5 ${u.perfil === 'admin' ? 'text-amber-600' : 'text-slate-500'}`}>
-                          {u.perfil === 'admin' ? 'Acesso Total (Admin)' : 'Funcionário (Padrão)'}
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-0.5 text-amber-600">
+                          Acesso Total (Admin)
                         </p>
                       </div>
                     </div>
@@ -330,7 +357,7 @@ export default function Seguranca() {
                       </button>
 
                       <button
-                        onClick={() => handleDelete(u.id, u.perfil)}
+                        onClick={() => handleDelete(u.id, u.usuario, u.perfil)}
                         className="flex-1 sm:flex-none px-4 h-9 bg-red-50 border border-red-100 text-red-500 rounded-md text-[10px] font-bold uppercase hover:bg-red-500 hover:text-white transition-colors"
                       >
                         <Trash2 size={14} className="mx-auto" />
@@ -378,9 +405,9 @@ export default function Seguranca() {
                       value={novoPerfil}
                       onChange={(e) => setNovoPerfil(e.target.value)}
                       className="w-full h-11 bg-slate-50 border border-slate-200 rounded-md px-3 text-xs font-bold text-slate-700 uppercase outline-none focus:border-blue-500"
+                      disabled
                     >
                       <option value="admin">Administrador (Acesso Total)</option>
-                      <option value="padrao">Padrão (Sem Financeiro / Segurança)</option>
                     </select>
                   </div>
 
