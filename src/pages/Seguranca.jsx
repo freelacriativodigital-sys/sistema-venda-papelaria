@@ -101,6 +101,25 @@ export default function Seguranca() {
     setIsModalOpen(true);
   };
 
+  const parseResponse = async (response) => {
+    const rawText = await response.text();
+
+    try {
+      const json = JSON.parse(rawText);
+      return {
+        ok: response.ok,
+        data: json,
+      };
+    } catch {
+      return {
+        ok: response.ok,
+        data: {
+          error: rawText || 'Resposta inválida do servidor.',
+        },
+      };
+    }
+  };
+
   const handleSalvar = async (e) => {
     e.preventDefault();
 
@@ -132,10 +151,10 @@ export default function Seguranca() {
           }),
         });
 
-        const result = await response.json();
+        const result = await parseResponse(response);
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Erro ao atualizar utilizador.');
+        if (!result.ok) {
+          throw new Error(result.data?.error || 'Erro ao atualizar utilizador.');
         }
       } else {
         const response = await fetch('/api/criar-usuario', {
@@ -150,10 +169,10 @@ export default function Seguranca() {
           }),
         });
 
-        const result = await response.json();
+        const result = await parseResponse(response);
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Erro ao criar utilizador.');
+        if (!result.ok) {
+          throw new Error(result.data?.error || 'Erro ao criar utilizador.');
         }
       }
 
