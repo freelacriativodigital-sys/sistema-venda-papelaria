@@ -11,6 +11,12 @@ import Briefings from './pages/Briefings';
 import Precificacao from './pages/Precificacao'; 
 import Seguranca from './pages/Seguranca';
 
+// Importação das páginas Master
+import Assinantes from './pages/Assinantes';
+import Links from './pages/Links';
+
+const isMaster = import.meta.env.VITE_APP_IS_MASTER === 'true';
+
 export const pagesConfig = {
   Pages: {
     "": Home, 
@@ -25,13 +31,18 @@ export const pagesConfig = {
     "briefings": Briefings, 
     "precificacao": Precificacao,
     "seguranca": Seguranca,
+    // Rotas master só entram no objeto se for a sua Vercel
+    ...(isMaster && { 
+        "assinantes": Assinantes, 
+        "links": Links 
+    })
   },
 
   menuCategorias: [
     {
       titulo: "Gestão Diária",
       items: [
-        { id: "", label: "Visão Geral", roles: ['admin'] }, // <-- AGORA É SÓ ADMIN
+        { id: "", label: "Visão Geral", roles: ['admin'] }, 
         { id: "pedidos", label: "Painel de Pedidos", roles: ['admin', 'padrao'] }, 
         { id: "clientes", label: "Meus Clientes", roles: ['admin', 'padrao'] },
       ]
@@ -63,6 +74,11 @@ export const pagesConfig = {
       titulo: "Sistema",
       items: [
         { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, 
+        // Menu Master só é adicionado se for a sua Vercel
+        ...(isMaster ? [
+          { id: "assinantes", label: "Assinantes SaaS", roles: ['admin'] },
+          { id: "links", label: "Links e Portais", roles: ['admin'] }
+        ] : [])
       ]
     }
   ],

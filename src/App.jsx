@@ -11,7 +11,7 @@ import Login from '@/components/tasks/Login';
 import { 
   Home, Package, MessageCircle, LogOut, 
   ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
-  Link as LinkIcon, Palette, Calculator, ShieldCheck 
+  Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase"; 
@@ -52,6 +52,8 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       "briefings": { path: "/briefings", icon: Palette },
       "precificacao": { path: "/precificacao", icon: Calculator },
       "seguranca": { path: "/seguranca", icon: ShieldCheck },
+      "assinantes": { path: "/assinantes", icon: Key }, // Ícone para Assinantes Master
+      "links": { path: "/links", icon: Link2 }, // Ícone para Links Master
     };
     return meta[id] || { path: `/${id}`, icon: Package };
   };
@@ -127,11 +129,9 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   }
 
   // --- BLOQUEIO DE SEGURANÇA ATUALIZADO ---
-  // A rota '/app' (Visão Geral) agora também é proibida para o perfil padrão
-  const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca'];
+  const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca', '/assinantes', '/links'];
   
   if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
-    // Redireciona o funcionário direto para a tela de Pedidos ao invés da Visão Geral
     return <Navigate to="/pedidos" replace />;
   }
   
