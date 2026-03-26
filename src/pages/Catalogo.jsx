@@ -12,137 +12,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- CARROSSEL DE BANNERS ---
-const BannerCarousel = ({ banners }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (!banners || banners.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % banners.length);
-    }, 5000); 
-    return () => clearInterval(interval);
-  }, [banners]);
-
-  const goToPrevious = (e) => {
-     e.stopPropagation(); 
-     setCurrentIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
-  };
-  const goToNext = (e) => {
-     e.stopPropagation();
-     setCurrentIndex((prev) => (prev + 1) % banners.length);
-  };
-
-  if (!banners || banners.length === 0) return null;
-
-  return (
-     <div className="relative h-[160px] sm:h-[220px] md:h-[350px] rounded-2xl md:rounded-[2rem] overflow-hidden bg-slate-900 shadow-sm border border-slate-200 group">
-        <div className="flex w-full h-full transition-transform duration-700 ease-out" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
-           {banners.map((b, i) => (
-              <div key={b.id || i} className="w-full h-full shrink-0 relative cursor-pointer" onClick={() => b.link && window.open(b.link, '_blank')}>
-                 <img src={b.imagem} className="w-full h-full object-cover" alt="Banner" />
-              </div>
-           ))}
-        </div>
-        {banners.length > 1 && (
-          <>
-            <button onClick={goToPrevious} className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md z-10">
-              <ChevronLeft size={20}/>
-            </button>
-            <button onClick={goToNext} className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/80 text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-md z-10">
-              <ChevronLeft size={20} className="rotate-180"/>
-            </button>
-            <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-2 z-10">
-               {banners.map((_, i) => (
-                  <button key={i} onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }} className={`h-1.5 md:h-2 rounded-full transition-all ${i === currentIndex ? 'bg-white w-4 md:w-6 shadow-sm' : 'bg-white/50 w-1.5 md:w-2 hover:bg-white/80'}`} />
-               ))}
-            </div>
-          </>
-        )}
-     </div>
-  )
-};
-
-// --- HEADER ESTILO E-COMMERCE PREMIUM (Ajustado) ---
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
-  // Ajuste do tamanho da logo focado apenas na altura para respeitar logos retangulares
-  const logoSizes = {
-    pequena: "h-8 md:h-10",
-    media: "h-12 md:h-16",
-    grande: "h-16 md:h-24"
-  };
-  const currentLogoHeight = logoSizes[st?.tamanho_logo] || logoSizes.media;
-
-  return (
-    // Removido o md:sticky e ajustado o z-index
-    <div className="w-full relative z-30 shadow-sm border-b border-slate-100 transition-colors duration-300" style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
-      {!isPublic && (
-        <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
-          Painel Administrativo • Modo de Visualização (Live Preview)
-        </div>
-      )}
-      
-      <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
-      
-      {/* Container com paddings menores e organização mais equilibrada */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8">
-        
-        {/* Logo mais livre, sendo o destaque */}
-        <div 
-          onClick={goHome}
-          className="flex items-center shrink-0 cursor-pointer group justify-center md:justify-start"
-        >
-          {st?.logo_url ? (
-             <img src={st.logo_url} className={`object-contain transition-transform group-hover:scale-105 ${currentLogoHeight}`} alt="Logo" />
-          ) : (
-             <ShoppingBag size={36} style={{ color: st?.cor_principal }} className="transition-transform group-hover:scale-105" />
-          )}
-        </div>
-
-        {/* Barra de pesquisa menor e mais discreta */}
-        <div className="w-full md:w-96 lg:w-[450px] relative group shrink-0">
-          <input 
-            type="text" 
-            placeholder="O que você procura hoje?" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-10 md:h-11 bg-slate-50/50 hover:bg-slate-50 rounded-full px-5 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-medium text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
-          />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={18} />
+// --- HEADER ESTILO E-COMMERCE PREMIUM ---
+const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
+  <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
+    {!isPublic && (
+      <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
+        Painel Administrativo • Modo de Visualização (Live Preview)
+      </div>
+    )}
+    
+    <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
+    
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
+      <div 
+        onClick={goHome}
+        className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
+      >
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-slate-100 overflow-hidden flex items-center justify-center bg-white shadow-sm transition-transform group-hover:scale-105" style={{ borderColor: st?.cor_principal }}>
+          {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
         </div>
       </div>
 
-      {/* MENU DE CATEGORIAS */}
-      {view !== 'detalhe' && (
-        <div className="border-t border-slate-100 bg-slate-50/50">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
-            <button 
-              onClick={() => changeCategory('Todas')}
-              className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-            >
-              <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-              Todas as Categorias
-            </button>
-            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-              return (
-                <button 
-                  key={cat}
-                  onClick={() => changeCategory(cat)}
-                  className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <div className="flex-1 w-full max-w-4xl relative group">
+        <input 
+          type="text" 
+          placeholder="O que você procura hoje?" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
+        />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
+      </div>
     </div>
-  );
-};
+
+    {/* MENU DE CATEGORIAS */}
+    {view !== 'detalhe' && (
+      <div className="border-t border-slate-100 bg-slate-50/50">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
+          <button 
+            onClick={() => changeCategory('Todas')}
+            className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+            style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+          >
+            <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
+            Todas as Categorias
+          </button>
+          {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
+            const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+            return (
+              <button 
+                key={cat}
+                onClick={() => changeCategory(cat)}
+                className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+                style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+              >
+                {cat}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )}
+  </div>
+);
 
 // --- FAIXA DE BENEFÍCIOS ---
 const BenefitsBar = ({ st }) => {
@@ -225,63 +157,71 @@ const FooterSite = ({ st }) => (
   </footer>
 );
 
-// --- COMPONENTE DE UPLOAD ALTAMENTE COMPRIMIDO ---
+// --- COMPONENTE DE UPLOAD DE ARQUIVO PARA O DRIVE ---
 const FileUploadField = ({ campo, value, onChange, st }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  // SEU LINK DO GOOGLE
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7j23F16fXR8-9wwxiKKOrhziuB4xeqlfxIGlN6FzCe8OBGw0PsGu9wN0ribbleGhI9w/exec";
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('O arquivo é muito grande. O tamanho máximo é 5MB.');
+      return;
+    }
+
     setIsUploading(true);
+    setUploadError('');
+    setUploadSuccess(false);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Data = event.target.result.split(',')[1];
+        
+        try {
+          const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              filename: `${Date.now()}_${file.name}`,
+              mimeType: file.type,
+              base64: base64Data
+            })
+          });
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          const result = await response.json();
+          
+          if (result.status === 'success') {
+            onChange(result.url); 
+            setUploadSuccess(true);
+          } else {
+            throw new Error(result.message || 'Erro no upload');
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
+        } catch (error) {
+          console.error("Erro no envio para o Drive:", error);
+          setUploadError('Falha ao enviar o arquivo. Tente novamente.');
+        } finally {
+          setIsUploading(false);
         }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
-        
-        onChange(compressedBase64);
+      };
+      
+      reader.onerror = () => {
+        setUploadError('Erro ao ler o arquivo localmente.');
         setIsUploading(false);
       };
 
-      img.onerror = () => {
-         if(file.size > 2 * 1024 * 1024) {
-            alert("Para arquivos não-imagem (como PDF), o limite é de 2MB.");
-            setIsUploading(false);
-            return;
-         }
-         onChange(event.target.result);
-         setIsUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+
+    } catch (error) {
+      setUploadError('Erro inesperado no processamento do arquivo.');
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -298,10 +238,10 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
         <div className="flex items-center justify-between p-3 rounded-md bg-emerald-50 border border-emerald-200">
            <div className="flex items-center gap-2 text-emerald-700">
              <Check size={16} />
-             <span className="text-[10px] font-bold uppercase tracking-widest">Arquivo Anexado</span>
+             <span className="text-[10px] font-bold uppercase tracking-widest">Arquivo Enviado</span>
            </div>
            <button 
-             onClick={() => onChange('')} 
+             onClick={() => { onChange(''); setUploadSuccess(false); }} 
              className="text-[10px] font-bold text-rose-500 uppercase hover:underline"
            >
              Remover
@@ -315,12 +255,14 @@ const FileUploadField = ({ campo, value, onChange, st }) => {
           className="w-full h-11 border-dashed border-2 border-slate-300 text-slate-600 hover:bg-slate-50 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"
         >
           {isUploading ? (
-            <><Loader2 size={16} className="animate-spin text-blue-500" /> Processando...</>
+            <><Loader2 size={16} className="animate-spin text-blue-500" /> Enviando Arquivo...</>
           ) : (
-            <><Upload size={16} /> Selecionar Arquivo</>
+            <><Upload size={16} /> Selecionar Arquivo (Max. 5MB)</>
           )}
         </Button>
       )}
+      
+      {uploadError && <p className="text-[9px] font-bold text-rose-500 mt-1.5 uppercase tracking-widest">{uploadError}</p>}
     </div>
   );
 };
@@ -342,55 +284,9 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
     setSt({...st, ordem_categorias: currentOrder});
   };
 
-  const handleAddBanner = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
-        
-        const currentBanners = Array.isArray(st.banners) ? st.banners : [];
-        setSt({ 
-          ...st, 
-          banners: [...currentBanners, { id: Date.now().toString(), imagem: compressedBase64, link: '' }] 
-        });
-      };
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; 
-  };
-
   return (
-    <div className="space-y-6 pb-40 p-4 md:p-6 animate-in fade-in duration-700 w-full">
-      <div className="flex flex-col gap-4 bg-white p-5 rounded-lg border border-slate-100 shadow-sm sticky top-0 z-40">
+    <div className="space-y-6 pb-20 p-4 md:p-6 animate-in fade-in duration-700 w-full">
+      <div className="flex flex-col gap-4 bg-white p-5 rounded-lg border border-slate-100 shadow-sm sticky top-0 z-10">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800 uppercase tracking-tight leading-none">Edição Visual</h1>
@@ -434,8 +330,7 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
               <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
               <Input value={st.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-9 text-xs" />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Logo</label>
                 <div className="relative group w-16 h-16">
@@ -445,41 +340,16 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Tamanho da Logo</label>
-                <select 
-                  value={st.tamanho_logo || 'media'} 
-                  onChange={(e) => setSt({...st, tamanho_logo: e.target.value})}
-                  className="w-full h-9 border border-slate-200 rounded-md text-xs font-medium bg-slate-50 text-slate-700 px-2 outline-none focus:border-blue-500"
-                >
-                  <option value="pequena">Pequena</option>
-                  <option value="media">Média</option>
-                  <option value="grande">Grande</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <div className="space-y-1.5">
+              <div className="flex-1 space-y-2">
                 <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Cor Principal</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative w-9 h-9 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
                     <Input type="color" value={st.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
                   </div>
-                  <Input value={st.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-9 font-mono text-[10px] uppercase w-full" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest block">Cor do Topo</label>
-                <div className="flex gap-2 items-center">
-                  <div className="relative w-9 h-9 rounded-md overflow-hidden shadow-sm border border-slate-200 shrink-0">
-                    <Input type="color" value={st.cor_topo || '#ffffff'} onChange={(e) => setSt({...st, cor_topo: e.target.value})} className="absolute -inset-2 w-14 h-14 cursor-pointer appearance-none border-none p-0 bg-transparent" />
-                  </div>
-                  <Input value={st.cor_topo || '#ffffff'} onChange={(e) => setSt({...st, cor_topo: e.target.value})} className="h-9 font-mono text-[10px] uppercase w-full" />
+                  <Input value={st.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-9 font-mono text-[10px] uppercase" />
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -573,43 +443,31 @@ const ConfigSidebar = ({ st, setSt, handleSave, saved, handleImageUpload, copyVi
 
         <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-sm space-y-5">
           <h3 className="text-xs font-semibold uppercase text-slate-700 tracking-widest flex items-center gap-2 border-b border-slate-100 pb-3">
-            <ImageIcon size={16} className="text-purple-500" /> Banners (Carrossel)
+            <ImageIcon size={16} className="text-purple-500" /> Banner de Destaque
           </h3>
-          <div className="space-y-4">
-            
-            <p className="text-[10px] text-slate-600 font-medium bg-blue-50 p-3 rounded-md border border-blue-100 flex items-start gap-2">
-              <span className="text-blue-500 shrink-0 text-sm">💡</span>
-              <span>Para um visual perfeito e sem cortes na loja, recomendamos que suas imagens tenham o tamanho de <strong className="text-blue-700">1200 x 400 pixels</strong>.</span>
-            </p>
-
-            {(st.banners || []).map((banner, index) => (
-              <div key={banner.id || index} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-3 relative group/banner">
-                 <button onClick={() => {
-                    const newBanners = [...st.banners];
-                    newBanners.splice(index, 1);
-                    setSt({...st, banners: newBanners});
-                 }} className="absolute top-2 right-2 p-1.5 bg-white text-rose-500 border border-slate-200 rounded-md hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm z-10">
-                    <Trash2 size={14} />
-                 </button>
-                 <div className="aspect-[21/9] rounded-md overflow-hidden bg-slate-200 border border-slate-300 relative w-full flex items-center justify-center">
-                    <img src={banner.imagem} className="w-full h-full object-cover" />
-                 </div>
-                 <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest flex items-center gap-1.5"><LinkIcon size={12}/> Link do Banner</label>
-                    <Input value={banner.link || ''} onChange={(e) => {
-                       const newBanners = [...st.banners];
-                       newBanners[index].link = e.target.value;
-                       setSt({...st, banners: newBanners});
-                    }} placeholder="Ex: https://wa.me/5511999999999" className="h-9 text-xs bg-white" />
-                 </div>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                  <Button variant="outline" className="w-full h-9 rounded-md border-dashed border border-slate-300 font-semibold uppercase text-[10px] gap-2 hover:bg-slate-50">
+                    <Upload size={14}/> {st.banner_url ? "Trocar Banner" : "Subir Imagem"}
+                  </Button>
+                </div>
+                {st.banner_url && (
+                  <Button onClick={() => setSt({...st, banner_url: ''})} variant="destructive" className="h-9 w-9 rounded-md p-0 shadow-sm"><Trash2 size={14} /></Button>
+                )}
               </div>
-            ))}
-            <div className="relative">
-               <input type="file" accept="image/*" onChange={handleAddBanner} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-               <Button variant="outline" className="w-full h-10 rounded-md border-dashed border-2 border-slate-300 font-semibold uppercase text-[10px] gap-2 hover:bg-slate-50 text-slate-600">
-                 <Plus size={16}/> Adicionar Novo Banner
-               </Button>
             </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest flex items-center gap-1.5"><LinkIcon size={12}/> Link do Banner</label>
+              <Input value={st.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="Ex: https://wa.me/5511999999999" className="h-9 text-xs" />
+            </div>
+            {st.banner_url && (
+              <div className="mt-3 aspect-[21/9] rounded-md overflow-hidden border border-slate-200 bg-slate-50 shadow-sm relative">
+                <img src={st.banner_url} className="w-full h-full object-cover" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -721,18 +579,9 @@ export default function Catalogo({ isPublic = false }) {
     async function fetchData() {
       try {
         const { data: configData } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
-        if (configData) {
-          if (!configData.banners || configData.banners.length === 0) {
-            if (configData.banner_url) {
-              configData.banners = [{ id: 'legacy', imagem: configData.banner_url, link: configData.banner_link || '' }];
-            } else {
-              configData.banners = [];
-            }
-          }
-          setSt(configData);
-        }
+        if (configData) setSt(configData);
 
-        const { data: prodData } = await supabase.from('produtos').select('*').eq('status_online', true).is('arquivado', false).order('created_at', { ascending: false });
+        const { data: prodData } = await supabase.from('produtos').select('*').eq('status_online', true).order('created_at', { ascending: false });
         if (prodData) {
           setProdutos(prodData);
           const uniqueCats = [...new Set(prodData.map(p => p.categoria))];
@@ -853,42 +702,11 @@ export default function Catalogo({ isPublic = false }) {
 
   const handleImageUpload = (e, field) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
-        setSt({ ...st, [field]: compressedBase64 });
-      };
-    };
-    reader.readAsDataURL(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setSt({ ...st, [field]: reader.result });
+      reader.readAsDataURL(file);
+    }
   };
 
   const filtered = produtos
@@ -1076,20 +894,20 @@ export default function Catalogo({ isPublic = false }) {
               
               {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
-                 <div className="aspect-square rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group p-2 flex items-center justify-center">
+                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group">
                    {selectedProduct.destaque && (
                       <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                         <Star size={12} fill="currentColor" /> Destaque
                       </div>
                    )}
-                   <img key={activeImage} src={activeImage} className="w-full h-full object-contain animate-in fade-in duration-300" alt={selectedProduct.nome} />
+                   <img key={activeImage} src={activeImage} className="w-full h-full object-cover animate-in fade-in duration-300" alt={selectedProduct.nome} />
                  </div>
                  
                  {galleryImages.length > 1 && (
                    <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
                      {galleryImages.map((img, idx) => (
-                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-1 transition-all flex items-center justify-center ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}>
-                         <img src={img} className="w-full h-full object-contain rounded-md" />
+                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-0.5 transition-all ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}>
+                         <img src={img} className="w-full h-full object-cover rounded-md" />
                        </button>
                      ))}
                    </div>
@@ -1157,7 +975,7 @@ export default function Catalogo({ isPublic = false }) {
                     {atacadoData.nextRule ? (
                       <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                          <p className="text-[11px] font-semibold text-slate-600 mb-2">
-                           🔥 Adicione mais <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> e o valor cai para <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
+                            🔥 Adicione mais <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> e o valor cai para <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
                          </p>
                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1">
                             <div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
@@ -1264,7 +1082,7 @@ export default function Catalogo({ isPublic = false }) {
                 {/* --- NOVA BARRA DE COMPRA (Horizontal no Desktop, Fixa no Mobile) --- */}
                 <div className="fixed inset-x-0 bottom-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50 md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
                    <div className="flex flex-col max-w-6xl mx-auto">
-                     
+                      
                       {atacadoData && atacadoData.nextRule && (
                         <div className="md:hidden flex flex-col gap-1 mb-2 px-1">
                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
@@ -1316,13 +1134,13 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
+                      <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
                         {prod.destaque && (
                           <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                             <Star size={10} fill="currentColor" /> Destaque
                           </div>
                         )}
-                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" />
+                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       </div>
                       
                       <div className="flex flex-col flex-1 p-3 md:p-4">
@@ -1355,7 +1173,11 @@ export default function Catalogo({ isPublic = false }) {
 
         <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 w-full space-y-10 md:space-y-14">
           
-          <BannerCarousel banners={st?.banners} />
+          {st?.banner_url && (
+            <div onClick={() => st.banner_link && window.open(st.banner_link, '_blank')} className="relative h-[160px] sm:h-[220px] md:h-[350px] rounded-2xl md:rounded-[2rem] overflow-hidden bg-slate-900 shadow-sm cursor-pointer hover:opacity-95 transition-opacity border border-slate-200">
+                <img src={st.banner_url} className="w-full h-full object-cover" alt="Banner" />
+            </div>
+          )}
 
           {filtered.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -1375,13 +1197,13 @@ export default function Catalogo({ isPublic = false }) {
                   return (
                   <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
                     
-                    <div className="aspect-square bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center p-2">
+                    <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
                       {prod.destaque && (
                          <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                            <Star size={10} fill="currentColor" /> Destaque
                          </span>
                       )}
-                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
                     </div>
                     
                     <div className="flex flex-col flex-1 p-3 md:p-4">
@@ -1446,6 +1268,7 @@ export default function Catalogo({ isPublic = false }) {
     return renderCatalog();
   }
 
+  // --- VISÃO ADMINISTRATIVA: MODO SPLIT COM OPÇÃO DE OCULTAR ---
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#f8fafc] relative overflow-hidden">
       
