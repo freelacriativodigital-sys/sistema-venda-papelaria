@@ -22,7 +22,7 @@ const calcularDescontoAtacado = (precoAtacado, precoBase) => {
   return desconto.toFixed(0);
 };
 
-// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS EXTREMO (PESO MÍNIMO) ---
+// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS (EQUILÍBRIO PERFEITO NITIDEZ/PESO) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -32,9 +32,9 @@ const compressImageToBlob = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Redução drástica para 500px (perfeito para web/mobile sem pesar)
-        const MAX_WIDTH = 500; 
-        const MAX_HEIGHT = 500;
+        // Redução para 800px (Garante alta nitidez no mobile e desktop)
+        const MAX_WIDTH = 800; 
+        const MAX_HEIGHT = 800;
         let width = img.width;
         let height = img.height;
 
@@ -55,10 +55,10 @@ const compressImageToBlob = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Compressão máxima: formato WebP com 50% de qualidade (0.5)
+        // Compressão: formato WebP com 80% de qualidade (0.8) - Excelente qualidade visual e arquivo leve
         canvas.toBlob((blob) => {
           resolve(blob);
-        }, 'image/webp', 0.5);
+        }, 'image/webp', 0.8);
       };
     };
   });
@@ -510,7 +510,6 @@ export default function Produtos() {
                   <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 z-10">
                     <div className="bg-white text-slate-800 px-4 py-1.5 rounded-md font-semibold text-[10px] md:text-xs uppercase flex items-center gap-1.5 shadow-md"><Edit3 size={14} /> Editar</div>
                   </div>
-                  {/* --- BLINDAGEM DA TELA BRANCA APLICADA AQUI --- */}
                   <img src={prod.imagens?.[0] || `https://placehold.co/400x400/f8fafc/94a3b8?text=${(prod.nome || 'Produto').split(' ')[0]}`} alt={prod.nome || 'Produto'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 
@@ -833,20 +832,17 @@ export default function Produtos() {
                                 </div>
                               ))}
                               
-                              {/* --- UPLOAD DE FOTOS PARA O STORAGE DO SUPABASE (COMPRESSÃO MÁXIMA) --- */}
+                              {/* --- UPLOAD DE FOTOS PARA O STORAGE DO SUPABASE (COMPRESSÃO EQUILIBRADA) --- */}
                               <input type="file" ref={fileInputRef} onChange={async (e) => {
                                 const files = Array.from(e.target.files);
                                 setIsUploadingImages(true);
                                 
                                 for (const file of files) {
                                   try {
-                                    // 1. Usa a função com a nova redução extrema de 500px e 50% de qualidade
                                     const blob = await compressImageToBlob(file); 
                                     
-                                    // 2. Define o nome pro Storage
                                     const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
                                     
-                                    // 3. Faz o upload pro bucket 'produtos'
                                     const { data, error } = await supabase.storage
                                       .from('produtos')
                                       .upload(fileName, blob, { 
@@ -856,7 +852,6 @@ export default function Produtos() {
 
                                     if (error) throw error;
 
-                                    // 4. Pega a URL pública
                                     const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
                                     setEditingProduct(prev => ({
                                       ...prev, 
