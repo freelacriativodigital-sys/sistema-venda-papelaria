@@ -11,7 +11,7 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // --- CONSTANTES DO SISTEMA ---
-const LIMITE_PRODUTOS = 150;
+const LIMITE_PRODUTOS = 50; // Limite reduzido para 50 produtos
 
 // --- FUNÇÃO AUXILIAR DE FORMATAÇÃO E CÁLCULO DE DESCONTO ---
 const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -22,7 +22,7 @@ const calcularDescontoAtacado = (precoAtacado, precoBase) => {
   return desconto.toFixed(0);
 };
 
-// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS (GERA BLOB PARA STORAGE) ---
+// --- FUNÇÃO MÁGICA: COMPRESSOR DE IMAGENS EXTREMO (PESO MÍNIMO) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -32,8 +32,9 @@ const compressImageToBlob = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 600; 
-        const MAX_HEIGHT = 600;
+        // Redução drástica para 500px (perfeito para web/mobile sem pesar)
+        const MAX_WIDTH = 500; 
+        const MAX_HEIGHT = 500;
         let width = img.width;
         let height = img.height;
 
@@ -54,10 +55,10 @@ const compressImageToBlob = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Em vez de toDataURL (Base64), gera um Blob (Arquivo Leve)
+        // Compressão máxima: formato WebP com 50% de qualidade (0.5)
         canvas.toBlob((blob) => {
           resolve(blob);
-        }, 'image/webp', 0.6);
+        }, 'image/webp', 0.5);
       };
     };
   });
@@ -87,7 +88,7 @@ export default function Produtos() {
       const { data, error } = await supabase
         .from("produtos")
         .select("*")
-        .neq('arquivado', true) // O SEGREDO ESTÁ AQUI
+        .neq('arquivado', true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -156,7 +157,6 @@ export default function Produtos() {
     }
   });
 
-  // --- LIXEIRA INTELIGENTE: APENAS ATUALIZA O STATUS ---
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from("produtos").update({ arquivado: true }).eq("id", id);
@@ -191,7 +191,6 @@ export default function Produtos() {
     }
   });
 
-  // --- LIXEIRA INTELIGENTE EM MASSA ---
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from('produtos').update({ arquivado: true }).in('id', selectedIds);
@@ -369,16 +368,18 @@ export default function Produtos() {
     if (opcaoImgRef.current) opcaoImgRef.current.click();
   };
 
-  // --- UPLOAD IMAGEM DE VARIAÇÃO PARA O STORAGE ---
   const handleOpcaoImgChange = async (e) => {
     if (e.target.files && e.target.files[0] && uploadTarget) {
       const file = e.target.files[0];
-      const blob = await compressImageToBlob(file);
+      const blob = await compressImageToBlob(file); 
       const fileName = `variacao-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
       
       const { data, error } = await supabase.storage
         .from('produtos')
-        .upload(fileName, blob, { contentType: 'image/webp' });
+        .upload(fileName, blob, { 
+          contentType: 'image/webp',
+          upsert: true 
+        });
 
       if (error) {
         alert("Erro ao subir foto da variação: " + error.message);
@@ -830,26 +831,39 @@ export default function Produtos() {
                                 </div>
                               ))}
                               
-                              {/* --- UPLOAD DE FOTOS PARA O STORAGE DO SUPABASE --- */}
+                              {/* --- UPLOAD DE FOTOS PARA O STORAGE DO SUPABASE (COMPRESSÃO MÁXIMA) --- */}
                               <input type="file" ref={fileInputRef} onChange={async (e) => {
                                 const files = Array.from(e.target.files);
                                 setIsUploadingImages(true);
                                 
                                 for (const file of files) {
-                                  const blob = await compressImageToBlob(file);
-                                  const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-                                  
-                                  const { data, error } = await supabase.storage
-                                    .from('produtos')
-                                    .upload(fileName, blob, { contentType: 'image/webp' });
+                                  try {
+                                    // 1. Usa a função com a nova redução extrema de 500px e 50% de qualidade
+                                    const blob = await compressImageToBlob(file); 
+                                    
+                                    // 2. Define o nome pro Storage
+                                    const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                                    
+                                    // 3. Faz o upload pro bucket 'produtos'
+                                    const { data, error } = await supabase.storage
+                                      .from('produtos')
+                                      .upload(fileName, blob, { 
+                                        contentType: 'image/webp',
+                                        upsert: true 
+                                      });
 
-                                  if (error) {
-                                    alert("Erro ao fazer upload da imagem: " + error.message);
-                                    continue;
+                                    if (error) throw error;
+
+                                    // 4. Pega a URL pública
+                                    const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
+                                    setEditingProduct(prev => ({
+                                      ...prev, 
+                                      imagens: [...(prev.imagens || []), publicUrlData.publicUrl]
+                                    }));
+
+                                  } catch (err) {
+                                    alert("Erro ao subir imagem: " + err.message);
                                   }
-
-                                  const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
-                                  setEditingProduct(prev => ({...prev, imagens: [...(prev.imagens || []), publicUrlData.publicUrl]}));
                                 }
                                 setIsUploadingImages(false);
                               }} className="hidden" multiple accept="image/*" />
