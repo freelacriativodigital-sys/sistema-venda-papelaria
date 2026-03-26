@@ -396,7 +396,8 @@ export default function Produtos() {
   };
 
   const filteredProducts = produtos.filter(p => {
-    const matchSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const nomeSeguro = p.nome || '';
+    const matchSearch = nomeSeguro.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCategory = selectedCategory === 'Todas' || p.categoria === selectedCategory;
     return matchSearch && matchCategory;
   });
@@ -509,6 +510,7 @@ export default function Produtos() {
                   <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 z-10">
                     <div className="bg-white text-slate-800 px-4 py-1.5 rounded-md font-semibold text-[10px] md:text-xs uppercase flex items-center gap-1.5 shadow-md"><Edit3 size={14} /> Editar</div>
                   </div>
+                  {/* --- BLINDAGEM DA TELA BRANCA APLICADA AQUI --- */}
                   <img src={prod.imagens?.[0] || `https://placehold.co/400x400/f8fafc/94a3b8?text=${(prod.nome || 'Produto').split(' ')[0]}`} alt={prod.nome || 'Produto'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 
