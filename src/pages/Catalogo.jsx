@@ -80,43 +80,8 @@ const compressImageToBlob = (file) => {
 };
 
 // ============================================================
-// MÓDULO: EDITOR RESPONSIVO
-// SANFONA NO DESKTOP / BOTTOM SHEET NO MOBILE
-// ============================================================
-const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
-  const isOpen = openSection === id;
-  return (
-    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
-      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
-        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-          <Icon size={14} className="text-slate-400" /> {title}
-        </div>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      
-      <div className={`
-        transition-all duration-300 ease-in-out
-        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[80vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
-        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
-        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
-      `}>
-        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
-           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
-             <Icon size={16} className="text-blue-400" /> {title}
-           </div>
-           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
-        </div>
-        <div className="space-y-4 pb-6 lg:pb-0">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================
 // MÓDULO: TOPO DO SITE
-// Logo maior + busca por ícone + categorias embaixo
+// Desktop no estilo site / Mobile no estilo do print
 // ============================================================
 const HeaderSite = ({
   st,
@@ -129,8 +94,7 @@ const HeaderSite = ({
   goHome,
   view,
 }) => {
-  const [showSearchDesktop, setShowSearchDesktop] = useState(false);
-  const [showSearchMobile, setShowSearchMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const categoriasVisiveis = (categorias || []).filter((c) => c !== "Sem Categoria");
 
@@ -138,186 +102,99 @@ const HeaderSite = ({
     String(selectedCategory || "").toLowerCase().trim() ===
     String(cat || "").toLowerCase().trim();
 
-  const toggleDesktopSearch = () => {
-    setShowSearchDesktop((prev) => !prev);
-  };
-
-  const toggleMobileSearch = () => {
-    setShowSearchMobile((prev) => !prev);
-  };
-
   const handleCategoryClick = (cat) => {
     changeCategory(cat);
+    setMobileMenuOpen(false);
   };
 
   return (
-    <div className="w-full relative z-40 pt-3 md:pt-5">
-      <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8">
-        <div className="bg-white/95 backdrop-blur rounded-[28px] md:rounded-full border border-slate-200/80 shadow-[0_12px_40px_rgba(15,23,42,0.08)] px-4 md:px-8 py-4 md:py-5">
-          
-          {/* =========================
-              DESKTOP
-          ========================= */}
-          <div className="hidden md:flex items-center justify-between gap-6">
+    <>
+      {/* =========================
+          DESKTOP
+      ========================= */}
+      <div className="hidden md:block w-full relative z-40">
+        {/* FAIXA ROSA SUPERIOR */}
+        <div
+          className="w-full border-b border-black/5"
+          style={{ backgroundColor: st?.cor_principal || "#e78db8" }}
+        >
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[86px] flex items-center justify-between gap-8">
             {/* LOGO */}
-            <div
+            <button
+              type="button"
               onClick={goHome}
-              className="flex items-center shrink-0 cursor-pointer group"
+              className="shrink-0 flex items-center justify-center"
             >
-              <div className="h-14 lg:h-16 flex items-center justify-center transition-transform group-hover:scale-105">
+              <div className="h-[68px] flex items-center justify-center">
                 {st?.logo_url ? (
                   <img
                     src={st.logo_url}
-                    className="h-full w-auto object-contain"
                     alt="Logo"
+                    className="h-full w-auto object-contain"
                   />
                 ) : (
-                  <div
-                    className="w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center border"
-                    style={{
-                      borderColor: `${st?.cor_principal || "#f472b6"}33`,
-                    }}
-                  >
+                  <div className="w-16 h-16 rounded-full bg-white/80 border border-white/70 flex items-center justify-center">
                     <ShoppingBag
-                      size={26}
-                      style={{ color: st?.cor_principal || "#f472b6" }}
+                      size={28}
+                      style={{ color: st?.cor_principal || "#e78db8" }}
                     />
                   </div>
                 )}
               </div>
-            </div>
+            </button>
 
-            {/* ESPAÇO CENTRAL */}
-            <div className="flex-1" />
-
-            {/* AÇÃO DESKTOP */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={toggleDesktopSearch}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-slate-200 transition-all"
-                aria-label="Buscar"
-              >
-                <Search size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* BUSCA DESKTOP */}
-          {showSearchDesktop && (
-            <div className="hidden md:block mt-4 pt-4 border-t border-slate-100">
-              <div className="max-w-3xl ml-auto relative group">
-                <input
-                  type="text"
-                  placeholder="O que você procura hoje?"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-12 bg-slate-50 rounded-full pl-12 pr-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 transition-all outline-none text-[15px] text-slate-700 placeholder:text-slate-400 shadow-sm"
-                />
-                <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors"
-                  size={18}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSearchDesktop(false)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-xl leading-none"
-                  aria-label="Fechar busca"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* =========================
-              MOBILE
-          ========================= */}
-          <div className="md:hidden flex items-center justify-between gap-4">
-            {/* LOGO */}
-            <div
-              onClick={goHome}
-              className="flex items-center shrink-0 cursor-pointer group"
-            >
-              <div className="h-12 flex items-center justify-center transition-transform group-hover:scale-105">
-                {st?.logo_url ? (
-                  <img
-                    src={st.logo_url}
-                    className="h-full w-auto object-contain"
-                    alt="Logo"
-                  />
-                ) : (
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center border"
-                    style={{
-                      borderColor: `${st?.cor_principal || "#f472b6"}33`,
-                    }}
-                  >
-                    <ShoppingBag
-                      size={22}
-                      style={{ color: st?.cor_principal || "#f472b6" }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* AÇÃO MOBILE */}
-            <div className="flex items-center shrink-0">
-              <button
-                type="button"
-                onClick={toggleMobileSearch}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 bg-slate-50 border border-slate-200"
-                aria-label="Buscar"
-              >
-                <Search size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* BUSCA MOBILE */}
-          {showSearchMobile && (
-            <div className="md:hidden mt-3">
+            {/* BUSCA */}
+            <div className="flex-1 max-w-[420px] lg:max-w-[520px]">
               <div className="relative group">
                 <input
                   type="text"
                   placeholder="O que você procura hoje?"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-11 bg-slate-50 rounded-full pl-12 pr-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400 shadow-sm"
+                  className="w-full h-[38px] rounded-full bg-white/90 border border-slate-200 pl-4 pr-11 text-[13px] text-slate-700 placeholder:text-slate-400 shadow-sm outline-none focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-white/30 transition-all"
                 />
                 <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors"
-                  size={18}
+                  size={16}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowSearchMobile(false)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-xl leading-none"
-                  aria-label="Fechar busca"
-                >
-                  ×
-                </button>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* CATEGORIAS EMBAIXO */}
-      {view !== "detalhe" && (
-        <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8 mt-3 md:mt-4">
-          <div className="border-b border-slate-200/80">
-            <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-3">
+            {/* LADO DIREITO VAZIO PARA MANTER PROPORÇÃO */}
+            <div className="w-[140px] shrink-0" />
+          </div>
+        </div>
+
+        {/* MENU DE CATEGORIAS DESKTOP */}
+        {view !== "detalhe" && (
+          <div className="w-full bg-white border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[42px] flex items-center gap-7 overflow-x-auto no-scrollbar">
               <button
+                type="button"
                 onClick={() => handleCategoryClick("Todas")}
-                className={`shrink-0 px-3 md:px-4 py-1.5 md:py-2 rounded-full text-[12px] md:text-[13px] font-semibold transition-all ${
+                className={`shrink-0 h-8 px-3 rounded-md border text-[13px] font-medium flex items-center gap-2 transition-all ${
                   selectedCategory === "Todas"
-                    ? "text-slate-900 bg-white border border-slate-200 shadow-sm"
-                    : "text-slate-500 border border-transparent hover:text-slate-800 hover:bg-white/70"
+                    ? "bg-slate-50 border-slate-300 text-slate-800"
+                    : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                Todas
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="4" y1="7" x2="20" y2="7"></line>
+                  <line x1="4" y1="12" x2="20" y2="12"></line>
+                  <line x1="4" y1="17" x2="20" y2="17"></line>
+                </svg>
+                <span>Todas as Categorias</span>
+                <ChevronDown size={14} />
               </button>
 
               {categoriasVisiveis.map((cat) => {
@@ -326,11 +203,12 @@ const HeaderSite = ({
                 return (
                   <button
                     key={cat}
+                    type="button"
                     onClick={() => handleCategoryClick(cat)}
-                    className={`shrink-0 px-3 md:px-4 py-1.5 md:py-2 rounded-full text-[12px] md:text-[13px] font-semibold transition-all ${
+                    className={`shrink-0 text-[13px] font-medium transition-colors ${
                       isSelected
-                        ? "text-slate-900 bg-white border border-slate-200 shadow-sm"
-                        : "text-slate-500 border border-transparent hover:text-slate-800 hover:bg-white/70"
+                        ? "text-slate-900"
+                        : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     {cat}
@@ -339,39 +217,190 @@ const HeaderSite = ({
               })}
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        )}
+      </div>
 
-// ============================================================
-// MÓDULO: FAIXA DE BENEFÍCIOS
-// ============================================================
-const BenefitsBar = ({ st }) => {
-  if (!st?.mostrar_beneficios) return null;
-  return (
-    <div className="bg-white border-b border-slate-100 hidden md:block transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between gap-4">
-        {[1, 2, 3].map(num => (
-           <div key={num} className="flex items-center gap-3 text-slate-600">
-              <div className="bg-slate-50 p-2 rounded-full border border-slate-100">
-                {st[`beneficio_${num}_icone`] ? (
-                   <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain" alt="" />
+      {/* =========================
+          MOBILE
+      ========================= */}
+      <div className="md:hidden w-full relative z-40">
+        {/* TOPO ROSA MOBILE */}
+        <div
+          className="w-full px-4 pt-3 pb-4"
+          style={{ backgroundColor: st?.cor_principal || "#e78db8" }}
+        >
+          <div className="relative flex items-center justify-center min-h-[64px]">
+            {/* MENU HAMBÚRGUER */}
+            {view !== "detalhe" && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-white/90"
+                aria-label="Abrir categorias"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </button>
+            )}
+
+            {/* LOGO CENTRAL */}
+            <button
+              type="button"
+              onClick={goHome}
+              className="flex items-center justify-center"
+            >
+              <div className="h-[58px] flex items-center justify-center">
+                {st?.logo_url ? (
+                  <img
+                    src={st.logo_url}
+                    alt="Logo"
+                    className="h-full w-auto object-contain"
+                  />
                 ) : (
-                   num === 1 ? <Truck size={18} className="text-rose-500" /> : 
-                   num === 2 ? <CreditCard size={18} className="text-blue-500" /> : 
-                   <ShieldCheck size={18} className="text-emerald-500" />
+                  <div className="w-14 h-14 rounded-full bg-white/85 border border-white/70 flex items-center justify-center">
+                    <ShoppingBag
+                      size={22}
+                      style={{ color: st?.cor_principal || "#e78db8" }}
+                    />
+                  </div>
                 )}
               </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-800 leading-none mb-1">{st[`beneficio_${num}_titulo`]}</p>
-                <p className="text-[9px] font-medium text-slate-500">{st[`beneficio_${num}_desc`]}</p>
-              </div>
-           </div>
-        ))}
+            </button>
+          </div>
+        </div>
+
+        {/* BUSCA MOBILE */}
+        <div className="bg-white px-4 py-3 border-b border-slate-200">
+          <div className="relative group">
+            <input
+              type="text"
+              placeholder="O que você está procurando?"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-11 rounded-xl bg-slate-100 border border-slate-200 pl-12 pr-4 text-[14px] text-slate-700 placeholder:text-slate-500 outline-none focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 transition-all"
+            />
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* MENU LATERAL MOBILE */}
+      {mobileMenuOpen && view !== "detalhe" && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 bg-black/30 z-[120]"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          <div className="md:hidden fixed top-0 left-0 h-full w-[86%] max-w-[320px] bg-white z-[130] shadow-2xl flex flex-col">
+            {/* TOPO MENU */}
+            <div className="flex items-center justify-between px-4 pt-5 pb-4 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={goHome}
+                className="flex items-center justify-center"
+              >
+                <div className="h-10 flex items-center justify-center">
+                  {st?.logo_url ? (
+                    <img
+                      src={st.logo_url}
+                      alt="Logo"
+                      className="h-full w-auto object-contain"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <ShoppingBag
+                        size={18}
+                        style={{ color: st?.cor_principal || "#e78db8" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+                aria-label="Fechar menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* TÍTULO */}
+            <div className="px-4 pt-4 pb-3">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-slate-400">
+                Categorias
+              </p>
+            </div>
+
+            {/* LISTA */}
+            <div className="px-4 pb-6 flex flex-col gap-1 overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => handleCategoryClick("Todas")}
+                className={`w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium transition-all flex items-center gap-3 ${
+                  selectedCategory === "Todas"
+                    ? "bg-rose-50 text-pink-400"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span
+                  className={`w-1 h-6 rounded-full ${
+                    selectedCategory === "Todas" ? "bg-pink-300" : "bg-transparent"
+                  }`}
+                />
+                <span>🛍️ Todos os Produtos</span>
+              </button>
+
+              {categoriasVisiveis.map((cat) => {
+                const isSelected = isCategoriaSelecionada(cat);
+
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleCategoryClick(cat)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium transition-all flex items-center justify-between ${
+                      isSelected
+                        ? "bg-rose-50 text-pink-400"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-1 h-6 rounded-full ${
+                          isSelected ? "bg-pink-300" : "bg-transparent"
+                        }`}
+                      />
+                      <span>{cat}</span>
+                    </div>
+                    <span className="text-slate-300">›</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 };
 
