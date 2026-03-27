@@ -80,7 +80,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           <img src={st.logoUrl} alt="Logo" className="max-h-12 w-auto object-contain drop-shadow-sm" />
         ) : (
           <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
-            {st.nomeLoja || "Painel de Gestão"}
+            {st.nomeLoja || "Portal Criarte"}
           </span>
         )}
       </div>
@@ -240,7 +240,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
 export default function App() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [st, setSt] = useState({ nomeLoja: 'Minha Loja', corPrincipal: '#33BEE8', logoUrl: '' });
+  const [st, setSt] = useState({ nomeLoja: 'Portal Criarte', corPrincipal: '#33BEE8', logoUrl: '' });
 
   useEffect(() => {
     const verificarSessao = async () => {
@@ -292,7 +292,7 @@ export default function App() {
         const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (data && !error) {
           setSt({
-            nomeLoja: data.nome_loja || 'Minha Loja',
+            nomeLoja: data.nome_loja || 'Portal Criarte',
             corPrincipal: data.cor_orcamento || '#33BEE8',
             logoUrl: data.logo_url || ''
           });

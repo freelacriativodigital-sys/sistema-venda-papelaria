@@ -35,7 +35,7 @@ export default function Orcamentos() {
   const [selecoesVariacao, setSelecoesVariacao] = useState({});
 
   const [orcamentoAprovado, setOrcamentoAprovado] = useState(null);
-  const [modalAprovacaoMult, setModalAprovacaoMult] = useState(null); // Para aprovar orçamentos com múltiplas opções
+  const [modalAprovacaoMult, setModalAprovacaoMult] = useState(null); 
   const navigate = useNavigate();
 
   const printRef = useRef();
@@ -63,7 +63,6 @@ export default function Orcamentos() {
   const corBase = config?.cor_orcamento || '#0f172a';
   const corNomeEmpresa = config?.cor_nome_empresa || corBase;
 
-  // --- FUNÇÕES DE GERENCIAMENTO DE OPÇÕES (ABAS) ---
   const opcaoAtual = opcoes.find(o => o.id === abaAtiva) || opcoes[0];
 
   const adicionarOpcao = () => {
@@ -87,7 +86,6 @@ export default function Orcamentos() {
     setOpcoes(opcoes.map(o => o.id === abaAtiva ? { ...o, desconto: valor } : o));
   };
 
-  // --- FUNÇÕES DE ITENS DIRECIONADAS PARA A ABA ATIVA ---
   const atualizarItensDaAba = (novosItens) => {
     setOpcoes(opcoes.map(o => o.id === abaAtiva ? { ...o, itens: novosItens } : o));
   };
@@ -200,15 +198,14 @@ export default function Orcamentos() {
       await supabase.from('clientes').insert([{ nome: clienteAtual.nome, whatsapp: clienteAtual.telefone }]);
     }
 
-    // Calcula total baseando-se na primeira opção (para os cards de listagem continuarem funcionando)
     const subtotalPrimeira = opcoes[0].itens.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
     const totalPrimeira = Math.max(0, subtotalPrimeira - (opcoes[0].desconto || 0));
 
     const novoOrcamento = {
       cliente_nome: clienteAtual.nome,
       cliente_telefone: clienteAtual.telefone,
-      itens: opcoes[0].itens, // Fallback para sistemas antigos
-      opcoes: opcoes, // Nova estrutura de múltiplas opções
+      itens: opcoes[0].itens, 
+      opcoes: opcoes, 
       total: totalPrimeira,
       entrada_valor: (totalPrimeira * termo.entrada_percentual) / 100,
       validade_dias: termo.validade,
@@ -261,7 +258,6 @@ export default function Orcamentos() {
       filename:     nomeArquivo,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, logging: false },
-      // Deixamos a altura da página livre para gerar múltiplas folhas se necessário
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -281,7 +277,6 @@ export default function Orcamentos() {
     setView('lista');
   };
 
-  // --- LÓGICA DE APROVAÇÃO COM MÚLTIPLAS OPÇÕES ---
   const iniciarAprovacao = (orc) => {
     const orcOpcoes = orc.opcoes && orc.opcoes.length > 0 
       ? orc.opcoes 

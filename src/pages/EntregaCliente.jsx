@@ -123,7 +123,7 @@ export default function EntregaCliente() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-6">
             <div className="flex-1">
               <span className="text-[8px] md:text-[9px] font-bold text-indigo-300 uppercase tracking-widest block mb-0.5 md:mb-1">
-                FEITO COM CARINHO - CRIARTE PERSONALIZADOS
+                FEITO COM CARINHO - PORTAL CRIARTE
               </span>
               <h2 className="text-sm md:text-xl font-black text-white uppercase tracking-tight mb-1 md:mb-2">
                 MUITO OBRIGADO PELA CONFIANÇA!
