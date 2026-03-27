@@ -184,6 +184,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
   const isBriefingClient = location.pathname.startsWith('/briefing/');
   const isEntregaPortal = location.pathname.startsWith('/entrega/');
+  const isBio = location.pathname === '/bio' || location.pathname === '/minhabio'; 
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
@@ -192,7 +193,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const BioPage = Pages["minhabio"];
   const EntregaPage = Pages["entrega/:driveFolderId"];
 
-  if (!isVitrine && !isBriefingClient && !isEntregaPortal && !isAuthorized) {
+  if (!isVitrine && !isBriefingClient && !isEntregaPortal && !isBio && !isAuthorized) {
     return <Login onLogin={onLogin} />;
   }
 
