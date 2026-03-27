@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- COMPRESSOR DE IMAGENS (800px / 80% WebP) ---
+// --- COMPRESSOR DE IMAGENS ATUALIZADO (1200px para Banners Full-Width perfeitos / 80% WebP) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -22,8 +22,8 @@ const compressImageToBlob = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
+        const MAX_WIDTH = 1200; 
+        const MAX_HEIGHT = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -61,14 +61,14 @@ const AccordionItem = ({ title, icon: Icon, isOpen, onClick, children }) => (
   </div>
 );
 
-// --- HEADER DA VITRINE ---
+// --- HEADER DA VITRINE (LOGO LIMPA SEM BORDA) ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
   <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
     <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
       <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start">
-        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-slate-100 overflow-hidden flex items-center justify-center bg-white shadow-sm transition-transform group-hover:scale-105" style={{ borderColor: st?.cor_principal }}>
-          {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+        <div className="h-14 md:h-16 flex items-center justify-center transition-transform group-hover:scale-105">
+          {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
         </div>
       </div>
       <div className="flex-1 w-full max-w-4xl relative group">
@@ -402,7 +402,19 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
+  const handleQuantidadeChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '');
+    if (val === '') { setQuantidade(''); } else { setQuantidade(parseInt(val)); }
+  };
+
+  const handleQuantidadeBlur = () => {
+    const minQtd = selectedProduct?.qtd_minima || 1;
+    if (!quantidade || quantidade < minQtd) setQuantidade(minQtd);
+  };
+
   const renderCatalog = () => {
+    const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
+
     if (view === 'detalhe' && selectedProduct) {
       let baseProductPrice = selectedProduct.preco_promocional > 0 ? selectedProduct.preco_promocional : selectedProduct.preco;
       let currentPrice = baseProductPrice;
@@ -509,7 +521,7 @@ export default function Catalogo({ isPublic = false }) {
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
               {/* ESQUERDA */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
-                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group">
+                 <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
                    {selectedProduct.destaque && (
                       <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
                         <Star size={12} fill="currentColor" /> Destaque
@@ -606,7 +618,7 @@ export default function Catalogo({ isPublic = false }) {
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
                           <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
-                            <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                            <button onClick={() => setQuantidade(prev => Math.max(selectedProduct?.qtd_minima || 1, prev - 1))} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
                             <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
                             <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
                           </div>
@@ -629,7 +641,7 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
+                      <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
                         {prod.destaque && <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</div>}
                         <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       </div>
@@ -652,13 +664,17 @@ export default function Catalogo({ isPublic = false }) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
         <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
+        
+        {/* BANNER FULL WIDTH - Fora do container para ir de ponta a ponta */}
+        {view === 'grid' && st?.banner_url && (
+          <div className="w-full cursor-pointer hover:opacity-95 transition-opacity bg-slate-900" onClick={() => st.banner_link && window.open(st.banner_link, '_blank')}>
+              <img src={st.banner_url} className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" alt="Banner Principal" />
+          </div>
+        )}
+
         <BenefitsBar st={st} />
         <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 w-full space-y-10 md:space-y-14">
-          {st?.banner_url && (
-            <div onClick={() => st.banner_link && window.open(st.banner_link, '_blank')} className="relative h-[160px] sm:h-[220px] md:h-[350px] rounded-2xl md:rounded-[2rem] overflow-hidden bg-slate-900 shadow-sm cursor-pointer hover:opacity-95 transition-opacity border border-slate-200">
-                <img src={st.banner_url} className="w-full h-full object-cover" alt="Banner" />
-            </div>
-          )}
+          
           {filtered.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
                <ShoppingBag size={40} className="mx-auto text-slate-200 mb-4" />
@@ -672,7 +688,7 @@ export default function Catalogo({ isPublic = false }) {
                   const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
                   return (
                   <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                    <div className="aspect-[4/5] bg-slate-50 border-b border-slate-100 overflow-hidden relative">
+                    <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
                       {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
                       <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
                     </div>
@@ -731,7 +747,7 @@ export default function Catalogo({ isPublic = false }) {
                   <Input value={st?.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Central</label>
+                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Centralizada</label>
                   <div className="flex gap-2">
                     <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative">
                        {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
@@ -748,6 +764,16 @@ export default function Catalogo({ isPublic = false }) {
                     <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 font-mono text-[10px] uppercase bg-slate-800 border-slate-700 text-white" />
                   </div>
                 </div>
+                
+                {/* NOVO CAMPO: FORMATO DAS FOTOS */}
+                <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
+                  <div className="flex gap-2">
+                    <button onClick={() => setSt({...st, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quadrado (1:1)</button>
+                    <button onClick={() => setSt({...st, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
+                  </div>
+                </div>
+
               </div>
            </AccordionItem>
 
