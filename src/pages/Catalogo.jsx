@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, Tags, Image as ImageIcon, Globe } from "lucide-react";
+import { 
+  ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, 
+  ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, 
+  Tags, Image as ImageIcon, Globe, Package, Box, Layers, Sparkles 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
-// --- IMPORTANDO OS SEUS NOVOS COMPONENTES ---
-import { deletePhysicalFile } from '../components/Catalogo/catalogoUtils';
+// --- IMPORTANDO OS SEUS NOVOS COMPONENTES (Cérebro e Visual) ---
+import { deletePhysicalFile, compressImageToBlob } from '../components/Catalogo/catalogoUtils';
 import { HeaderSite } from '../components/Catalogo/HeaderSite';
 import BenefitsBar from '../components/Catalogo/BenefitsBar';
 import FooterSite from '../components/Catalogo/FooterSite';
@@ -170,6 +174,35 @@ export default function Catalogo({ isPublic = false }) {
     alert("Link copiado!");
   };
 
+  const handleImageUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploadingGlobal(true);
+    try {
+      if (st[field]) await deletePhysicalFile(st[field]);
+      const blob = await compressImageToBlob(file);
+      const fileName = `catalogo-${field}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
+      if (error) throw error;
+      const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
+      setSt(prev => ({ ...prev, [field]: publicUrlData.publicUrl }));
+    } catch (err) {
+      alert("Erro ao subir imagem: " + err.message);
+    } finally {
+      setIsUploadingGlobal(false);
+    }
+  };
+
+  const removeImageAndStorage = async (field) => {
+    const currentUrl = st[field];
+    if (currentUrl) {
+      setIsUploadingGlobal(true);
+      await deletePhysicalFile(currentUrl);
+      setSt(prev => ({ ...prev, [field]: '' }));
+      setIsUploadingGlobal(false);
+    }
+  };
+
   const filtered = produtos
     .filter(p => {
       const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -231,10 +264,17 @@ export default function Catalogo({ isPublic = false }) {
        const textoVars = Object.entries(item.selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
        
        let textoPersonalizado = '';
+       let textoPersonalizadoDb = '';
+       
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
              const campo = item.produto.campos_personalizados?.find(c => c.id === k);
              return `▪️ ${campo?.titulo || k}: ${v}`;
+          }).join('\n');
+          
+          textoPersonalizadoDb = 'Personalização:\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
+            const campo = item.produto.campos_personalizados?.find(c => c.id === k);
+            return `- ${campo?.titulo || k}: ${v}`;
           }).join('\n');
        }
 
@@ -265,6 +305,7 @@ export default function Catalogo({ isPublic = false }) {
   };
 
   const renderCatalog = () => {
+    // --- ESTA É A VARIÁVEL QUE FALTAVA ---
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
