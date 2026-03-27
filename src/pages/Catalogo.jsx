@@ -6,12 +6,11 @@ import {
   Loader2, Sparkles, Layers, Box, Package,
   Truck, ShieldCheck, CreditCard, Star,
   Save, Palette, Globe, Image as ImageIcon, 
-  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate, ShoppingCart
+  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
-import { AnimatePresence, motion } from "framer-motion";
 
 // --- COMPRESSOR DE IMAGENS (1200px para Banners Full-Width / 80% WebP) ---
 const compressImageToBlob = (file) => {
@@ -226,10 +225,6 @@ export default function Catalogo({ isPublic = false }) {
 
   const [openSection, setOpenSection] = useState('');
   
-  // --- ESTADOS DO CARRINHO ---
-  const [carrinho, setCarrinho] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
   const imageRef = useRef(null);
 
   useEffect(() => {
@@ -434,56 +429,6 @@ export default function Catalogo({ isPublic = false }) {
      setQuantidade(prev => Math.max(minQtd, prev - 1));
   };
 
-  // --- FINALIZAR PEDIDO COMPLETO ---
-  const finalizarPedido = () => {
-    if (carrinho.length === 0) return;
-
-    const num = st?.whatsapp?.replace(/\D/g, '');
-    let dbDesc = '';
-    let zapMsg = 'Olá! Gostaria de fazer o seguinte pedido pelo catálogo:\n\n';
-    let totalGeral = 0;
-
-    carrinho.forEach((item) => {
-       const textoVars = Object.entries(item.selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
-       
-       let textoPersonalizado = '';
-       if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
-          textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
-             const campo = item.produto.campos_personalizados?.find(c => c.id === k);
-             return `▪️ ${campo?.titulo || k}: ${v}`;
-          }).join('\n');
-       }
-
-       const itemTotal = item.precoTotal;
-       totalGeral += itemTotal;
-
-       const descItem = `🛍️ *${item.produto.nome}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
-       
-       dbDesc += descItem;
-       zapMsg += descItem;
-    });
-
-    dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
-    zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
-
-    // Envia o pedido consolidado para a aba "Site/Catálogo" silenciosamente
-    supabase.from('pedidos').insert([{
-       title: `Catálogo: Pedido de ${carrinho.length} item(s)`,
-       description: dbDesc,
-       service_value: totalGeral,
-       status: 'solicitacao',
-       priority: 'alta',
-       category: 'Catálogo'
-    }]).then(() => {}).catch(err => console.error(err));
-
-    // Redireciona o cliente para o WhatsApp com todos os itens listados
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(zapMsg)}`, '_blank');
-    
-    // Limpa o carrinho após finalizar
-    setCarrinho([]); 
-    setIsCartOpen(false);
-  };
-
   const renderCatalog = () => {
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
@@ -532,8 +477,8 @@ export default function Catalogo({ isPublic = false }) {
       const descontoPercent = calcularDesconto(selectedProduct.preco, selectedProduct.preco_promocional);
       const relacionados = produtos.filter(p => p.categoria === selectedProduct.categoria && p.id !== selectedProduct.id).slice(0, 4);
 
-      // --- ADICIONAR ITEM AO CARRINHO E CONTINUAR ---
-      const adicionarAoCarrinho = () => {
+      // --- LÓGICA ATUALIZADA: INTEGRAÇÃO CATÁLOGO -> PEDIDOS ---
+      const enviarZap = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
           const camposFaltando = selectedProduct.campos_personalizados.filter(
             campo => campo.obrigatorio && (!respostasPersonalizadas[campo.id] || respostasPersonalizadas[campo.id].trim() === '')
@@ -544,20 +489,32 @@ export default function Catalogo({ isPublic = false }) {
           }
         }
 
-        const novoItem = {
-          id_carrinho: Date.now() + Math.random(),
-          produto: selectedProduct,
-          quantidade: qtdSafe,
-          unitPriceFinal,
-          precoTotal,
-          wholesaleApplied,
-          selecoes,
-          respostasPersonalizadas,
-          activeImage
-        };
+        const num = st?.whatsapp?.replace(/\D/g, '');
+        const textoVars = Object.entries(selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
+        
+        let textoPersonalizado = '';
+        if (selectedProduct.campos_personalizados?.length > 0) {
+          textoPersonalizado = '\n\n*📝 Personalização:*\n' + selectedProduct.campos_personalizados.map(campo => {
+            return `▪️ *${campo.titulo}:* ${respostasPersonalizadas[campo.id] || 'Não preenchido'}`;
+          }).join('\n');
+        }
 
-        setCarrinho(prev => [...prev, novoItem]);
-        setIsCartOpen(true); // Abre o carrinho para ele ver o que adicionou
+        const descBanco = `*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n${textoVars ? `\n*Variações:*\n${textoVars}` : ''}${textoPersonalizado}`;
+
+        // Envia silenciosamente o pedido para o banco com status 'solicitacao' (Gera a notificação no painel)
+        // Isso é feito SEM o "await" para evitar que o navegador bloqueie o redirecionamento do WhatsApp!
+        supabase.from('pedidos').insert([{
+           title: `Catálogo: ${selectedProduct.nome}`,
+           description: descBanco,
+           service_value: precoTotal,
+           status: 'solicitacao',
+           priority: 'alta', // Marca como alta prioridade para o admin ver rápido
+           category: selectedProduct.categoria || 'Catálogo'
+        }]).then(() => {}).catch(err => console.error("Erro ao registrar no banco:", err));
+
+        // Envia o cliente direto para o WhatsApp
+        const msg = `Olá! Gostaria de encomendar este produto:\n\n🛍️ *${selectedProduct.nome}*\n${textoVars}${textoPersonalizado}\n\n*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n*Total:* R$ ${precoTotal.toFixed(2)}`;
+        window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
       };
 
       const variacoesJSX = selectedProduct.variacoes?.ativa && selectedProduct.variacoes?.atributos ? (
@@ -586,10 +543,9 @@ export default function Catalogo({ isPublic = false }) {
       ) : null;
 
       return (
-        <div className="min-h-screen bg-white flex flex-col relative">
+        <div className="min-h-screen bg-white flex flex-col">
           <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
           <BenefitsBar st={st} />
-          
           <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 pb-40 md:pb-10">
             <button onClick={voltarParaGrid} className="flex items-center gap-1.5 text-slate-500 font-bold text-xs hover:text-slate-900 transition-all mb-6">
               <ChevronLeft size={16} /> Voltar para loja
@@ -689,12 +645,9 @@ export default function Catalogo({ isPublic = false }) {
                     <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
                   </div>
                 )}
-                
-                {/* BARRA INFERIOR COM O NOVO BOTÃO DE ADICIONAR AO CARRINHO */}
                 <div className="fixed inset-x-0 bottom-[64px] bg-white p-4 pb-4 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-[100] md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
                    <div className="flex flex-col max-w-6xl mx-auto">
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
-                        
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
                           <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
                             <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
@@ -702,22 +655,16 @@ export default function Catalogo({ isPublic = false }) {
                             <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
                           </div>
                           <div className="text-right">
-                            <p className="text-[9px] md:text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-0.5">Subtotal</p>
+                            <p className="text-[9px] md:text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-0.5">Total a Pagar</p>
                             <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
                           </div>
                         </div>
-                        
-                        <div className="w-full md:flex-1 flex flex-col gap-1.5">
-                          <Button onClick={adicionarAoCarrinho} className="w-full h-12 md:h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
-                            <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
-                          </Button>
-                          <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
-                        </div>
-
+                        <Button onClick={enviarZap} className="w-full md:flex-1 h-12 md:h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
+                          <MessageCircle size={20} fill="currentColor" /> Encomendar pelo WhatsApp
+                        </Button>
                       </div>
                    </div>
                 </div>
-
               </div>
             </div>
             {relacionados.length > 0 && (
@@ -742,80 +689,6 @@ export default function Catalogo({ isPublic = false }) {
             )}
           </div>
           <FooterSite st={st} />
-
-          {/* --- GAVETA DO CARRINHO --- */}
-          <AnimatePresence>
-            {isCartOpen && (
-              <>
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
-                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
-                  <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><ShoppingCart size={20}/></div>
-                      <div>
-                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {carrinho.length === 0 ? (
-                       <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
-                          <ShoppingBag size={48} className="mb-4 text-slate-200"/>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
-                          <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
-                       </div>
-                    ) : (
-                       carrinho.map((item) => (
-                         <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
-                            <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
-                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
-                               <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex flex-col justify-center flex-1">
-                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
-                               <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                               <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
-                            </div>
-                         </div>
-                       ))
-                    )}
-                  </div>
-
-                  {carrinho.length > 0 && (
-                    <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                      <div className="flex justify-between items-end mb-4">
-                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
-                         <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
-                      </div>
-                      <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
-                        <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido pelo WhatsApp
-                      </Button>
-                      <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
-                        Continuar Comprando
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* BOTÃO FLUTUANTE DO CARRINHO (Aparece apenas quando tem itens) */}
-          {carrinho.length > 0 && !isCartOpen && (
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className="fixed bottom-24 md:bottom-10 right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95"
-            >
-              <ShoppingCart size={24} />
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
-                {carrinho.length}
-              </span>
-            </button>
-          )}
-
         </div>
       );
     }
@@ -874,80 +747,6 @@ export default function Catalogo({ isPublic = false }) {
           )}
         </main>
         <FooterSite st={st} />
-
-        {/* --- GAVETA DO CARRINHO (DISPONÍVEL TAMBÉM NA VITRINE) --- */}
-        <AnimatePresence>
-          {isCartOpen && (
-            <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
-              <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
-                <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><ShoppingCart size={20}/></div>
-                    <div>
-                      <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                  {carrinho.length === 0 ? (
-                     <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
-                        <ShoppingBag size={48} className="mb-4 text-slate-200"/>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
-                        <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
-                     </div>
-                  ) : (
-                     carrinho.map((item) => (
-                       <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
-                          <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
-                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
-                             <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex flex-col justify-center flex-1">
-                             <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
-                             <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                             <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
-                          </div>
-                       </div>
-                     ))
-                  )}
-                </div>
-
-                {carrinho.length > 0 && (
-                  <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                    <div className="flex justify-between items-end mb-4">
-                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
-                       <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
-                    </div>
-                    <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
-                      <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido pelo WhatsApp
-                    </Button>
-                    <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
-                      Continuar Comprando
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* BOTÃO FLUTUANTE DO CARRINHO (Aparece apenas quando tem itens) */}
-        {carrinho.length > 0 && !isCartOpen && (
-          <button 
-            onClick={() => setIsCartOpen(true)}
-            className="fixed bottom-6 right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95"
-          >
-            <ShoppingCart size={24} />
-            <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
-              {carrinho.length}
-            </span>
-          </button>
-        )}
-
       </div>
     );
   };
