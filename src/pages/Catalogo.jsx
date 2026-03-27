@@ -429,6 +429,11 @@ export default function Catalogo({ isPublic = false }) {
     if (!quantidade || quantidade < minQtd) setQuantidade(minQtd);
   };
 
+  const decrementarQuantidade = () => {
+     const minQtd = selectedProduct?.qtd_minima || 1;
+     setQuantidade(prev => Math.max(minQtd, prev - 1));
+  };
+
   const renderCatalog = () => {
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
@@ -635,7 +640,7 @@ export default function Catalogo({ isPublic = false }) {
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
                           <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
-                            <button onClick={() => setQuantidade(prev => Math.max(selectedProduct?.qtd_minima || 1, prev - 1))} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                            <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
                             <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
                             <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
                           </div>
@@ -767,12 +772,15 @@ export default function Catalogo({ isPublic = false }) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Central</label>
-                <div className="flex gap-2">
-                  <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative">
-                     {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
-                     <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                <div className="flex flex-col gap-1">
+                  <div className="flex gap-2">
+                    <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative shrink-0">
+                       {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
+                       <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                    {st?.logo_url && <button onClick={() => setSt({...st, logo_url: ''})} className="bg-red-500 text-white p-1.5 rounded h-12 flex items-center justify-center"><Trash2 size={14}/></button>}
                   </div>
-                  {st?.logo_url && <button onClick={() => setSt({...st, logo_url: ''})} className="bg-red-500 text-white p-1.5 rounded h-12 flex items-center justify-center"><Trash2 size={14}/></button>}
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1">Medida recomendada: 500 x 500 px</p>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -836,14 +844,19 @@ export default function Catalogo({ isPublic = false }) {
                  </div>
                  {st?.mostrar_beneficios && [1, 2, 3].map(num => (
                    <div key={num} className="p-3 bg-slate-800 rounded border border-slate-700 space-y-2">
-                     <div className="flex gap-2">
-                       <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
-                         {st[`beneficio_${num}_icone`] ? <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain"/> : <Package size={14} className="text-slate-500"/>}
-                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                     <div className="flex gap-2 items-start">
+                       <div className="flex flex-col items-center gap-1 shrink-0">
+                         <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
+                           {st[`beneficio_${num}_icone`] ? <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain"/> : <Package size={14} className="text-slate-500"/>}
+                           <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                         </div>
+                         <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100 px</span>
                        </div>
-                       <Input value={st[`beneficio_${num}_titulo`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_titulo`]: e.target.value})} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white flex-1" />
+                       <div className="flex-1 space-y-2">
+                         <Input value={st[`beneficio_${num}_titulo`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_titulo`]: e.target.value})} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white w-full" />
+                         <Input value={st[`beneficio_${num}_desc`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_desc`]: e.target.value})} placeholder="Descrição curta" className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400 w-full" />
+                       </div>
                      </div>
-                     <Input value={st[`beneficio_${num}_desc`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_desc`]: e.target.value})} placeholder="Descrição curta" className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400" />
                    </div>
                  ))}
               </div>
@@ -856,6 +869,7 @@ export default function Catalogo({ isPublic = false }) {
                   <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
                     <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem Full-Width"}
                   </Button>
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1.5 text-center w-full">Medida recomendada: 1200 x 400 px</p>
                 </div>
                 {st?.banner_url && (
                   <div className="aspect-[21/9] rounded overflow-hidden border border-slate-700 relative">
