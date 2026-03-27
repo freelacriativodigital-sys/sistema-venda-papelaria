@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, ChevronDown, ChevronUp, UserSquare2, Loader2, CalendarDays, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Importações do calendário
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -48,7 +47,6 @@ export default function NewTaskForm({ onSubmit }) {
 
   const [selectedDate, setSelectedDate] = useState(undefined);
 
-  // --- ESTADOS DO MODAL DE NOVO CLIENTE ---
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [newClientData, setNewClientData] = useState({ nome: '', whatsapp: '', aniversario: '', pendente: 0, pago: 0 });
 
@@ -89,8 +87,9 @@ export default function NewTaskForm({ onSubmit }) {
       queryClient.invalidateQueries({ queryKey: ["sistema-clientes"] });
       setIsClientModalOpen(false);
       setClienteId(newClient.id);
-      setTask({ ...task, title: newClient.nome });
-      setClientes(prev => [...prev, newClient].sort((a,b) => a.nome.localeCompare(b.nome)));
+      setTask({ ...task, title: String(newClient.nome || '') });
+      // Usar String() no localeCompare para evitar erro com números
+      setClientes(prev => [...prev, newClient].sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || ''))));
     },
   });
 
@@ -105,7 +104,7 @@ export default function NewTaskForm({ onSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!task.title.trim()) return;
+    if (!String(task.title || '').trim()) return;
     
     const clienteSelecionado = clientes.find(c => c.id === clienteId);
 
@@ -126,10 +125,20 @@ export default function NewTaskForm({ onSubmit }) {
   };
 
   const selecionarCliente = (cli) => {
-    setTask({ ...task, title: cli.nome });
+    setTask({ ...task, title: String(cli.nome || '') });
     setClienteId(cli.id);
     setMostrarDropdownCliente(false);
   };
+
+  // --- BLINDAGEM DA BUSCA AQUI TAMBÉM ---
+  const searchStr = String(task.title || '').toLowerCase().trim();
+  const filteredClientes = clientes.filter(c => {
+    const nomeMatch = String(c.nome || '').toLowerCase().includes(searchStr);
+    const zapMatch = String(c.whatsapp || '').toLowerCase().includes(searchStr);
+    return nomeMatch || zapMatch;
+  });
+  
+  const isExactMatch = filteredClientes.some(c => String(c.nome || '').toLowerCase().trim() === searchStr);
 
   return (
     <div>
@@ -159,7 +168,7 @@ export default function NewTaskForm({ onSubmit }) {
                  placeholder="Busque o cliente ou digite o que precisa..."
                  value={task.title}
                  onChange={(e) => {
-                   setTask({ ...task, title: e.target.value });
+                   setTask({ ...task, title: String(e.target.value) });
                    setClienteId(null);
                    setMostrarDropdownCliente(true);
                  }}
@@ -170,9 +179,9 @@ export default function NewTaskForm({ onSubmit }) {
                />
                {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 w-4 h-4 animate-spin" />}
                
-               {mostrarDropdownCliente && task.title.trim().length > 0 && !clienteId && (
+               {mostrarDropdownCliente && searchStr.length > 0 && !clienteId && (
                  <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-lg shadow-lg max-h-56 overflow-y-auto p-1.5 space-y-0.5 z-[100]">
-                   {clientes.filter(c => c.nome.toLowerCase().includes(task.title.toLowerCase()) || (c.whatsapp && c.whatsapp.includes(task.title))).map(cli => (
+                   {filteredClientes.map(cli => (
                      <div 
                        key={cli.id} 
                        onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} 
@@ -182,8 +191,7 @@ export default function NewTaskForm({ onSubmit }) {
                      </div>
                    ))}
                    
-                   {/* BOTÃO CADASTRAR NOVO SE NÃO EXISTIR */}
-                   {!clientes.some(c => c.nome.toLowerCase() === task.title.trim().toLowerCase()) && (
+                   {!isExactMatch && (
                      <div className="pt-1 mt-1 border-t border-border">
                        <button 
                          type="button"
@@ -240,11 +248,11 @@ export default function NewTaskForm({ onSubmit }) {
                             mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-3 bg-white"
                             classNames={{
                               head_cell: "text-slate-500 rounded-md w-9 font-normal text-[11px] uppercase tracking-wider",
-                              cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-slate-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                              cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-slate-100",
                               day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-slate-100 rounded-md text-slate-900",
                               day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white rounded-md",
                               day_today: "bg-slate-100 text-slate-900 rounded-md font-bold",
-                              day_outside: "day-outside text-slate-400 opacity-50 aria-selected:bg-slate-100/50 aria-selected:text-slate-400 aria-selected:opacity-30",
+                              day_outside: "day-outside text-slate-400 opacity-50",
                               nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-slate-200 rounded-md text-slate-600",
                               nav_button_previous: "absolute left-1",
                               nav_button_next: "absolute right-1",
@@ -287,7 +295,7 @@ export default function NewTaskForm({ onSubmit }) {
               <Button type="button" variant="ghost" size="sm" onClick={() => { setIsOpen(false); setShowDetails(false); setClienteId(null); setSelectedDate(undefined); }} className="text-xs h-8">
                 <X className="w-3 h-3 mr-1" /> Cancelar
               </Button>
-              <Button type="submit" size="sm" disabled={!task.title.trim()} className="text-xs h-8 bg-primary hover:bg-primary/90">
+              <Button type="submit" size="sm" disabled={!String(task.title || '').trim()} className="text-xs h-8 bg-primary hover:bg-primary/90">
                 <Plus className="w-3 h-3 mr-1" /> Adicionar
               </Button>
             </div>
@@ -295,7 +303,6 @@ export default function NewTaskForm({ onSubmit }) {
         )}
       </AnimatePresence>
 
-      {/* MODAL DE CADASTRO RÁPIDO DE CLIENTE */}
       <AnimatePresence>
         {isClientModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
@@ -314,13 +321,13 @@ export default function NewTaskForm({ onSubmit }) {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">Nome Completo</label>
-                  <Input value={newClientData.nome} onChange={e => setNewClientData({...newClientData, nome: e.target.value})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" autoFocus />
+                  <Input value={newClientData.nome} onChange={e => setNewClientData({...newClientData, nome: String(e.target.value)})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" autoFocus />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">WhatsApp</label>
-                    <Input value={newClientData.whatsapp} onChange={e => setNewClientData({...newClientData, whatsapp: e.target.value})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" />
+                    <Input value={newClientData.whatsapp} onChange={e => setNewClientData({...newClientData, whatsapp: String(e.target.value)})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">Aniversário</label>
