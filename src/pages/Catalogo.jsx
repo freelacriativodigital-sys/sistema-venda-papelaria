@@ -114,42 +114,59 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-// ============================================================
-// MÓDULO: TOPO DO SITE
-// Logo + busca + menu de categorias
-// ============================================================
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+const HeaderSite = ({
+  st,
+  searchTerm,
+  setSearchTerm,
+  selectedCategory,
+  changeCategory,
+  categorias,
+  isPublic,
+  goHome,
+  view,
+}) => {
   const openWhatsApp = () => {
-    const num = st?.whatsapp?.replace(/\D/g, '');
+    const num = st?.whatsapp?.replace(/\D/g, "");
     if (!num) return;
-    window.open(`https://wa.me/${num}`, '_blank');
+    window.open(`https://wa.me/${num}`, "_blank");
   };
 
   return (
     <div className="w-full relative z-40 pt-3 md:pt-4">
       <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8">
         <div className="bg-white/95 backdrop-blur rounded-[28px] md:rounded-full border border-slate-200/80 shadow-[0_10px_35px_rgba(15,23,42,0.08)] px-3 md:px-5 py-3 md:py-4">
-          <div className="flex flex-col gap-3 md:gap-0 md:flex-row md:items-center md:justify-between">
-            {/* BLOCO: LOGO */}
+          
+          {/* DESKTOP */}
+          <div className="hidden md:flex items-center justify-between gap-6">
+            {/* LOGO */}
             <div
               onClick={goHome}
-              className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start"
+              className="flex items-center shrink-0 cursor-pointer group"
             >
               <div className="h-11 md:h-12 flex items-center justify-center transition-transform group-hover:scale-105">
                 {st?.logo_url ? (
-                  <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" />
+                  <img
+                    src={st.logo_url}
+                    className="h-full w-auto object-contain"
+                    alt="Logo"
+                  />
                 ) : (
                   <div
                     className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center border"
-                    style={{ borderColor: `${st?.cor_principal || '#f472b6'}33` }}
+                    style={{
+                      borderColor: `${st?.cor_principal || "#f472b6"}33`,
+                    }}
                   >
-                    <ShoppingBag size={22} style={{ color: st?.cor_principal || '#f472b6' }} />
+                    <ShoppingBag
+                      size={22}
+                      style={{ color: st?.cor_principal || "#f472b6" }}
+                    />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* BLOCO: BUSCA */}
+            {/* BUSCA */}
             <div className="flex-1 w-full md:px-4 lg:px-8">
               <div className="relative group max-w-full">
                 <input
@@ -166,8 +183,8 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
               </div>
             </div>
 
-            {/* BLOCO: AÇÕES DESKTOP */}
-            <div className="hidden md:flex items-center gap-3 shrink-0">
+            {/* AÇÕES DESKTOP */}
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 type="button"
                 className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
@@ -189,58 +206,172 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
                   type="button"
                   onClick={openWhatsApp}
                   className="h-11 px-6 rounded-full text-white text-xs font-extrabold uppercase tracking-[0.08em] shadow-sm transition-transform hover:scale-[1.02]"
-                  style={{ backgroundColor: st?.cor_principal || '#f472b6' }}
-                >
-                  WhatsApp
-                </button>
-              ) : null}
-            </div>
-
-            {/* BLOCO: AÇÕES MOBILE */}
-            <div className="md:hidden flex items-center justify-center gap-2 pt-1">
-              <button
-                type="button"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 bg-slate-50 border border-slate-200"
-                aria-label="Carrinho"
-              >
-                <ShoppingCart size={18} />
-              </button>
-
-              {st?.whatsapp ? (
-                <button
-                  type="button"
-                  onClick={openWhatsApp}
-                  className="h-10 px-5 rounded-full text-white text-[11px] font-extrabold uppercase tracking-[0.08em] shadow-sm"
-                  style={{ backgroundColor: st?.cor_principal || '#f472b6' }}
+                  style={{ backgroundColor: st?.cor_principal || "#f472b6" }}
                 >
                   WhatsApp
                 </button>
               ) : null}
             </div>
           </div>
+
+          {/* MOBILE */}
+          <div className="md:hidden flex flex-col gap-3">
+            {/* LINHA 1 */}
+            <div className="flex items-center justify-between gap-3">
+              {/* LOGO ESQUERDA */}
+              <div
+                onClick={goHome}
+                className="flex items-center shrink-0 cursor-pointer group"
+              >
+                <div className="h-10 flex items-center justify-center transition-transform group-hover:scale-105">
+                  {st?.logo_url ? (
+                    <img
+                      src={st.logo_url}
+                      className="h-full w-auto object-contain"
+                      alt="Logo"
+                    />
+                  ) : (
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center border"
+                      style={{
+                        borderColor: `${st?.cor_principal || "#f472b6"}33`,
+                      }}
+                    >
+                      <ShoppingBag
+                        size={20}
+                        style={{ color: st?.cor_principal || "#f472b6" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ÍCONES DIREITA */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 bg-slate-50 border border-slate-200"
+                  aria-label="Buscar"
+                >
+                  <Search size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 bg-slate-50 border border-slate-200"
+                  aria-label="Carrinho"
+                >
+                  <ShoppingCart size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 bg-slate-50 border border-slate-200"
+                  aria-label="Menu"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* LINHA 2: BUSCA */}
+            <div className="relative group max-w-full">
+              <input
+                type="text"
+                placeholder="O que você procura hoje?"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-11 bg-slate-50 rounded-full pl-12 pr-4 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400 shadow-sm"
+              />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors"
+                size={18}
+              />
+            </div>
+
+            {/* LINHA 3: WHATSAPP */}
+            {st?.whatsapp ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={openWhatsApp}
+                  className="h-10 px-5 rounded-full text-white text-[11px] font-extrabold uppercase tracking-[0.08em] shadow-sm"
+                  style={{ backgroundColor: st?.cor_principal || "#f472b6" }}
+                >
+                  WhatsApp
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {view !== 'detalhe' && (
+      {view !== "detalhe" && (
         <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8 mt-3 md:mt-4">
           <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1">
             <button
-              onClick={() => changeCategory('Todas')}
-              className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal || '#f472b6', borderColor: st?.cor_principal || '#f472b6' } : {}}
+              onClick={() => changeCategory("Todas")}
+              className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2.5 rounded-full border flex items-center gap-2 ${
+                selectedCategory === "Todas"
+                  ? "shadow-sm text-white"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+              }`}
+              style={
+                selectedCategory === "Todas"
+                  ? {
+                      backgroundColor: st?.cor_principal || "#f472b6",
+                      borderColor: st?.cor_principal || "#f472b6",
+                    }
+                  : {}
+              }
             >
-              <Layers size={14} className={selectedCategory === 'Todas' ? 'text-white/80' : 'text-slate-400'} />
+              <Layers
+                size={14}
+                className={
+                  selectedCategory === "Todas"
+                    ? "text-white/80"
+                    : "text-slate-400"
+                }
+              />
               Todas as Categorias
             </button>
 
-            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+            {categorias?.filter((c) => c !== "Sem Categoria").map((cat) => {
+              const isSelected =
+                selectedCategory.toLowerCase().trim() ===
+                cat.toLowerCase().trim();
+
               return (
                 <button
                   key={cat}
                   onClick={() => changeCategory(cat)}
-                  className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-                  style={isSelected ? { backgroundColor: st?.cor_principal || '#f472b6', borderColor: st?.cor_principal || '#f472b6' } : {}}
+                  className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2.5 rounded-full border ${
+                    isSelected
+                      ? "shadow-sm text-white"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                  }`}
+                  style={
+                    isSelected
+                      ? {
+                          backgroundColor: st?.cor_principal || "#f472b6",
+                          borderColor: st?.cor_principal || "#f472b6",
+                        }
+                      : {}
+                  }
                 >
                   {cat}
                 </button>
