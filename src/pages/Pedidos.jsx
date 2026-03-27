@@ -225,8 +225,9 @@ export default function Pedidos() {
 
   const gruposPendentes = organizarPorData(pendingTasks);
 
+  // --- CORREÇÃO DA TELA BRANCA AQUI: (c.nome || '') ---
   const filteredClientes = clientes.filter(c => 
-    c.nome.toLowerCase().includes(clientSearch.toLowerCase()) || 
+    (c.nome || '').toLowerCase().includes((clientSearch || '').toLowerCase()) || 
     (c.whatsapp && c.whatsapp.includes(clientSearch))
   );
 
@@ -472,7 +473,8 @@ export default function Pedidos() {
                           </button>
                         ))}
                         
-                        {!filteredClientes.some(c => c.nome.toLowerCase() === clientSearch.trim().toLowerCase()) && (
+                        {/* --- CORREÇÃO DA TELA BRANCA AQUI TAMBÉM --- */}
+                        {!filteredClientes.some(c => (c.nome || '').toLowerCase() === clientSearch.trim().toLowerCase()) && (
                           <div className="pt-1 mt-1 border-t border-slate-100">
                             <button 
                               type="button"
