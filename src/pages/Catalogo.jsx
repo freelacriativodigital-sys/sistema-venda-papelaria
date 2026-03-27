@@ -77,74 +77,83 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
-  <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
-    <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
-      <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start">
-        <div className="h-14 md:h-16 flex items-center justify-center transition-transform group-hover:scale-105">
-          {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
+const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+  const logoSizes = {
+    pequeno: 'h-8 md:h-12',
+    medio: 'h-12 md:h-16',
+    grande: 'h-16 md:h-24'
+  };
+  const activeLogoSize = logoSizes[st?.tamanho_logo || 'medio'];
+
+  return (
+    <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
+      <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-center gap-4 md:gap-8">
+        <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start">
+          <div className={`${activeLogoSize} flex items-center justify-center transition-transform group-hover:scale-105`}>
+            {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
+          </div>
+        </div>
+        <div className="flex-1 w-full max-w-3xl relative group">
+          <input 
+            type="text" 
+            placeholder="O que você procura hoje?" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-10 md:h-12 bg-slate-50/80 hover:bg-slate-50 rounded-lg px-4 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400 shadow-sm"
+          />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={18} />
         </div>
       </div>
-      <div className="flex-1 w-full max-w-4xl relative group">
-        <input 
-          type="text" 
-          placeholder="O que você procura hoje?" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
-        />
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
-      </div>
+      {view !== 'detalhe' && (
+        <div className="border-t border-slate-100 bg-white">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-3 flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar">
+            <button 
+              onClick={() => changeCategory('Todas')}
+              className={`text-[10px] md:text-xs font-semibold whitespace-nowrap transition-all px-3 py-1.5 md:px-4 md:py-2 rounded-md border flex items-center gap-1.5 ${selectedCategory === 'Todas' ? 'text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+            >
+              <Layers size={12} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
+              Todas
+            </button>
+            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+              return (
+                <button 
+                  key={cat}
+                  onClick={() => changeCategory(cat)}
+                  className={`text-[10px] md:text-xs font-semibold whitespace-nowrap transition-all px-3 py-1.5 md:px-4 md:py-2 rounded-md border ${isSelected ? 'text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+                >
+                  {cat}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
-    {view !== 'detalhe' && (
-      <div className="border-t border-slate-100 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => changeCategory('Todas')}
-            className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-            style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-          >
-            <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-            Todas as Categorias
-          </button>
-          {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-            const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-            return (
-              <button 
-                key={cat}
-                onClick={() => changeCategory(cat)}
-                className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-                style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-              >
-                {cat}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 const BenefitsBar = ({ st }) => {
   if (!st?.mostrar_beneficios) return null;
   return (
-    <div className="bg-white border-b border-slate-100 hidden md:block transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between gap-4">
+    <div className="bg-slate-50 border-b border-slate-100 hidden md:block transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
         {[1, 2, 3].map(num => (
            <div key={num} className="flex items-center gap-3 text-slate-600">
-              <div className="bg-slate-50 p-2 rounded-full border border-slate-100">
+              <div className="bg-white p-2 rounded-full border border-slate-200 shadow-sm">
                 {st[`beneficio_${num}_icone`] ? (
-                   <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain" alt="" />
+                   <img src={st[`beneficio_${num}_icone`]} className="w-4 h-4 object-contain" alt="" />
                 ) : (
-                   num === 1 ? <Truck size={18} className="text-rose-500" /> : 
-                   num === 2 ? <CreditCard size={18} className="text-blue-500" /> : 
-                   <ShieldCheck size={18} className="text-emerald-500" />
+                   num === 1 ? <Truck size={16} className="text-rose-500" /> : 
+                   num === 2 ? <CreditCard size={16} className="text-blue-500" /> : 
+                   <ShieldCheck size={16} className="text-emerald-500" />
                 )}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-800 leading-none mb-1">{st[`beneficio_${num}_titulo`]}</p>
+                <p className="text-[11px] font-bold text-slate-800 leading-none mb-0.5">{st[`beneficio_${num}_titulo`]}</p>
                 <p className="text-[9px] font-medium text-slate-500">{st[`beneficio_${num}_desc`]}</p>
               </div>
            </div>
@@ -437,7 +446,6 @@ export default function Catalogo({ isPublic = false }) {
      setQuantidade(prev => Math.max(minQtd, prev - 1));
   };
 
-  // --- FINALIZAR PEDIDO COMPLETO ---
   const finalizarPedido = () => {
     if (carrinho.length === 0) return;
 
@@ -583,10 +591,8 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       ) : null;
 
-      // COMPONENTE DE COMPRA: Para renderizar duas vezes (Mobile vs Desktop) sem duplicar código
       const BuyBarContent = ({ isMobile }) => (
         <div className="flex flex-col w-full max-w-6xl mx-auto">
-          {/* ATACADO PROGRESS BAR (Exclusivo da barra Mobile) */}
           {isMobile && atacadoData && atacadoData.nextRule && (
             <div className="flex flex-col gap-1.5 mb-3 px-1">
                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
@@ -621,7 +627,6 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       );
 
-      // Controle de posição do carrinho flutuante
       let floatingCartBottom = 'bottom-6'; 
       if (view === 'detalhe') {
          floatingCartBottom = isPublic ? 'bottom-[140px]' : 'bottom-[200px]';
@@ -772,7 +777,6 @@ export default function Catalogo({ isPublic = false }) {
                   </div>
                 )}
                 
-                {/* BARRA DE COMPRA DESKTOP (Aparece no fluxo normal da direita) */}
                 <div className="hidden md:block mt-4">
                    <BuyBarContent isMobile={false} />
                 </div>
@@ -780,7 +784,6 @@ export default function Catalogo({ isPublic = false }) {
               </div>
             </div>
             
-            {/* VEJA TAMBÉM */}
             {relacionados.length > 0 && (
               <div className="mt-16 md:mt-24 mb-10">
                 <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 flex items-center gap-2">Veja também</h3>
@@ -792,9 +795,17 @@ export default function Catalogo({ isPublic = false }) {
                         <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       </div>
                       <div className="flex flex-col flex-1 p-3 md:p-4">
-                        <h3 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight mb-2">{prod.nome}</h3>
-                        <div className="flex flex-col mb-3"><span className="text-sm font-black text-slate-900 leading-none">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</span></div>
-                        <div className="mt-auto pt-2"><button className="w-full py-2 rounded-lg text-white text-[10px] font-bold uppercase transition-colors duration-300" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button></div>
+                        <h3 className="text-xs font-normal text-slate-800 line-clamp-2 leading-tight mb-2">{prod.nome}</h3>
+                        <div className="mt-auto flex flex-col gap-2">
+                          <div className="flex flex-col">
+                            {prod.preco_promocional > 0 ? (
+                               <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base font-black text-slate-900 leading-none mt-0.5">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                            ) : (
+                               <span className="text-base font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                            )}
+                          </div>
+                          <button className="w-full py-2 rounded-lg text-white text-[10px] font-bold uppercase transition-colors duration-300" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -805,7 +816,6 @@ export default function Catalogo({ isPublic = false }) {
           
           <FooterSite st={st} />
 
-          {/* BARRA FIXA MOBILE (Fora do content-flow e do animate-in para garantir colisão 100% na base da tela) */}
           <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
              <BuyBarContent isMobile={true} />
           </div>
@@ -870,7 +880,7 @@ export default function Catalogo({ isPublic = false }) {
             )}
           </AnimatePresence>
 
-          {/* BOTÃO FLUTUANTE DO CARRINHO (Aparece apenas quando tem itens) */}
+          {/* BOTÃO FLUTUANTE DO CARRINHO */}
           {carrinho.length > 0 && !isCartOpen && (
             <button 
               onClick={() => setIsCartOpen(true)}
@@ -924,15 +934,17 @@ export default function Catalogo({ isPublic = false }) {
                         {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Variações</span>}
                         {!descontoPercent && !prod.atacado?.ativa && !prod.variacoes?.ativa && <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5"><Package size={10} /> {prod.categoria}</span>}
                       </div>
-                      <h3 className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-2">{prod.nome}</h3>
-                      <div className="flex flex-col mb-3">
-                        {prod.preco_promocional > 0 ? (
-                          <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-black text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                        ) : (
-                          <span className="text-base md:text-lg font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                        )}
+                      <h3 className="text-xs md:text-sm font-normal text-slate-800 line-clamp-2 leading-snug mb-2">{prod.nome}</h3>
+                      <div className="mt-auto flex flex-col gap-2.5">
+                        <div className="flex flex-col">
+                          {prod.preco_promocional > 0 ? (
+                            <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-black text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                          ) : (
+                            <span className="text-base md:text-lg font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                          )}
+                        </div>
+                        <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
                       </div>
-                      <div className="mt-auto pt-2"><button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button></div>
                     </div>
                   </div>
                 )})}
@@ -1002,7 +1014,6 @@ export default function Catalogo({ isPublic = false }) {
           )}
         </AnimatePresence>
 
-        {/* BOTÃO FLUTUANTE DO CARRINHO (Aparece apenas quando tem itens) */}
         {carrinho.length > 0 && !isCartOpen && (
           <button 
             onClick={() => setIsCartOpen(true)}
@@ -1056,7 +1067,19 @@ export default function Catalogo({ isPublic = false }) {
                   <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1">Medida recomendada: 500 x 500 px</p>
                 </div>
               </div>
-              <div className="space-y-1.5">
+
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Tamanho da Logo no Topo</label>
+                <div className="flex gap-2">
+                  {['pequeno', 'medio', 'grande'].map(size => (
+                    <button key={size} onClick={() => setSt({...st, tamanho_logo: size})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.tamanho_logo === size || (!st?.tamanho_logo && size === 'medio') ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cor Principal</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.cor_principal || '#000000' }}>
