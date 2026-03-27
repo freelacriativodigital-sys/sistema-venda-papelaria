@@ -13,7 +13,10 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
-// --- COMPRESSOR DE IMAGENS (1920px para Desktop / 800px para Mobile | WebP 80%) ---
+// ============================================================================
+// 1. FUNÇÕES AUXILIARES E INTEGRAÇÃO COM SUPABASE
+// ============================================================================
+
 const compressImageToBlob = (file, maxDimension = 1920) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -23,15 +26,13 @@ const compressImageToBlob = (file, maxDimension = 1920) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = maxDimension; 
-        const MAX_HEIGHT = maxDimension;
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          if (width > maxDimension) { height *= maxDimension / width; width = maxDimension; }
         } else {
-          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          if (height > maxDimension) { width *= maxDimension / height; height = maxDimension; }
         }
 
         canvas.width = width;
@@ -45,61 +46,35 @@ const compressImageToBlob = (file, maxDimension = 1920) => {
   });
 };
 
-// --- COMPONENTE INTELIGENTE: SANFONA NO DESKTOP / BOTTOM SHEET NO MOBILE ---
-const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
-  const isOpen = openSection === id;
-  return (
-    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
-      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
-        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-          <Icon size={14} className="text-slate-400" /> {title}
-        </div>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      
-      <div className={`
-        transition-all duration-300 ease-in-out
-        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[80vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
-        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
-        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
-      `}>
-        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
-           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
-             <Icon size={16} className="text-blue-400" /> {title}
-           </div>
-           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
-        </div>
-        <div className="space-y-4 pb-6 lg:pb-0">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
+const deletePhysicalFile = async (url) => {
+  if (!url || !url.includes('produtos/')) return;
+  try {
+    const fileName = url.split('produtos/')[1];
+    if (fileName) await supabase.storage.from('produtos').remove([fileName]);
+  } catch (error) {
+    console.error("Erro ao deletar arquivo físico:", error);
+  }
 };
 
-// --- HEADER SITE (Sticky, Logo Desktop Maior, Mobile Reorganizado) ---
+// ============================================================================
+// 2. COMPONENTES MODULARES DA INTERFACE (UI)
+// Peça para alterar apenas esses blocos no futuro para não reescrever tudo!
+// ============================================================================
+
+// --- HEADER DO SITE ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setIsCartOpen, categorias, changeCategory, selectedCategory }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  // --- LOGO DESKTOP AUMENTADA (Ajuste de tamanhos solicitado) ---
-  const logoSizes = {
-    pequeno: 'h-10 md:h-14',
-    medio: 'h-12 md:h-18', // Antes: 10/12
-    grande: 'h-14 md:h-24'  // Antes: 12/14
-  };
+  const logoSizes = { pequeno: 'h-10 md:h-14', medio: 'h-12 md:h-18', grande: 'h-14 md:h-24' };
   const activeLogoSize = logoSizes[st?.tamanho_logo || 'medio'];
 
   return (
     <>
       <div className="sticky top-3 md:top-5 mx-auto w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 md:px-6 py-2.5 md:py-3 transition-all duration-300">
-        
-        {/* MOBILE LAYOUT (Logo Lateral Esq, Ícones na Dir) */}
         <div className="flex md:hidden items-center justify-between w-full">
           <div onClick={goHome} className="flex-1 flex justify-start cursor-pointer px-1">
             {st?.logo_url ? <img src={st.logo_url} className="h-9 w-auto max-w-[150px] object-contain" alt="Logo" /> : <ShoppingBag size={26} style={{ color: st?.cor_principal }} />}
           </div>
-          
           <div className="flex items-center gap-1.5 text-slate-600">
             <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"><Search size={20} /></button>
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"><Menu size={22} /></button>
@@ -109,8 +84,6 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
             </button>
           </div>
         </div>
-
-        {/* DESKTOP LAYOUT (Cabeçalho Pílula Clean) */}
         <div className="hidden md:flex items-center justify-between w-full">
           <div className="flex items-center gap-4">
             <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer transition-transform hover:scale-105">
@@ -119,26 +92,15 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
              <div className="flex items-center relative">
-               <input 
-                 type="text" 
-                 placeholder="Pesquisar..." 
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 className={`transition-all duration-300 outline-none bg-slate-50 border border-slate-200 focus:bg-white rounded-full px-4 h-10 text-sm ${isSearchOpen ? 'w-64 opacity-100 mr-2' : 'w-0 opacity-0 pointer-events-none'}`}
-               />
-               <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors">
-                 <Search size={20} />
-               </button>
+               <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`transition-all duration-300 outline-none bg-slate-50 border border-slate-200 focus:bg-white rounded-full px-4 h-10 text-sm ${isSearchOpen ? 'w-64 opacity-100 mr-2' : 'w-0 opacity-0 pointer-events-none'}`} />
+               <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors"><Search size={20} /></button>
              </div>
-
              <button onClick={() => setIsCartOpen(true)} className="relative w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors">
                <ShoppingCart size={20} />
                {carrinhoCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold bg-rose-500 text-white rounded-full flex items-center justify-center shadow-sm">{carrinhoCount}</span>}
              </button>
-
              {st?.whatsapp && (
                <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-10 px-6 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-105 ml-1" style={{ backgroundColor: st?.cor_principal }}>
                  Fale Conosco
@@ -147,8 +109,6 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
           </div>
         </div>
       </div>
-
-      {/* MOBILE SEARCH BAR */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden w-[95%] mx-auto mt-2 overflow-hidden z-40 sticky top-[68px]">
@@ -160,8 +120,6 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* MOBILE MENU CATEGORIAS */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -175,9 +133,7 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
                 <button onClick={() => { changeCategory('Todas'); setIsMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${!selectedCategory || selectedCategory === 'Todas' ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`} style={(!selectedCategory || selectedCategory === 'Todas') ? { backgroundColor: st?.cor_principal } : {}}>Todas as Categorias</button>
                 {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
                    const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-                   return (
-                     <button key={cat} onClick={() => { changeCategory(cat); setIsMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`} style={isSelected ? { backgroundColor: st?.cor_principal } : {}}>{cat}</button>
-                   )
+                   return <button key={cat} onClick={() => { changeCategory(cat); setIsMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`} style={isSelected ? { backgroundColor: st?.cor_principal } : {}}>{cat}</button>
                 })}
               </div>
             </motion.div>
@@ -188,6 +144,101 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
   );
 };
 
+// --- CARD DE PRODUTO ---
+const ProductCard = ({ prod, st, aspectClass, calcularDesconto, abrirDetalhe }) => {
+  const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
+  return (
+    <div className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
+      <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
+        {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
+        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+      </div>
+      <div className="flex flex-col flex-1 p-3 md:p-4">
+        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+          {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
+          {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
+          {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Variações</span>}
+          {!descontoPercent && !prod.atacado?.ativa && !prod.variacoes?.ativa && <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5"><Package size={10} /> {prod.categoria}</span>}
+        </div>
+        <h3 className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 leading-snug mb-2">{prod.nome}</h3>
+        <div className="mt-auto flex flex-col gap-2.5">
+          <div className="flex flex-col">
+            {prod.preco_promocional > 0 ? (
+              <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-black text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+            ) : (
+              <span className="text-base md:text-lg font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+            )}
+          </div>
+          <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- SIDEBAR DO CARRINHO ---
+const CartSidebar = ({ isCartOpen, setIsCartOpen, carrinho, setCarrinho, st, finalizarPedido }) => {
+  return (
+    <AnimatePresence>
+      {isCartOpen && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
+          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
+            <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center" style={{ color: st?.cor_principal }}><ShoppingCart size={20}/></div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
+                </div>
+              </div>
+              <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {carrinho.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
+                    <ShoppingBag size={48} className="mb-4 text-slate-200"/>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
+                    <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
+                 </div>
+              ) : (
+                 carrinho.map((item) => (
+                   <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
+                      <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
+                         <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex flex-col justify-center flex-1">
+                         <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
+                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
+                         <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
+                      </div>
+                   </div>
+                 ))
+              )}
+            </div>
+            {carrinho.length > 0 && (
+              <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+                <div className="flex justify-between items-end mb-4">
+                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
+                   <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
+                </div>
+                <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
+                  <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido
+                </Button>
+                <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
+                  Continuar Comprando
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// --- FOOTER & OUTROS COMPONENTES ESTÁTICOS ---
 const BenefitsBar = ({ st }) => {
   if (!st?.mostrar_beneficios) return null;
   return (
@@ -236,11 +287,6 @@ const FooterSite = ({ st }) => (
                 <Instagram size={16} className="text-pink-500" /> Instagram
               </button>
             )}
-            {st?.email && (
-              <button onClick={() => window.open(`mailto:${st.email}`, '_blank')} className="flex items-center gap-2 hover:text-white transition-colors text-[11px] font-bold uppercase tracking-wide">
-                <Mail size={16} className="text-blue-400" /> E-mail
-              </button>
-            )}
             {st?.endereco && (
               <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 mt-2">
                 <MapPin size={16} /> {st.endereco}
@@ -261,6 +307,42 @@ const FooterSite = ({ st }) => (
     </div>
   </footer>
 );
+
+// --- COMPONENTE DO EDITOR ADMINISTRATIVO (SANFONA/GAVETA) ---
+const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
+  const isOpen = openSection === id;
+  return (
+    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
+      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
+        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+          <Icon size={14} className="text-slate-400" /> {title}
+        </div>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <div className={`
+        transition-all duration-300 ease-in-out
+        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[80vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
+        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
+        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
+      `}>
+        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
+           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
+             <Icon size={16} className="text-blue-400" /> {title}
+           </div>
+           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
+        </div>
+        <div className="space-y-4 pb-6 lg:pb-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// ============================================================================
+// 3. COMPONENTE PRINCIPAL (CONTROLADOR DE ESTADO)
+// ============================================================================
 
 export default function Catalogo({ isPublic = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -291,20 +373,6 @@ export default function Catalogo({ isPublic = false }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const imageRef = useRef(null);
-
-  useEffect(() => {
-    async function registrarAcesso() {
-      if (isPublic && !sessionStorage.getItem('visitou_catalogo')) {
-        try {
-          const { data } = await supabase.from('configuracoes').select('acessos_catalogo').eq('id', 1).single();
-          const acessosAtuais = data ? Number(data.acessos_catalogo) || 0 : 0;
-          await supabase.from('configuracoes').update({ acessos_catalogo: acessosAtuais + 1 }).eq('id', 1);
-          sessionStorage.setItem('visitou_catalogo', 'true');
-        } catch (error) {}
-      }
-    }
-    registrarAcesso();
-  }, [isPublic]);
 
   useEffect(() => {
     async function fetchData() {
@@ -390,7 +458,6 @@ export default function Catalogo({ isPublic = false }) {
         if (atrib.opcoes?.length > 0) iniciais[atrib.nome] = atrib.opcoes[0];
       });
     }
-    
     const imgSet = new Set();
     if (prod.imagem_url) imgSet.add(prod.imagem_url);
     if (prod.imagens && Array.isArray(prod.imagens)) prod.imagens.forEach(img => imgSet.add(img));
@@ -414,41 +481,36 @@ export default function Catalogo({ isPublic = false }) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       setOpenSection('');
-    } else {
-      alert("Erro ao salvar: " + error.message);
-    }
+    } else { alert("Erro ao salvar: " + error.message); }
   };
 
   const copyVitrineLink = () => {
-    const url = window.location.origin + "/vitrine";
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(window.location.origin + "/vitrine");
     alert("Link copiado!");
   };
 
-  // --- Função de Upload Atualizada para Suportar Dimensões e Campos Separados ---
   const handleImageUpload = async (e, field, maxDim = 1920) => {
     const file = e.target.files[0];
     if (!file) return;
     setIsUploadingGlobal(true);
     try {
+      if (st[field]) await deletePhysicalFile(st[field]);
       const blob = await compressImageToBlob(file, maxDim);
       const fileName = `catalogo-${field}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
       const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
       if (error) throw error;
-      
       const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
       const novaUrl = publicUrlData.publicUrl;
-      
       setSt(prev => ({ ...prev, [field]: novaUrl }));
-      
-      // Auto-save: Salva direto no banco de dados. 
-      // Se as colunas banner_desktop_url e banner_mobile_url não existirem, o Supabase as criará.
-      const { error: dbError } = await supabase.from('configuracoes').update({ [field]: novaUrl }).eq('id', 1);
-      if (dbError) throw dbError;
-      
-    } catch (err) {
-      alert("Erro ao subir imagem: " + err.message);
-    } finally {
+      await supabase.from('configuracoes').update({ [field]: novaUrl }).eq('id', 1);
+    } catch (err) { alert("Erro ao subir imagem: " + err.message); } finally { setIsUploadingGlobal(false); }
+  };
+
+  const removeImageAndStorage = async (field) => {
+    if (st[field]) {
+      setIsUploadingGlobal(true);
+      await deletePhysicalFile(st[field]);
+      setSt(prev => ({ ...prev, [field]: '' }));
       setIsUploadingGlobal(false);
     }
   };
@@ -456,32 +518,18 @@ export default function Catalogo({ isPublic = false }) {
   const moveCategory = (index, direction) => {
     const reorderable = displayCategories;
     let currentOrder = [...reorderable];
-    if (direction === 'up' && index > 0) {
-      [currentOrder[index - 1], currentOrder[index]] = [currentOrder[index], currentOrder[index - 1]];
-    } else if (direction === 'down' && index < currentOrder.length - 1) {
-      [currentOrder[index + 1], currentOrder[index]] = [currentOrder[index], currentOrder[index + 1]];
-    }
+    if (direction === 'up' && index > 0) [currentOrder[index - 1], currentOrder[index]] = [currentOrder[index], currentOrder[index - 1]];
+    else if (direction === 'down' && index < currentOrder.length - 1) [currentOrder[index + 1], currentOrder[index]] = [currentOrder[index], currentOrder[index + 1]];
     setSt({...st, ordem_categorias: currentOrder});
   };
 
-  const filtered = produtos
-    .filter(p => {
-      const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-      const pCat = String(p.categoria || "").toLowerCase().trim();
-      const sCat = String(selectedCategory || "").toLowerCase().trim();
-      const matchCategory = selectedCategory === 'Todas' || pCat === sCat;
-      return matchSearch && matchCategory;
-    })
-    .sort((a, b) => {
-      if (a.destaque && !b.destaque) return -1;
-      if (!a.destaque && b.destaque) return 1;
-      return 0;
-    });
+  const filtered = produtos.filter(p => {
+    const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = selectedCategory === 'Todas' || String(p.categoria || "").toLowerCase().trim() === String(selectedCategory || "").toLowerCase().trim();
+    return matchSearch && matchCategory;
+  }).sort((a, b) => (a.destaque && !b.destaque ? -1 : (!a.destaque && b.destaque ? 1 : 0)));
 
-  const calcularDesconto = (preco, promo) => {
-    if (!promo || promo >= preco || preco === 0) return 0;
-    return Math.round(((preco - promo) / preco) * 100);
-  };
+  const calcularDesconto = (preco, promo) => (!promo || promo >= preco || preco === 0) ? 0 : Math.round(((preco - promo) / preco) * 100);
 
   const selecionarOpcao = (nomeAtributo, opcao) => {
     setSelecoes(prev => ({ ...prev, [nomeAtributo]: opcao }));
@@ -494,13 +542,9 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
-  const lidarRespostaPersonalizada = (id, valor) => {
-    setRespostasPersonalizadas(prev => ({ ...prev, [id]: valor }));
-  };
-
   const handleQuantidadeChange = (e) => {
     const val = e.target.value.replace(/\D/g, '');
-    if (val === '') { setQuantidade(''); } else { setQuantidade(parseInt(val)); }
+    setQuantidade(val === '' ? '' : parseInt(val));
   };
 
   const handleQuantidadeBlur = () => {
@@ -513,17 +557,34 @@ export default function Catalogo({ isPublic = false }) {
      setQuantidade(prev => Math.max(minQtd, prev - 1));
   };
 
+  // --- FUNÇÃO CENTRAL DA AUTOMAÇÃO (PRÉ-VENDA) ---
+  const registrarPedidoPendente = async (titulo, dbDesc, total, itensChecklist) => {
+    const novoPedidoPendente = {
+      title: titulo,
+      description: dbDesc || 'Sem detalhes adicionais.',
+      cliente_nome: "Cliente do Site (Aguardando Mensagem)",
+      service_value: total,
+      valor_pago: 0,
+      payment_status: "em_aberto",
+      status: "pendente",
+      priority: "alta",
+      category: "Catálogo",
+      checklist: itensChecklist
+    };
+    try { await supabase.from('pedidos').insert([novoPedidoPendente]); } 
+    catch (err) { console.error("Erro ao registrar pré-pedido:", err); }
+  };
+
   const finalizarPedido = () => {
     if (carrinho.length === 0) return;
-
     const num = st?.whatsapp?.replace(/\D/g, '');
     let dbDesc = '';
     let zapMsg = 'Olá! Gostaria de fazer o seguinte pedido pelo catálogo:\n\n';
     let totalGeral = 0;
+    const itensChecklist = [];
 
     carrinho.forEach((item) => {
        const textoVars = Object.entries(item.selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
-       
        let textoPersonalizado = '';
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
@@ -531,12 +592,12 @@ export default function Catalogo({ isPublic = false }) {
              return `▪️ ${campo?.titulo || k}: ${v}`;
           }).join('\n');
        }
-
        const itemTotal = item.precoTotal;
        totalGeral += itemTotal;
+       
+       itensChecklist.push({ name: `${item.quantidade}x ${item.produto.nome}`, value: itemTotal, done: false });
 
        const descItem = `🛍️ *${item.produto.nome}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
-       
        dbDesc += descItem;
        zapMsg += descItem;
     });
@@ -544,18 +605,13 @@ export default function Catalogo({ isPublic = false }) {
     dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
     zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
 
-    supabase.from('pedidos').insert([{
-       title: `Catálogo: Pedido de ${carrinho.length} item(s)`,
-       description: dbDesc,
-       service_value: totalGeral,
-       status: 'solicitacao',
-       priority: 'alta',
-       category: 'Catálogo'
-    }]).then(() => {}).catch(err => console.error(err));
-
+    // 1. Abre o Zap e limpa o carrinho
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(zapMsg)}`, '_blank');
     setCarrinho([]); 
     setIsCartOpen(false);
+
+    // 2. Automação: Joga no Painel de Pedidos
+    registrarPedidoPendente(`Catálogo: Pedido de ${itensChecklist.length} item(s)`, dbDesc, totalGeral, itensChecklist);
   };
 
   const renderCatalog = () => {
@@ -588,10 +644,7 @@ export default function Catalogo({ isPublic = false }) {
 
       if (selectedProduct.atacado?.ativa && selectedProduct.atacado?.regras?.length > 0) {
         const validRules = selectedProduct.atacado.regras.filter(r => qtdSafe >= r.min && (!r.max || qtdSafe <= r.max)).sort((a, b) => b.min - a.min);
-        if (validRules.length > 0) {
-          unitPriceFinal = getWholesalePrice(validRules[0].preco);
-          wholesaleApplied = true;
-        }
+        if (validRules.length > 0) { unitPriceFinal = getWholesalePrice(validRules[0].preco); wholesaleApplied = true; }
       }
 
       let atacadoData = null;
@@ -608,29 +661,38 @@ export default function Catalogo({ isPublic = false }) {
 
       const adicionarAoCarrinho = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
-          const camposFaltando = selectedProduct.campos_personalizados.filter(
-            campo => campo.obrigatorio && (!respostasPersonalizadas[campo.id] || respostasPersonalizadas[campo.id].trim() === '')
-          );
-          if (camposFaltando.length > 0) {
-            alert(`Por favor, preencha o campo obrigatório: ${camposFaltando[0].titulo}`);
-            return;
-          }
+          const camposFaltando = selectedProduct.campos_personalizados.filter(campo => campo.obrigatorio && (!respostasPersonalizadas[campo.id] || respostasPersonalizadas[campo.id].trim() === ''));
+          if (camposFaltando.length > 0) { alert(`Por favor, preencha o campo obrigatório: ${camposFaltando[0].titulo}`); return; }
         }
-
-        const novoItem = {
-          id_carrinho: Date.now() + Math.random(),
-          produto: selectedProduct,
-          quantidade: qtdSafe,
-          unitPriceFinal,
-          precoTotal,
-          wholesaleApplied,
-          selecoes,
-          respostasPersonalizadas,
-          activeImage
-        };
-
+        const novoItem = { id_carrinho: Date.now() + Math.random(), produto: selectedProduct, quantidade: qtdSafe, unitPriceFinal, precoTotal, wholesaleApplied, selecoes, respostasPersonalizadas, activeImage };
         setCarrinho(prev => [...prev, novoItem]);
         setIsCartOpen(true); 
+      };
+
+      const enviarZapDireto = () => {
+        if (selectedProduct.campos_personalizados?.length > 0) {
+          const camposFaltando = selectedProduct.campos_personalizados.filter(campo => campo.obrigatorio && (!respostasPersonalizadas[campo.id] || respostasPersonalizadas[campo.id].trim() === ''));
+          if (camposFaltando.length > 0) { alert(`Por favor, preencha o campo obrigatório: ${camposFaltando[0].titulo}`); return; }
+        }
+
+        const num = st?.whatsapp?.replace(/\D/g, '');
+        const textoVars = Object.entries(selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
+        let textoPersonalizado = '';
+        let textoPersonalizadoDb = '';
+        
+        if (selectedProduct.campos_personalizados?.length > 0) {
+          textoPersonalizado = '\n\n*📝 Personalização:*\n' + selectedProduct.campos_personalizados.map(campo => `▪️ *${campo.titulo}:* ${respostasPersonalizadas[campo.id] || 'Não preenchido'}`).join('\n');
+          textoPersonalizadoDb = 'Personalização:\n' + selectedProduct.campos_personalizados.map(campo => `- ${campo.titulo}: ${respostasPersonalizadas[campo.id] || 'Não preenchido'}`).join('\n');
+        }
+
+        const msg = `Olá! Gostaria de encomendar este produto:\n\n🛍️ *${selectedProduct.nome}*\n${textoVars}${textoPersonalizado}\n\n*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n*Total:* R$ ${precoTotal.toFixed(2)}`;
+        
+        // 1. Abre WhatsApp
+        window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+
+        // 2. Automação: Joga no Painel de Pedidos
+        const detalhesDb = `${textoVars.replace(/▪️ \*/g, '- ').replace(/\*/g, '')}\n${textoPersonalizadoDb}`.trim();
+        registrarPedidoPendente(`Site: ${selectedProduct.nome} (${qtdSafe}x)`, detalhesDb, precoTotal, [{ name: `${qtdSafe}x ${selectedProduct.nome}`, value: precoTotal, done: false }]);
       };
 
       const variacoesJSX = selectedProduct.variacoes?.ativa && selectedProduct.variacoes?.atributos ? (
@@ -642,11 +704,7 @@ export default function Catalogo({ isPublic = false }) {
                 {atrib.opcoes.map(opcao => {
                   const isSelected = selecoes[atrib.nome]?.id === opcao.id;
                   return (
-                    <button
-                      key={opcao.id}
-                      onClick={() => selecionarOpcao(atrib.nome, opcao)}
-                      className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
-                    >
+                    <button key={opcao.id} onClick={() => selecionarOpcao(atrib.nome, opcao)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
                       {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-cover"/></div>}
                       {opcao.nome}
                     </button>
@@ -662,15 +720,10 @@ export default function Catalogo({ isPublic = false }) {
         <div className="flex flex-col w-full max-w-6xl mx-auto">
           {isMobile && atacadoData && atacadoData.nextRule && (
             <div className="flex flex-col gap-1.5 mb-3 px-1">
-               <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
-                 🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un
-               </p>
-               <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
-               </div>
+               <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</p>
+               <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"><div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
             </div>
           )}
-
           <div className={`flex ${isMobile ? 'flex-col' : 'flex-row items-center'} gap-3 md:gap-4 w-full`}>
             <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
               <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
@@ -689,6 +742,9 @@ export default function Catalogo({ isPublic = false }) {
                  <Button onClick={adicionarAoCarrinho} className="flex-1 h-12 md:h-14 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]" style={{ backgroundColor: st?.cor_principal }}>
                    {isMobile ? "Adicionar" : "Adicionar ao Carrinho"}
                  </Button>
+                 <Button onClick={enviarZapDireto} className="flex-1 h-12 md:h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
+                   <MessageCircle size={18} fill="currentColor" className="hidden sm:block" /> Comprar Agora
+                 </Button>
                  {isMobile && (
                     <button onClick={() => setIsCartOpen(true)} className="w-12 h-12 rounded-xl flex items-center justify-center text-white relative shadow-md shrink-0 transition-all active:scale-[0.98]" style={{ backgroundColor: st?.cor_principal }}>
                       <ShoppingCart size={20} />
@@ -696,7 +752,6 @@ export default function Catalogo({ isPublic = false }) {
                     </button>
                  )}
                </div>
-               <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
             </div>
           </div>
         </div>
@@ -708,67 +763,34 @@ export default function Catalogo({ isPublic = false }) {
           <BenefitsBar st={st} />
           
           <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 mb-10">
-            <button onClick={voltarParaGrid} className="flex items-center gap-1.5 text-slate-500 font-bold text-xs hover:text-slate-900 transition-all mb-6">
-              <ChevronLeft size={16} /> Voltar para loja
-            </button>
+            <button onClick={voltarParaGrid} className="flex items-center gap-1.5 text-slate-500 font-bold text-xs hover:text-slate-900 transition-all mb-6"><ChevronLeft size={16} /> Voltar para loja</button>
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
-              
               <div className="w-full md:w-[45%] flex flex-col gap-4">
                  <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
-                   {selectedProduct.destaque && (
-                      <div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
-                        <Star size={12} fill="currentColor" /> Destaque
-                      </div>
-                   )}
+                   {selectedProduct.destaque && (<div className="absolute top-4 left-4 z-10 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={12} fill="currentColor" /> Destaque</div>)}
                    <img key={activeImage} src={activeImage} className="w-full h-full object-cover animate-in fade-in duration-300" alt={selectedProduct.nome} />
                  </div>
                  {galleryImages.length > 1 && (
                    <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
                      {galleryImages.map((img, idx) => (
-                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-0.5 transition-all ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}>
-                         <img src={img} className="w-full h-full object-cover rounded-md" />
-                       </button>
+                       <button key={idx} onClick={() => setActiveImage(img)} className={`w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 p-0.5 transition-all ${activeImage === img ? 'border-slate-800 bg-white' : 'border-transparent opacity-70 hover:opacity-100 bg-slate-50'}`}><img src={img} className="w-full h-full object-cover rounded-md" /></button>
                      ))}
                    </div>
                  )}
                  <div className="block md:hidden mt-2">{variacoesJSX}</div>
-                 {selectedProduct.descricao && (
-                    <div className="hidden md:block mt-8 pt-8 border-t border-slate-100">
-                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Descrição do Produto</h3>
-                      <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
-                    </div>
-                 )}
+                 {selectedProduct.descricao && (<div className="hidden md:block mt-8 pt-8 border-t border-slate-100"><h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Descrição do Produto</h3><div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div></div>)}
               </div>
 
               <div className="w-full md:w-[55%] flex flex-col">
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {descontoPercent > 0 && !wholesaleApplied && !hasVariationPrice && (
-                    <span className="text-white text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>
-                      -{descontoPercent}% OFF
-                    </span>
-                  )}
-                  {selectedProduct.qtd_minima > 1 && (
-                    <span className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm">
-                      Pedido Mín. {selectedProduct.qtd_minima} un.
-                    </span>
-                  )}
-                  <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm flex items-center gap-1">
-                    <Package size={12}/> {selectedProduct.categoria}
-                  </span>
+                  {descontoPercent > 0 && !wholesaleApplied && !hasVariationPrice && (<span className="text-white text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>)}
+                  {selectedProduct.qtd_minima > 1 && (<span className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm">Pedido Mín. {selectedProduct.qtd_minima} un.</span>)}
+                  <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm flex items-center gap-1"><Package size={12}/> {selectedProduct.categoria}</span>
                 </div>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 leading-tight">{selectedProduct.nome}</h1>
                 <div className="mb-6 pb-6 border-b border-slate-100">
-                   <div className="flex items-end gap-3 mb-1">
-                     <span className="text-3xl md:text-4xl font-black transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {unitPriceFinal.toFixed(2)}</span>
-                     {selectedProduct.preco_promocional > 0 && !wholesaleApplied && !hasVariationPrice && (
-                       <span className="text-sm text-slate-400 line-through font-bold mb-1.5">R$ {selectedProduct.preco.toFixed(2)}</span>
-                     )}
-                   </div>
-                   {wholesaleApplied && (
-                      <span className="font-bold text-[10px] uppercase flex items-center gap-1 mt-1" style={{ color: st?.cor_etiqueta_atacado || '#fb923c' }}>
-                        <Box size={12}/> Preço de Atacado Aplicado
-                      </span>
-                   )}
+                   <div className="flex items-end gap-3 mb-1"><span className="text-3xl md:text-4xl font-black transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {unitPriceFinal.toFixed(2)}</span>{selectedProduct.preco_promocional > 0 && !wholesaleApplied && !hasVariationPrice && (<span className="text-sm text-slate-400 line-through font-bold mb-1.5">R$ {selectedProduct.preco.toFixed(2)}</span>)}</div>
+                   {wholesaleApplied && (<span className="font-bold text-[10px] uppercase flex items-center gap-1 mt-1" style={{ color: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={12}/> Preço de Atacado Aplicado</span>)}
                 </div>
                 <div className="hidden md:block">{variacoesJSX}</div>
                 
@@ -776,77 +798,22 @@ export default function Catalogo({ isPublic = false }) {
                   <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-5">
                     <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Box size={14}/> Descontos por Quantidade</h3>
                     {atacadoData.nextRule ? (
-                      <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                         <p className="text-[11px] font-semibold text-slate-600 mb-2">
-                           🔥 Faltam só <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
-                         </p>
-                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1"><div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
-                      </div>
+                      <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm"><p className="text-[11px] font-semibold text-slate-600 mb-2">🔥 Faltam só <span className="font-black text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-black text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span></p><div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1"><div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div><div className="flex justify-between items-center text-[9px] font-bold text-slate-400"><span>{qtdSafe} un.</span><span>Meta: {atacadoData.nextRule.min} un.</span></div></div>
                     ) : (
-                      <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 text-amber-700">
-                        <Sparkles size={16} className="text-amber-500" /><span className="text-[11px] font-black uppercase tracking-widest">Desconto Máximo Atingido!</span>
-                      </div>
+                      <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 text-amber-700"><Sparkles size={16} className="text-amber-500" /><span className="text-[11px] font-black uppercase tracking-widest">Desconto Máximo Atingido! 🎉</span></div>
                     )}
                     <div className="flex flex-col gap-1.5">
                       {atacadoData.rules.map((r, i) => {
                          const isCurrent = atacadoData.activeRule?.min === r.min;
-                         return (
-                           <div key={i} className={`flex justify-between items-center text-[10px] px-3 py-2 rounded-md border ${isCurrent ? 'bg-amber-100/50 border-amber-200 text-amber-900 font-bold shadow-sm' : 'bg-white border-slate-100 text-slate-500'}`}>
-                             <span>Acima de {r.min} un.</span>
-                             <span className={isCurrent ? 'font-black' : 'font-semibold'}>R$ {getWholesalePrice(r.preco).toFixed(2)} /un</span>
-                           </div>
-                         )
+                         return (<div key={i} className={`flex justify-between items-center text-[10px] px-3 py-2 rounded-md border ${isCurrent ? 'bg-amber-100/50 border-amber-200 text-amber-900 font-bold shadow-sm' : 'bg-white border-slate-100 text-slate-500'}`}><span>Acima de {r.min} un.</span><span className={isCurrent ? 'font-black' : 'font-semibold'}>R$ {getWholesalePrice(r.preco).toFixed(2)} /un</span></div>)
                       })}
                     </div>
                   </div>
                 )}
                 
-                {selectedProduct.campos_personalizados && selectedProduct.campos_personalizados.length > 0 && (
-                  <div className="space-y-5 mb-6 border-b border-slate-100 pb-6">
-                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <LayoutTemplate size={16} /> Personalize seu Produto
-                    </h3>
-                    
-                    {selectedProduct.campos_personalizados.map(campo => (
-                      <div key={campo.id} className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
-                          {campo.titulo}
-                          {campo.obrigatorio && <span className="text-rose-500 text-[10px]">* Obrigatório</span>}
-                        </label>
-                        
-                        {campo.tipo === 'texto_curto' && (
-                          <Input 
-                            value={respostasPersonalizadas[campo.id] || ''}
-                            onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)}
-                            placeholder="Digite sua resposta..."
-                            className="h-11 bg-slate-50 focus:bg-white text-sm"
-                          />
-                        )}
-
-                        {campo.tipo === 'texto_longo' && (
-                          <textarea 
-                            value={respostasPersonalizadas[campo.id] || ''}
-                            onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)}
-                            placeholder="Descreva os detalhes aqui..."
-                            className="w-full min-h-[80px] p-3 rounded-md border border-slate-200 bg-slate-50 focus:bg-white text-sm outline-none focus:ring-2 focus:ring-slate-100 resize-none"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {selectedProduct.descricao && (
-                  <div className="mb-6 border-b border-slate-100 pb-6 block md:hidden">
-                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
-                    <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
-                  </div>
-                )}
+                {selectedProduct.descricao && (<div className="mb-6 border-b border-slate-100 pb-6 block md:hidden"><h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3><div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div></div>)}
                 
-                <div className="hidden md:block mt-4">
-                   <BuyBarContent isMobile={false} />
-                </div>
-
+                <div className="hidden md:block mt-4"><BuyBarContent isMobile={false} /></div>
               </div>
             </div>
             
@@ -855,25 +822,7 @@ export default function Catalogo({ isPublic = false }) {
                 <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 flex items-center gap-2">Veja também</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
-                    <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
-                        {prod.destaque && <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</div>}
-                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                      </div>
-                      <div className="flex flex-col flex-1 p-3 md:p-4">
-                        <h3 className="text-xs font-normal text-slate-800 line-clamp-2 leading-tight mb-2">{prod.nome}</h3>
-                        <div className="mt-auto flex flex-col gap-2">
-                          <div className="flex flex-col">
-                            {prod.preco_promocional > 0 ? (
-                               <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base font-black text-slate-900 leading-none mt-0.5">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                            ) : (
-                               <span className="text-base font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                            )}
-                          </div>
-                          <button className="w-full py-2 rounded-lg text-white text-[10px] font-bold uppercase transition-colors duration-300" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
-                        </div>
-                      </div>
-                    </div>
+                    <ProductCard key={prod.id} prod={prod} st={st} aspectClass={aspectClass} calcularDesconto={calcularDesconto} abrirDetalhe={abrirDetalhe} />
                   ))}
                 </div>
               </div>
@@ -881,127 +830,42 @@ export default function Catalogo({ isPublic = false }) {
           </div>
           
           <FooterSite st={st} />
-
-          <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
-             <BuyBarContent isMobile={true} />
-          </div>
-
-          <AnimatePresence>
-            {isCartOpen && (
-              <>
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
-                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
-                  <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center" style={{ color: st?.cor_principal }}><ShoppingCart size={20}/></div>
-                      <div>
-                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {carrinho.length === 0 ? (
-                       <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
-                          <ShoppingBag size={48} className="mb-4 text-slate-200"/>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
-                          <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
-                       </div>
-                    ) : (
-                       carrinho.map((item) => (
-                         <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
-                            <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
-                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
-                               <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex flex-col justify-center flex-1">
-                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
-                               <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                               <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
-                            </div>
-                         </div>
-                       ))
-                    )}
-                  </div>
-                  {carrinho.length > 0 && (
-                    <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                      <div className="flex justify-between items-end mb-4">
-                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
-                         <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
-                      </div>
-                      <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
-                        <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido pelo WhatsApp
-                      </Button>
-                      <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
-                        Continuar Comprando
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+          <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}><BuyBarContent isMobile={true} /></div>
+          <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} carrinho={carrinho} setCarrinho={setCarrinho} st={st} finalizarPedido={finalizarPedido} />
+          
           {carrinho.length > 0 && !isCartOpen && (
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`}
-              style={{ backgroundColor: st?.cor_principal }}
-            >
-              <ShoppingCart size={24} />
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
-                {carrinho.length}
-              </span>
+            <button onClick={() => setIsCartOpen(true)} className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`} style={{ backgroundColor: st?.cor_principal }}>
+              <ShoppingCart size={24} /><span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">{carrinho.length}</span>
             </button>
           )}
         </div>
       );
     }
 
+    // --- GRID PRINCIPAL DA VITRINE ---
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
         <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} carrinhoCount={carrinho.length} setIsCartOpen={setIsCartOpen} categorias={displayCategories} changeCategory={changeCategory} selectedCategory={selectedCategory} />
         
-        {/* --- HERO SECTION ATUALIZADA (Visual Full-Width Desktop / Limpo Mobile) --- */}
         {view === 'grid' && (
           <div className="relative w-full overflow-hidden bg-white z-0 mt-[-80px]">
-             
-             {/* --- DESKTOP HERO: Banner de Fundo Inteiro + Textos Centralizados --- */}
              <div className="hidden md:flex relative w-full aspect-[21/9] min-h-[450px] max-h-[650px] items-center justify-center overflow-hidden bg-slate-900">
-                {st?.banner_desktop_url && (
-                   <img src={st.banner_desktop_url} className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500" alt="Banner Desktop" />
-                )}
-                {/* Camada escura suave no fundo para legibilidade */}
+                {st?.banner_desktop_url && <img src={st.banner_desktop_url} className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500" alt="Banner Desktop" />}
                 <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"></div>
-                
-                {/* Textos Centralizados por cima da imagem */}
                 <div className="relative z-10 max-w-4xl mx-auto px-8 text-center space-y-6 animate-in slide-in-from-bottom-5 duration-700">
-                   <h1 className="text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter drop-shadow-md italic">
-                     {st?.nome_loja || 'Sua Loja'}
-                   </h1>
-                   <p className="text-base md:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed font-medium drop-shadow">
-                     {st?.texto_sobre || 'Explore nosso catálogo e faça seu pedido direto pelo WhatsApp.'}
-                   </p>
+                   <h1 className="text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter drop-shadow-md italic">{st?.nome_loja || 'Sua Loja'}</h1>
+                   <p className="text-base md:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed font-medium drop-shadow">{st?.texto_sobre || 'Explore nosso catálogo e faça seu pedido direto pelo WhatsApp.'}</p>
                    <div className="flex items-center justify-center gap-4 pt-4">
-                     {st?.whatsapp && (
-                       <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white shadow-xl transition-transform hover:scale-105 border-none" style={{ backgroundColor: st?.cor_principal }}>
-                         Fale Conosco
-                       </Button>
-                     )}
-                     <Button onClick={() => document.getElementById('produtos-section').scrollIntoView({ behavior: 'smooth' })} variant="outline" className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white border-white/40 bg-white/10 backdrop-blur-sm hover:bg-white hover:text-slate-900 transition-all hover:scale-105">
-                       Ver Produtos
-                     </Button>
+                     {st?.whatsapp && <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white shadow-xl transition-transform hover:scale-105 border-none" style={{ backgroundColor: st?.cor_principal }}>Fale Conosco</Button>}
+                     <Button onClick={() => document.getElementById('produtos-section').scrollIntoView({ behavior: 'smooth' })} variant="outline" className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white border-white/40 bg-white/10 backdrop-blur-sm hover:bg-white hover:text-slate-900 transition-all hover:scale-105">Ver Produtos</Button>
                    </div>
                 </div>
              </div>
-
-             {/* --- MOBILE HERO: Apenas o Banner --- */}
              {st?.banner_mobile_url && (
                <div className="flex md:hidden relative w-full aspect-square bg-slate-50 border-b border-slate-100 mt-[80px]">
                   <img src={st.banner_mobile_url} className="w-full h-full object-cover" alt="Banner Mobile" />
                </div>
              )}
-
           </div>
         )}
 
@@ -1009,28 +873,13 @@ export default function Catalogo({ isPublic = false }) {
         
         <main id="produtos-section" className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 flex-1 w-full">
           <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar mb-8 pb-3 border-b border-slate-100">
-            <button 
-              onClick={() => changeCategory('Todas')}
-              className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border flex items-center gap-1.5 ${selectedCategory === 'Todas' ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-            >
-              <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-              Todas
-            </button>
+            <button onClick={() => changeCategory('Todas')} className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border flex items-center gap-1.5 ${selectedCategory === 'Todas' ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`} style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}><Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} /> Todas</button>
             {categoriasRaw?.filter(c => c !== 'Sem Categoria').map(cat => {
               const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-              return (
-                <button 
-                  key={cat}
-                  onClick={() => changeCategory(cat)}
-                  className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border ${isSelected ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-                >
-                  {cat}
-                </button>
-              )
+              return <button key={cat} onClick={() => changeCategory(cat)} className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border ${isSelected ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`} style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}>{cat}</button>
             })}
           </div>
+          
           {filtered.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm mt-4">
                <ShoppingBag size={40} className="mx-auto text-slate-200 mb-4" />
@@ -1040,108 +889,19 @@ export default function Catalogo({ isPublic = false }) {
             <div className="space-y-6">
               <h2 className="text-xl md:text-2xl font-black text-slate-900 pb-2">Nossos Produtos</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-                {filtered.map(prod => {
-                  const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
-                  return (
-                  <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                    <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
-                      {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
-                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
-                    </div>
-                    <div className="flex flex-col flex-1 p-3 md:p-4">
-                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                        {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
-                        {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
-                        {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Variações</span>}
-                        {!descontoPercent && !prod.atacado?.ativa && !prod.variacoes?.ativa && <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5"><Package size={10} /> {prod.categoria}</span>}
-                      </div>
-                      <h3 className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 leading-snug mb-2">{prod.nome}</h3>
-                      <div className="mt-auto flex flex-col gap-2.5">
-                        <div className="flex flex-col">
-                          {prod.preco_promocional > 0 ? (
-                            <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-black text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                          ) : (
-                            <span className="text-base md:text-lg font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                          )}
-                        </div>
-                        <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
-                      </div>
-                    </div>
-                  </div>
-                )})}
+                {filtered.map(prod => (
+                  <ProductCard key={prod.id} prod={prod} st={st} aspectClass={aspectClass} calcularDesconto={calcularDesconto} abrirDetalhe={abrirDetalhe} />
+                ))}
               </div>
             </div>
           )}
         </main>
         <FooterSite st={st} />
-        <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
-        </div>
-        <AnimatePresence>
-          {isCartOpen && (
-            <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
-              <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
-                <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center" style={{ color: st?.cor_principal }}><ShoppingCart size={20}/></div>
-                    <div>
-                      <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                  {carrinho.length === 0 ? (
-                       <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
-                          <ShoppingBag size={48} className="mb-4 text-slate-200"/>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
-                          <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
-                       </div>
-                    ) : (
-                       carrinho.map((item) => (
-                         <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
-                            <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
-                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
-                               <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex flex-col justify-center flex-1">
-                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
-                               <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                               <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
-                            </div>
-                         </div>
-                       ))
-                    )}
-                </div>
-                {carrinho.length > 0 && (
-                  <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                    <div className="flex justify-between items-end mb-4">
-                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
-                       <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
-                    </div>
-                    <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
-                      <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido pelo WhatsApp
-                    </Button>
-                    <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
-                      Continuar Comprando
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} carrinho={carrinho} setCarrinho={setCarrinho} st={st} finalizarPedido={finalizarPedido} />
+        
         {carrinho.length > 0 && !isCartOpen && (
-          <button 
-            onClick={() => setIsCartOpen(true)}
-            className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`}
-            style={{ backgroundColor: st?.cor_principal }}
-          >
-            <ShoppingCart size={24} />
-            <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
-              {carrinho.length}
-            </span>
+          <button onClick={() => setIsCartOpen(true)} className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`} style={{ backgroundColor: st?.cor_principal }}>
+            <ShoppingCart size={24} /><span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">{carrinho.length}</span>
           </button>
         )}
       </div>
@@ -1152,35 +912,30 @@ export default function Catalogo({ isPublic = false }) {
 
   if (isPublic) return renderCatalog();
 
+  // ============================================================================
+  // 4. MODO ADMINISTRADOR: O EDITOR
+  // ============================================================================
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
-        
-        <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
-          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft size={14} /> Sair
-          </button>
-          <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all">
-            {saved ? <Check size={14} /> : "Salvar"}
-          </Button>
+      {/* SIDEBAR DESKTOP */}
+      <div className="hidden lg:flex w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex-col h-full shadow-2xl z-20">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors"><ArrowLeft size={14} /> Sair</button>
+          <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all">{saved ? <Check size={14} /> : "Salvar"}</Button>
         </div>
 
-        <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
            <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
-                <Input value={st?.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Central</label>
+              <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome da Loja</label><Input value={st?.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" /></div>
+              <div className="space-y-1.5"><label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Central</label>
                 <div className="flex flex-col gap-1">
                   <div className="flex gap-2">
                     <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative shrink-0">
                        {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
-                    {st?.logo_url && <button onClick={() => setSt({...st, logo_url: ''})} className="bg-red-500 text-white p-1.5 rounded h-12 flex items-center justify-center"><Trash2 size={14}/></button>}
+                    {st?.logo_url && <button onClick={() => removeImageAndStorage('logo_url')} className="bg-red-500 text-white p-1.5 rounded h-12 flex items-center justify-center"><Trash2 size={14}/></button>}
                   </div>
                   <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1">Medida recomendada: 500 x 500 px</p>
                 </div>
@@ -1190,199 +945,98 @@ export default function Catalogo({ isPublic = false }) {
                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Tamanho da Logo no Topo</label>
                 <div className="flex gap-2">
                   {['pequeno', 'medio', 'grande'].map(size => (
-                    <button key={size} onClick={() => setSt({...st, tamanho_logo: size})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.tamanho_logo === size || (!st?.tamanho_logo && size === 'medio') ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>
-                      {size}
-                    </button>
+                    <button key={size} onClick={() => setSt({...st, tamanho_logo: size})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.tamanho_logo === size || (!st?.tamanho_logo && size === 'medio') ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>{size}</button>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
-                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cor Principal</label>
-                <div className="flex gap-2 items-center">
-                  <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.cor_principal || '#000000' }}>
-                    <input type="color" value={st?.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
-                  </div>
-                  <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 font-mono text-[10px] uppercase bg-slate-800 border-slate-700 text-white" />
-                </div>
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50"><label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cor Principal</label>
+                <div className="flex gap-2 items-center"><div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.cor_principal || '#000000' }}><input type="color" value={st?.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" /></div><Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 font-mono text-[10px] uppercase bg-slate-800 border-slate-700 text-white" /></div>
               </div>
               
-              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
-                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
-                <div className="flex gap-2">
-                  <button onClick={() => setSt({...st, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quad. (1:1)</button>
-                  <button onClick={() => setSt({...st, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
-                </div>
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50"><label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
+                <div className="flex gap-2"><button onClick={() => setSt({...st, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quad. (1:1)</button><button onClick={() => setSt({...st, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button></div>
               </div>
 
-              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
-                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cores das Etiquetas</label>
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50"><label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cores das Etiquetas</label>
                  <div className="grid grid-cols-1 gap-2 pt-1">
-                  {[
-                    { label: 'Destaque', field: 'cor_etiqueta_destaque', def: '#fbbf24' },
-                    { label: 'Promoção', field: 'cor_etiqueta_promo', def: '#f43f5e' },
-                    { label: 'Atacado', field: 'cor_etiqueta_atacado', def: '#fb923c' },
-                    { label: 'Variações', field: 'cor_etiqueta_variacao', def: '#60a5fa' }
-                  ].map(item => (
-                    <div key={item.field} className="flex gap-2 items-center justify-between bg-slate-800 p-1.5 rounded border border-slate-700">
-                      <span className="text-[9px] font-bold uppercase text-slate-400 px-1">{item.label}</span>
-                      <div className="relative w-6 h-6 rounded shrink-0" style={{ backgroundColor: st?.[item.field] || item.def }}>
-                        <input type="color" value={st?.[item.field] || item.def} onChange={(e) => setSt({...st, [item.field]: e.target.value})} className="absolute -inset-2 w-10 h-10 opacity-0 cursor-pointer" />
-                      </div>
-                    </div>
+                  {[{ label: 'Destaque', field: 'cor_etiqueta_destaque', def: '#fbbf24' }, { label: 'Promoção', field: 'cor_etiqueta_promo', def: '#f43f5e' }, { label: 'Atacado', field: 'cor_etiqueta_atacado', def: '#fb923c' }, { label: 'Variações', field: 'cor_etiqueta_variacao', def: '#60a5fa' }].map(item => (
+                    <div key={item.field} className="flex gap-2 items-center justify-between bg-slate-800 p-1.5 rounded border border-slate-700"><span className="text-[9px] font-bold uppercase text-slate-400 px-1">{item.label}</span><div className="relative w-6 h-6 rounded shrink-0" style={{ backgroundColor: st?.[item.field] || item.def }}><input type="color" value={st?.[item.field] || item.def} onChange={(e) => setSt({...st, [item.field]: e.target.value})} className="absolute -inset-2 w-10 h-10 opacity-0 cursor-pointer" /></div></div>
                   ))}
                  </div>
               </div>
            </EditorSection>
 
            <EditorSection id="layout" title="Estrutura" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Ordem das Categorias</label>
+              <div className="space-y-2"><label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Ordem das Categorias</label>
                 {displayCategories.filter(c => c !== 'Sem Categoria').map((cat, index) => (
-                  <div key={cat} className="flex items-center justify-between p-2 bg-slate-800 border border-slate-700 rounded-md">
-                    <span className="text-[10px] font-bold text-slate-300 uppercase">{cat}</span>
-                    <div className="flex gap-1">
-                      <button onClick={() => moveCategory(index, 'up')} disabled={index === 0} className="p-1 text-slate-500 hover:text-white disabled:opacity-30"><ChevronUp size={14} /></button>
-                      <button onClick={() => moveCategory(index, 'down')} disabled={index === displayCategories.filter(c => c !== 'Sem Categoria').length - 1} className="p-1 text-slate-500 hover:text-white disabled:opacity-30"><ChevronDown size={14} /></button>
-                    </div>
-                  </div>
+                  <div key={cat} className="flex items-center justify-between p-2 bg-slate-800 border border-slate-700 rounded-md"><span className="text-[10px] font-bold text-slate-300 uppercase">{cat}</span><div className="flex gap-1"><button onClick={() => moveCategory(index, 'up')} disabled={index === 0} className="p-1 text-slate-500 hover:text-white disabled:opacity-30"><ChevronUp size={14} /></button><button onClick={() => moveCategory(index, 'down')} disabled={index === displayCategories.filter(c => c !== 'Sem Categoria').length - 1} className="p-1 text-slate-500 hover:text-white disabled:opacity-30"><ChevronDown size={14} /></button></div></div>
                 ))}
               </div>
 
               <div className="space-y-4 pt-4 border-t border-slate-700/50 mt-4">
-                 <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md">
-                   <span className="text-[10px] font-bold uppercase text-slate-300">Faixa de Benefícios</span>
-                   <button onClick={() => setSt({...st, mostrar_beneficios: !st.mostrar_beneficios})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${st?.mostrar_beneficios ? 'bg-emerald-500' : 'bg-slate-600'}`}>
-                     <div className={`w-3 h-3 bg-white rounded-full transition-transform ${st?.mostrar_beneficios ? 'translate-x-4' : 'translate-x-0'}`} />
-                   </button>
-                 </div>
+                 <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md"><span className="text-[10px] font-bold uppercase text-slate-300">Faixa de Benefícios</span><button onClick={() => setSt({...st, mostrar_beneficios: !st.mostrar_beneficios})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${st?.mostrar_beneficios ? 'bg-emerald-500' : 'bg-slate-600'}`}><div className={`w-3 h-3 bg-white rounded-full transition-transform ${st?.mostrar_beneficios ? 'translate-x-4' : 'translate-x-0'}`} /></button></div>
                  {st?.mostrar_beneficios && [1, 2, 3].map(num => (
                    <div key={num} className="p-3 bg-slate-800 rounded border border-slate-700 space-y-2">
                      <div className="flex gap-2 items-start">
-                       <div className="flex flex-col items-center gap-1 shrink-0">
-                         <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
-                           {st[`beneficio_${num}_icone`] ? <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain"/> : <Package size={14} className="text-slate-500"/>}
-                           <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`, 100)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                         </div>
-                         <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100 px</span>
-                       </div>
-                       <div className="flex-1 space-y-2">
-                         <Input value={st[`beneficio_${num}_titulo`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_titulo`]: e.target.value})} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white w-full" />
-                         <Input value={st[`beneficio_${num}_desc`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_desc`]: e.target.value})} placeholder="Descrição curta" className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400 w-full" />
-                       </div>
+                       <div className="flex flex-col items-center gap-1 shrink-0"><div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">{st[`beneficio_${num}_icone`] ? <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain"/> : <Package size={14} className="text-slate-500"/>}<input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`)} className="absolute inset-0 opacity-0 cursor-pointer" /></div><span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100 px</span></div>
+                       <div className="flex-1 space-y-2"><Input value={st[`beneficio_${num}_titulo`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_titulo`]: e.target.value})} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white w-full" /><Input value={st[`beneficio_${num}_desc`] || ''} onChange={(e) => setSt({...st, [`beneficio_${num}_desc`]: e.target.value})} placeholder="Descrição curta" className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400 w-full" /></div>
                      </div>
                    </div>
                  ))}
               </div>
            </EditorSection>
 
-           {/* --- SEÇÃO BANNERS ATUALIZADA (Uploads Separados Desktop/Mobile) --- */}
            <EditorSection id="banners" title="Banners Capa" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-6">
-                
                 {/* BANNER DESKTOP */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Monitor size={14}/> Banner Desktop (Computador)</label>
-                  <div className="relative">
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_desktop_url', 1920)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                      <Upload size={13} className="mr-1.5"/> {st?.banner_desktop_url ? "Trocar Imagem" : "Subir Imagem"}
-                    </Button>
-                  </div>
-                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1 text-center w-full">Recomendado: 1920 x 820 px (ou similar)</p>
-                  {st?.banner_desktop_url && (
-                    <div className="aspect-[21/9] rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800">
-                      <img src={st.banner_desktop_url} className="w-full h-full object-cover" />
-                      <button onClick={() => setSt({...st, banner_desktop_url: ''})} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button>
-                    </div>
-                  )}
+                <div className="space-y-2"><label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Monitor size={14}/> Banner Desktop</label>
+                  <div className="relative"><input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_desktop_url', 1920)} className="absolute inset-0 opacity-0 cursor-pointer z-10" /><Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700"><Upload size={13} className="mr-1.5"/> {st?.banner_desktop_url ? "Trocar Imagem" : "Subir Imagem"}</Button></div>
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1 text-center w-full">Recomendado: 1920 x 820 px</p>
+                  {st?.banner_desktop_url && (<div className="aspect-[21/9] rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800"><img src={st.banner_desktop_url} className="w-full h-full object-cover" /><button onClick={() => removeImageAndStorage('banner_desktop_url')} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button></div>)}
                 </div>
-
                 {/* BANNER MOBILE */}
-                <div className="space-y-2 pt-4 border-t border-slate-700/50">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><SmartPhone size={14}/> Banner Mobile (Celular)</label>
-                  <div className="relative">
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_mobile_url', 800)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                    <Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                      <Upload size={13} className="mr-1.5"/> {st?.banner_mobile_url ? "Trocar Imagem" : "Subir Imagem"}
-                    </Button>
-                  </div>
+                <div className="space-y-2 pt-4 border-t border-slate-700/50"><label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><SmartPhone size={14}/> Banner Mobile</label>
+                  <div className="relative"><input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_mobile_url', 800)} className="absolute inset-0 opacity-0 cursor-pointer z-10" /><Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700"><Upload size={13} className="mr-1.5"/> {st?.banner_mobile_url ? "Trocar Imagem" : "Subir Imagem"}</Button></div>
                   <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1 text-center w-full">Recomendado: 800 x 800 px (Quadrado)</p>
-                  {st?.banner_mobile_url && (
-                    <div className="aspect-square w-32 mx-auto rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800">
-                      <img src={st.banner_mobile_url} className="w-full h-full object-cover" />
-                      <button onClick={() => setSt({...st, banner_mobile_url: ''})} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button>
-                    </div>
-                  )}
+                  {st?.banner_mobile_url && (<div className="aspect-square w-32 mx-auto rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800"><img src={st.banner_mobile_url} className="w-full h-full object-cover" /><button onClick={() => removeImageAndStorage('banner_mobile_url')} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button></div>)}
                 </div>
-
-                <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Link Opcional ao Clicar (https://...)</label>
-                  <Input value={st?.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="https://..." className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
-                </div>
+                <div className="space-y-1.5 pt-3 border-t border-slate-700/50"><label className="text-[9px] font-bold uppercase text-slate-500">Link Opcional ao Clicar (https://...)</label><Input value={st?.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="https://..." className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" /></div>
               </div>
            </EditorSection>
 
            <EditorSection id="rodape" title="Rodapé" icon={Globe} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Texto Sobre a Empresa (aparece no Desktop)</label>
-                  <textarea value={st?.texto_sobre || ''} onChange={(e) => setSt({...st, texto_sobre: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">WhatsApp</label>
-                  <Input value={st?.whatsapp || ''} onChange={(e) => setSt({...st, whatsapp: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Instagram</label>
-                  <Input value={st?.instagram || ''} onChange={(e) => setSt({...st, instagram: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Endereço Físico</label>
-                  <Input value={st?.endereco || ''} onChange={(e) => setSt({...st, endereco: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
-                </div>
+                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">Sobre a Empresa</label><textarea value={st?.texto_sobre || ''} onChange={(e) => setSt({...st, texto_sobre: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" /></div>
+                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">WhatsApp</label><Input value={st?.whatsapp || ''} onChange={(e) => setSt({...st, whatsapp: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" /></div>
+                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">Instagram</label><Input value={st?.instagram || ''} onChange={(e) => setSt({...st, instagram: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" /></div>
+                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">Endereço Físico</label><Input value={st?.endereco || ''} onChange={(e) => setSt({...st, endereco: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" /></div>
               </div>
            </EditorSection>
         </div>
 
         <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950">
-           <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2">
-             <Copy size={12} /> Copiar Link da Loja
-           </Button>
+           <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2"><Copy size={12} /> Copiar Link da Loja</Button>
         </div>
       </div>
 
       <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
-        <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
-          <ArrowLeft size={18} />
-        </button>
+        <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700"><ArrowLeft size={18} /></button>
         {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
+
         {renderCatalog()}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
-          {[
-            { id: 'identidade', icon: Palette, label: 'Visual' },
-            { id: 'layout', icon: LayoutTemplate, label: 'Estrutura' },
-            { id: 'banners', icon: ImageIcon, label: 'Banners' },
-            { id: 'rodape', icon: Globe, label: 'Rodapé' }
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setOpenSection(openSection === tab.id ? '' : tab.id)} className={`flex flex-col items-center justify-center w-16 h-full gap-1.5 transition-colors ${openSection === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
-               <tab.icon size={20} className={openSection === tab.id ? 'animate-pulse' : ''} />
-               <span className="text-[8px] font-bold uppercase tracking-wider">{tab.label}</span>
-            </button>
+
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1 pointer-events-auto">
+          {[{ id: 'identidade', icon: Palette, label: 'Visual' }, { id: 'layout', icon: LayoutTemplate, label: 'Estrutura' }, { id: 'banners', icon: ImageIcon, label: 'Banners' }, { id: 'rodape', icon: Globe, label: 'Rodapé' }].map(tab => (
+            <button key={tab.id} onClick={() => setOpenSection(openSection === tab.id ? '' : tab.id)} className={`flex flex-col items-center justify-center w-16 h-full gap-1.5 transition-colors ${openSection === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}><tab.icon size={20} className={openSection === tab.id ? 'animate-pulse' : ''} /><span className="text-[8px] font-bold uppercase tracking-wider">{tab.label}</span></button>
           ))}
           <div className="w-[1px] h-8 bg-slate-800 mx-1"></div>
-          <button onClick={handleSave} className="flex flex-col items-center justify-center w-16 h-full gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors">
-             {saved ? <Check size={20} /> : <Save size={20} />}
-             <span className="text-[8px] font-bold uppercase tracking-wider">Salvar</span>
-          </button>
+          <button onClick={handleSave} className="flex flex-col items-center justify-center w-16 h-full gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors">{saved ? <Check size={20} /> : <Save size={20} />}<span className="text-[8px] font-bold uppercase tracking-wider">Salvar</span></button>
         </div>
       </div>
 
       {isUploadingGlobal && (
-        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center">
-          <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />
-          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Comprimindo e Enviando Imagem...</p>
-        </div>
+        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto"><Loader2 className="animate-spin text-white w-12 h-12 mb-4" /><p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Limpando e Enviando...</p></div>
       )}
     </div>
   );
