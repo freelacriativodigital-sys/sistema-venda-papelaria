@@ -77,55 +77,79 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
-  <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
-    <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row items-center gap-4 md:gap-12">
-      <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start">
-        <div className="h-14 md:h-16 flex items-center justify-center transition-transform group-hover:scale-105">
-          {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
+const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+  const logoSizes = {
+    pequena: "h-8 md:h-10",
+    media: "h-12 md:h-16",
+    grande: "h-16 md:h-24"
+  };
+  const currentLogoHeight = logoSizes[st?.tamanho_logo] || logoSizes.media;
+
+  return (
+    <div className="w-full relative z-30 shadow-sm border-b border-slate-100 transition-colors duration-300" style={{ backgroundColor: st?.cor_topo || '#ffffff' }}>
+      {!isPublic && (
+        <div className="bg-amber-500 text-white text-[10px] font-black text-center py-1 uppercase tracking-widest">
+          Painel Administrativo • Modo de Visualização (Live Preview)
+        </div>
+      )}
+      
+      <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
+      
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8">
+        
+        <div 
+          onClick={goHome}
+          className="flex items-center shrink-0 cursor-pointer group justify-center md:justify-start"
+        >
+          {st?.logo_url ? (
+             <img src={st.logo_url} className={`object-contain transition-transform group-hover:scale-105 ${currentLogoHeight}`} alt="Logo" />
+          ) : (
+             <ShoppingBag size={36} style={{ color: st?.cor_principal }} className="transition-transform group-hover:scale-105" />
+          )}
+        </div>
+
+        <div className="w-full md:w-96 lg:w-[450px] relative group shrink-0">
+          <input 
+            type="text" 
+            placeholder="O que você procura hoje?" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-10 md:h-11 bg-slate-50/50 hover:bg-slate-50 rounded-full px-5 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-medium text-sm text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
+          />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={18} />
         </div>
       </div>
-      <div className="flex-1 w-full max-w-4xl relative group">
-        <input 
-          type="text" 
-          placeholder="O que você procura hoje?" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full h-11 md:h-14 bg-slate-50/50 hover:bg-slate-50 rounded-full px-6 pl-14 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100/50 transition-all outline-none font-normal text-sm md:text-base text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
-        />
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={20} />
-      </div>
+
+      {view !== 'detalhe' && (
+        <div className="border-t border-slate-100 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
+            <button 
+              onClick={() => changeCategory('Todas')}
+              className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+            >
+              <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
+              Todas as Categorias
+            </button>
+            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+              return (
+                <button 
+                  key={cat}
+                  onClick={() => changeCategory(cat)}
+                  className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
+                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+                >
+                  {cat}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
-    {view !== 'detalhe' && (
-      <div className="border-t border-slate-100 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => changeCategory('Todas')}
-            className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border flex items-center gap-2 ${selectedCategory === 'Todas' ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-            style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-          >
-            <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-            Todas as Categorias
-          </button>
-          {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-            const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-            return (
-              <button 
-                key={cat}
-                onClick={() => changeCategory(cat)}
-                className={`text-[11px] md:text-xs font-bold whitespace-nowrap transition-all px-4 md:px-5 py-2 md:py-2.5 rounded-full border ${isSelected ? 'shadow-sm text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}
-                style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-              >
-                {cat}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 const BenefitsBar = ({ st }) => {
   if (!st?.mostrar_beneficios) return null;
@@ -419,6 +443,10 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
+  const lidarRespostaPersonalizada = (id, valor) => {
+    setRespostasPersonalizadas(prev => ({ ...prev, [id]: valor }));
+  };
+
   const handleQuantidadeChange = (e) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val === '') { setQuantidade(''); } else { setQuantidade(parseInt(val)); }
@@ -557,7 +585,7 @@ export default function Catalogo({ isPublic = false }) {
         };
 
         setCarrinho(prev => [...prev, novoItem]);
-        setIsCartOpen(true); // Abre o carrinho para ele ver o que adicionou
+        setIsCartOpen(true); 
       };
 
       const variacoesJSX = selectedProduct.variacoes?.ativa && selectedProduct.variacoes?.atributos ? (
@@ -590,7 +618,7 @@ export default function Catalogo({ isPublic = false }) {
           <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
           <BenefitsBar st={st} />
           
-          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 pb-40 md:pb-10">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 pb-48 md:pb-10">
             <button onClick={voltarParaGrid} className="flex items-center gap-1.5 text-slate-500 font-bold text-xs hover:text-slate-900 transition-all mb-6">
               <ChevronLeft size={16} /> Voltar para loja
             </button>
@@ -655,6 +683,7 @@ export default function Catalogo({ isPublic = false }) {
                    )}
                 </div>
                 <div className="hidden md:block">{variacoesJSX}</div>
+                
                 {atacadoData && (
                   <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-5">
                     <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Box size={14}/> Descontos por Quantidade</h3>
@@ -690,9 +719,22 @@ export default function Catalogo({ isPublic = false }) {
                   </div>
                 )}
                 
-                {/* BARRA INFERIOR COM O NOVO BOTÃO DE ADICIONAR AO CARRINHO */}
-                <div className="fixed inset-x-0 bottom-[64px] bg-white p-4 pb-4 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-[100] md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
+                {/* BARRA INFERIOR COM O BOTÃO DE ADICIONAR AO CARRINHO (Fixa no celular) */}
+                <div className={`fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px] lg:bottom-0'} bg-white p-4 pb-6 md:pb-0 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-[100] md:static md:bg-transparent md:p-0 md:shadow-none md:border-none md:mt-2`}>
                    <div className="flex flex-col max-w-6xl mx-auto">
+                      
+                      {/* BARRA DE ATACADO REINCLUÍDA NA BARRA FIXA DO MOBILE */}
+                      {atacadoData && atacadoData.nextRule && (
+                        <div className="md:hidden flex flex-col gap-1.5 mb-3 px-1">
+                           <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
+                             🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un
+                           </p>
+                           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
+                           </div>
+                        </div>
+                      )}
+
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
                         
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
@@ -807,7 +849,11 @@ export default function Catalogo({ isPublic = false }) {
           {carrinho.length > 0 && !isCartOpen && (
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="fixed bottom-24 md:bottom-10 right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95"
+              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${
+                view === 'detalhe' 
+                  ? (isPublic ? 'bottom-[150px]' : 'bottom-[220px] lg:bottom-10') 
+                  : (isPublic ? 'bottom-6' : 'bottom-[88px] lg:bottom-10')
+              }`}
             >
               <ShoppingCart size={24} />
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
@@ -833,6 +879,8 @@ export default function Catalogo({ isPublic = false }) {
         <BenefitsBar st={st} />
         <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 w-full space-y-10 md:space-y-14">
           
+          <BannerCarousel banners={st?.banners} />
+
           {filtered.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
                <ShoppingBag size={40} className="mx-auto text-slate-200 mb-4" />
@@ -939,7 +987,11 @@ export default function Catalogo({ isPublic = false }) {
         {carrinho.length > 0 && !isCartOpen && (
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="fixed bottom-6 right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95"
+            className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${
+              view === 'detalhe' 
+                ? (isPublic ? 'bottom-[150px]' : 'bottom-[220px] lg:bottom-10') 
+                : (isPublic ? 'bottom-6' : 'bottom-[88px] lg:bottom-10')
+            }`}
           >
             <ShoppingCart size={24} />
             <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
