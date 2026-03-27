@@ -6,7 +6,7 @@ import {
   Loader2, Sparkles, Layers, Box, Package,
   Truck, ShieldCheck, CreditCard, Star,
   Save, Palette, Globe, Image as ImageIcon, 
-  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate, ShoppingCart
+  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate, ShoppingCart, Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,33 +77,107 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-// --- NOVO HEADER SITE: Pílula flutuante e fixa ---
-const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome }) => {
-  const logoSizes = {
-    pequeno: 'h-8 md:h-10',
-    medio: 'h-10 md:h-12',
-    grande: 'h-12 md:h-14'
-  };
-  const activeLogoSize = logoSizes[st?.tamanho_logo || 'medio'];
+// --- HEADER SITE (Sticky e Responsivo ao Editor) ---
+const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setIsCartOpen, categorias, changeCategory, selectedCategory }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="fixed top-3 md:top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between gap-4 transition-all duration-500 animate-in slide-in-from-top-4">
-      <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group">
-        <div className={`${activeLogoSize} flex items-center justify-center transition-transform group-hover:scale-105`}>
-          {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+    <>
+      <div className="sticky top-3 md:top-5 mx-auto w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 py-2.5 md:py-3 transition-all duration-300">
+        
+        {/* MOBILE LAYOUT */}
+        <div className="flex md:hidden items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors"><Menu size={22} /></button>
+            <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors"><Search size={20} /></button>
+          </div>
+          
+          <div onClick={goHome} className="flex-1 flex justify-center cursor-pointer px-2">
+            {st?.logo_url ? <img src={st.logo_url} className="h-8 w-auto max-w-[140px] object-contain" alt="Logo" /> : <ShoppingBag size={24} style={{ color: st?.cor_principal }} />}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsCartOpen(true)} className="relative text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors">
+              <ShoppingCart size={22} />
+              {carrinhoCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[9px] font-bold bg-rose-500 text-white rounded-full flex items-center justify-center">{carrinhoCount}</span>}
+            </button>
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden md:flex items-center justify-between w-full">
+          <div className="flex items-center gap-4">
+            <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer transition-transform hover:scale-105">
+              {st?.logo_url ? <img src={st.logo_url} className="h-10 w-auto object-contain" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+             <div className="flex items-center relative">
+               <input 
+                 type="text" 
+                 placeholder="Pesquisar produtos..." 
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className={`transition-all duration-300 outline-none bg-slate-50 border border-slate-200 focus:bg-white rounded-full px-4 h-10 text-sm ${isSearchOpen ? 'w-64 opacity-100 mr-2' : 'w-0 opacity-0 pointer-events-none'}`}
+               />
+               <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors">
+                 <Search size={20} />
+               </button>
+             </div>
+
+             <button onClick={() => setIsCartOpen(true)} className="relative w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 text-slate-600 transition-colors">
+               <ShoppingCart size={20} />
+               {carrinhoCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold bg-rose-500 text-white rounded-full flex items-center justify-center shadow-sm">{carrinhoCount}</span>}
+             </button>
+
+             {st?.whatsapp && (
+               <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-10 px-5 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-105 ml-1" style={{ backgroundColor: st?.cor_principal }}>
+                 WhatsApp
+               </Button>
+             )}
+          </div>
         </div>
       </div>
-      <div className="flex-1 w-full max-w-xl relative group">
-        <input 
-          type="text" 
-          placeholder="Pesquisar produtos..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full h-10 bg-slate-50 hover:bg-slate-100 rounded-full px-5 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400"
-        />
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
-      </div>
-    </div>
+
+      {/* MOBILE SEARCH BAR (Aparece abaixo do Header quando ativada) */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden w-[95%] mx-auto mt-2 overflow-hidden z-40 sticky top-[68px]">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-1.5 flex items-center gap-2">
+              <Search size={18} className="text-slate-400 ml-2 shrink-0" />
+              <input type="text" placeholder="Buscar produtos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full h-10 outline-none px-2 text-sm bg-transparent" autoFocus />
+              <button onClick={() => setIsSearchOpen(false)} className="p-2 text-slate-400"><X size={18}/></button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MOBILE MENU CATEGORIAS (Drawer) */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] md:hidden"/>
+            <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 left-0 h-full w-[80%] max-w-[300px] bg-white shadow-2xl z-[210] flex flex-col md:hidden">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                 <h2 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2"><Layers size={16} style={{ color: st?.cor_principal }}/> Categorias</h2>
+                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-700 bg-white rounded-lg border border-slate-200 shadow-sm"><X size={16}/></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <button onClick={() => { changeCategory('Todas'); setIsMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${!selectedCategory || selectedCategory === 'Todas' ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`} style={(!selectedCategory || selectedCategory === 'Todas') ? { backgroundColor: st?.cor_principal } : {}}>Todas as Categorias</button>
+                {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
+                   const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+                   return (
+                     <button key={cat} onClick={() => { changeCategory(cat); setIsMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${isSelected ? 'text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`} style={isSelected ? { backgroundColor: st?.cor_principal } : {}}>{cat}</button>
+                   )
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
@@ -477,7 +551,6 @@ export default function Catalogo({ isPublic = false }) {
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
-      // ... (Lógica de detalhe e cálculo de preço permanece a mesma) ...
       let baseProductPrice = selectedProduct.preco_promocional > 0 ? selectedProduct.preco_promocional : selectedProduct.preco;
       let currentPrice = baseProductPrice;
       let hasVariationPrice = false;
@@ -601,25 +674,27 @@ export default function Catalogo({ isPublic = false }) {
             </div>
             
             <div className="w-full md:flex-1 flex flex-col gap-1.5">
-              <Button onClick={adicionarAoCarrinho} className="w-full h-12 md:h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
-                <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
-              </Button>
-              <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
+               {/* BARRA DE BOTÕES ALINHADA */}
+               <div className="flex gap-2 w-full">
+                 <Button onClick={adicionarAoCarrinho} className="flex-1 h-12 md:h-14 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]" style={{ backgroundColor: st?.cor_principal }}>
+                   {isMobile ? "Adicionar" : "Adicionar ao Carrinho"}
+                 </Button>
+                 {isMobile && (
+                    <button onClick={() => setIsCartOpen(true)} className="w-12 h-12 rounded-xl flex items-center justify-center text-white relative shadow-md shrink-0 transition-all active:scale-[0.98]" style={{ backgroundColor: st?.cor_principal }}>
+                      <ShoppingCart size={20} />
+                      {carrinho.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm">{carrinho.length}</span>}
+                    </button>
+                 )}
+               </div>
+               <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
             </div>
           </div>
         </div>
       );
 
-      let floatingCartBottom = 'bottom-6'; 
-      if (view === 'detalhe') {
-         floatingCartBottom = isPublic ? 'bottom-[140px]' : 'bottom-[200px]';
-      } else if (!isPublic) {
-         floatingCartBottom = 'bottom-[88px]'; 
-      }
-
       return (
-        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0 pt-24 md:pt-32"> {/* Adicionado PADDING TOP para o header fixo não cobrir */}
-          <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} />
+        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0">
+          <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} carrinhoCount={carrinho.length} setIsCartOpen={setIsCartOpen} categorias={displayCategories} changeCategory={changeCategory} selectedCategory={selectedCategory} />
           <BenefitsBar st={st} />
           
           <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 mb-10">
@@ -799,6 +874,7 @@ export default function Catalogo({ isPublic = false }) {
           
           <FooterSite st={st} />
 
+          {/* BARRA FIXA BOTTOM PARA MOBILE */}
           <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
              <BuyBarContent isMobile={true} />
           </div>
@@ -811,7 +887,7 @@ export default function Catalogo({ isPublic = false }) {
                 <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
                   <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><ShoppingCart size={20}/></div>
+                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center" style={{ color: st?.cor_principal }}><ShoppingCart size={20}/></div>
                       <div>
                         <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
@@ -863,11 +939,12 @@ export default function Catalogo({ isPublic = false }) {
             )}
           </AnimatePresence>
 
-          {/* BOTÃO FLUTUANTE DO CARRINHO */}
+          {/* BOTÃO FLUTUANTE DO CARRINHO (Apenas visível no Desktop, pois no Mobile ele já está na barra inferior) */}
           {carrinho.length > 0 && !isCartOpen && (
             <button 
               onClick={() => setIsCartOpen(true)}
-              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 bottom-6`}
+              className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`}
+              style={{ backgroundColor: st?.cor_principal }}
             >
               <ShoppingCart size={24} />
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
@@ -882,12 +959,11 @@ export default function Catalogo({ isPublic = false }) {
 
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
-        <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} />
+        <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} carrinhoCount={carrinho.length} setIsCartOpen={setIsCartOpen} categorias={displayCategories} changeCategory={changeCategory} selectedCategory={selectedCategory} />
         
         {/* --- NOVO BANNER / HERO SECTION (ESTILO STARTUP/AGÊNCIA) --- */}
         {view === 'grid' && (
-          <div className="relative w-full pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden bg-white z-0">
-             {/* Fundo Curvado Dinâmico com a cor principal */}
+          <div className="relative w-full pt-28 pb-16 md:pt-36 md:pb-24 overflow-hidden bg-white z-0 mt-[-80px]">
              <div className="absolute top-0 right-0 w-full md:w-[55%] h-[110%] opacity-10 pointer-events-none rounded-bl-[120px] -z-10" style={{ backgroundColor: st?.cor_principal }}></div>
              
              <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12 md:gap-16">
@@ -919,7 +995,6 @@ export default function Catalogo({ isPublic = false }) {
                       <div className="aspect-square md:aspect-[4/3] w-full rounded-tl-[80px] rounded-br-[80px] rounded-tr-[24px] rounded-bl-[24px] overflow-hidden shadow-2xl border-[6px] border-white relative z-10">
                          <img src={st.banner_url} className="w-full h-full object-cover" alt="Banner Principal" />
                       </div>
-                      {/* Mancha colorida atras da imagem */}
                       <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-30 -z-10 blur-3xl" style={{ backgroundColor: st?.cor_principal }}></div>
                    </div>
                 )}
@@ -932,7 +1007,6 @@ export default function Catalogo({ isPublic = false }) {
         
         <main id="produtos-section" className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 flex-1 w-full">
           
-          {/* --- MENU DE CATEGORIAS MOVIDO PARA CÁ --- */}
           <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar mb-8 pb-3 border-b border-slate-100">
             <button 
               onClick={() => changeCategory('Todas')}
@@ -981,7 +1055,7 @@ export default function Catalogo({ isPublic = false }) {
                         {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Variações</span>}
                         {!descontoPercent && !prod.atacado?.ativa && !prod.variacoes?.ativa && <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5"><Package size={10} /> {prod.categoria}</span>}
                       </div>
-                      <h3 className="text-xs md:text-sm font-normal text-slate-800 line-clamp-2 leading-snug mb-2">{prod.nome}</h3>
+                      <h3 className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 leading-snug mb-2">{prod.nome}</h3>
                       <div className="mt-auto flex flex-col gap-2.5">
                         <div className="flex flex-col">
                           {prod.preco_promocional > 0 ? (
@@ -1009,7 +1083,7 @@ export default function Catalogo({ isPublic = false }) {
               <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
                 <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><ShoppingCart size={20}/></div>
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center" style={{ color: st?.cor_principal }}><ShoppingCart size={20}/></div>
                     <div>
                       <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
@@ -1061,11 +1135,12 @@ export default function Catalogo({ isPublic = false }) {
           )}
         </AnimatePresence>
 
-        {/* BOTÃO FLUTUANTE DO CARRINHO */}
+        {/* BOTÃO FLUTUANTE DO CARRINHO (Apenas visível no Desktop) */}
         {carrinho.length > 0 && !isCartOpen && (
           <button 
             onClick={() => setIsCartOpen(true)}
-            className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 bottom-6`}
+            className={`hidden md:flex fixed right-4 md:right-10 z-[100] w-14 h-14 text-white rounded-full shadow-xl shadow-slate-900/10 items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 bottom-10`}
+            style={{ backgroundColor: st?.cor_principal }}
           >
             <ShoppingCart size={24} />
             <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
@@ -1115,7 +1190,7 @@ export default function Catalogo({ isPublic = false }) {
                   <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1">Medida recomendada: 500 x 500 px</p>
                 </div>
               </div>
-
+              
               <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Tamanho da Logo no Topo</label>
                 <div className="flex gap-2">
@@ -1213,7 +1288,6 @@ export default function Catalogo({ isPublic = false }) {
                   <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
                     <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem de Destaque"}
                   </Button>
-                  {/* --- Medida atualizada para refletir o novo formato do layout --- */}
                   <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1.5 text-center w-full">Medida recomendada: 800 x 800 px</p>
                 </div>
                 {st?.banner_url && (
