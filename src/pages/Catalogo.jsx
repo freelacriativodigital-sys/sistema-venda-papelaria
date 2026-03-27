@@ -6,13 +6,13 @@ import {
   Loader2, Sparkles, Layers, Box, Package,
   Truck, ShieldCheck, CreditCard, Star,
   Save, Palette, Globe, Image as ImageIcon, 
-  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft
+  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- COMPRESSOR DE IMAGENS ATUALIZADO (1200px para Banners Full-Width perfeitos / 80% WebP) ---
+// --- COMPRESSOR DE IMAGENS (1200px para Banners Full-Width / 80% WebP) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -44,22 +44,38 @@ const compressImageToBlob = (file) => {
   });
 };
 
-// --- COMPONENTE DE SANFONA PARA O EDITOR ---
-const AccordionItem = ({ title, icon: Icon, isOpen, onClick, children }) => (
-  <div className="border-b border-slate-700/50">
-    <button onClick={onClick} className="w-full flex items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
-      <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-        <Icon size={14} className="text-slate-400" /> {title}
-      </div>
-      <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-    </button>
-    <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-      <div className="p-4 pt-0 bg-slate-900/50 space-y-4">
-        {children}
+// --- COMPONENTE INTELIGENTE: SANFONA NO DESKTOP / BOTTOM SHEET NO MOBILE ---
+const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
+  const isOpen = openSection === id;
+  return (
+    <div className="lg:border-b lg:border-slate-700/50">
+      {/* BOTÃO DESKTOP (SANFONA) */}
+      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
+        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+          <Icon size={14} className="text-slate-400" /> {title}
+        </div>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {/* CONTEÚDO (Muda fisicamente de acordo com a tela) */}
+      <div className={`
+        transition-all duration-300 ease-in-out
+        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden'}
+        ${isOpen ? 'fixed inset-x-0 bottom-[60px] top-auto max-h-[75vh] bg-slate-900 z-[140] overflow-y-auto p-5 rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col' : 'hidden lg:block'}
+      `}>
+        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
+           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
+             <Icon size={16} className="text-blue-400" /> {title}
+           </div>
+           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
+        </div>
+        <div className="lg:p-4 lg:pt-0 space-y-5">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- HEADER DA VITRINE (LOGO LIMPA SEM BORDA) ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
@@ -212,7 +228,7 @@ export default function Catalogo({ isPublic = false }) {
   const [saved, setSaved] = useState(false);
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
 
-  const [openSection, setOpenSection] = useState('identidade');
+  const [openSection, setOpenSection] = useState('');
   
   const imageRef = useRef(null);
 
@@ -332,6 +348,7 @@ export default function Catalogo({ isPublic = false }) {
     if (!error) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      setOpenSection(''); // Fecha painel mobile ao salvar
     } else {
       alert("Erro ao salvar: " + error.message);
     }
@@ -410,6 +427,11 @@ export default function Catalogo({ isPublic = false }) {
   const handleQuantidadeBlur = () => {
     const minQtd = selectedProduct?.qtd_minima || 1;
     if (!quantidade || quantidade < minQtd) setQuantidade(minQtd);
+  };
+
+  const decrementarQuantidade = () => {
+     const minQtd = selectedProduct?.qtd_minima || 1;
+     setQuantidade(prev => Math.max(minQtd, prev - 1));
   };
 
   const renderCatalog = () => {
@@ -613,12 +635,12 @@ export default function Catalogo({ isPublic = false }) {
                     <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
                   </div>
                 )}
-                <div className="fixed inset-x-0 bottom-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50 md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
+                <div className="fixed inset-x-0 bottom-0 bg-white p-4 pb-safe border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50 md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
                    <div className="flex flex-col max-w-6xl mx-auto">
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
                           <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
-                            <button onClick={() => setQuantidade(prev => Math.max(selectedProduct?.qtd_minima || 1, prev - 1))} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                            <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
                             <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
                             <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
                           </div>
@@ -728,10 +750,10 @@ export default function Catalogo({ isPublic = false }) {
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* SIDEBAR DO EDITOR */}
-      <div className="w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-full shadow-2xl z-20">
+      {/* --- SIDEBAR DO EDITOR (DESKTOP) --- */}
+      <div className="hidden lg:flex w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex-col h-full shadow-2xl z-20">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
           </button>
           <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all">
@@ -740,45 +762,62 @@ export default function Catalogo({ isPublic = false }) {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
-           <AccordionItem title="Identidade Visual" icon={Palette} isOpen={openSection === 'identidade'} onClick={() => setOpenSection(openSection === 'identidade' ? '' : 'identidade')}>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
-                  <Input value={st?.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Centralizada</label>
-                  <div className="flex gap-2">
-                    <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative">
-                       {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
-                       <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cor Principal</label>
-                  <div className="flex gap-2 items-center">
-                    <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.cor_principal || '#000000' }}>
-                      <input type="color" value={st?.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
-                    </div>
-                    <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 font-mono text-[10px] uppercase bg-slate-800 border-slate-700 text-white" />
-                  </div>
-                </div>
-                
-                {/* NOVO CAMPO: FORMATO DAS FOTOS */}
-                <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
-                  <div className="flex gap-2">
-                    <button onClick={() => setSt({...st, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quadrado (1:1)</button>
-                    <button onClick={() => setSt({...st, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
-                  </div>
-                </div>
-
+           <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
+                <Input value={st?.nome_loja || ''} onChange={(e) => setSt({...st, nome_loja: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
               </div>
-           </AccordionItem>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Logo Central</label>
+                <div className="flex gap-2">
+                  <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden relative">
+                     {st?.logo_url ? <img src={st.logo_url} className="w-full h-full object-contain p-1" /> : <ImageIcon size={16} className="text-slate-500" />}
+                     <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo_url')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  </div>
+                  {st?.logo_url && <button onClick={() => setSt({...st, logo_url: ''})} className="bg-red-500 text-white p-1.5 rounded h-12 flex items-center justify-center"><Trash2 size={14}/></button>}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cor Principal</label>
+                <div className="flex gap-2 items-center">
+                  <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.cor_principal || '#000000' }}>
+                    <input type="color" value={st?.cor_principal || '#000000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
+                  </div>
+                  <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 font-mono text-[10px] uppercase bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setSt({...st, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quad. (1:1)</button>
+                  <button onClick={() => setSt({...st, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${st?.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
+                </div>
+              </div>
 
-           <AccordionItem title="Ordem do Menu" icon={Layers} isOpen={openSection === 'menu'} onClick={() => setOpenSection(openSection === 'menu' ? '' : 'menu')}>
+              <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Cores das Etiquetas</label>
+                 <div className="grid grid-cols-1 gap-2 pt-1">
+                  {[
+                    { label: 'Destaque', field: 'cor_etiqueta_destaque', def: '#fbbf24' },
+                    { label: 'Promoção', field: 'cor_etiqueta_promo', def: '#f43f5e' },
+                    { label: 'Atacado', field: 'cor_etiqueta_atacado', def: '#fb923c' },
+                    { label: 'Variações', field: 'cor_etiqueta_variacao', def: '#60a5fa' }
+                  ].map(item => (
+                    <div key={item.field} className="flex gap-2 items-center justify-between bg-slate-800 p-1.5 rounded border border-slate-700">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 px-1">{item.label}</span>
+                      <div className="relative w-6 h-6 rounded shrink-0" style={{ backgroundColor: st?.[item.field] || item.def }}>
+                        <input type="color" value={st?.[item.field] || item.def} onChange={(e) => setSt({...st, [item.field]: e.target.value})} className="absolute -inset-2 w-10 h-10 opacity-0 cursor-pointer" />
+                      </div>
+                    </div>
+                  ))}
+                 </div>
+              </div>
+           </EditorSection>
+
+           <EditorSection id="layout" title="Estrutura" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Ordem das Categorias</label>
                 {displayCategories.filter(c => c !== 'Sem Categoria').map((cat, index) => (
                   <div key={cat} className="flex items-center justify-between p-2 bg-slate-800 border border-slate-700 rounded-md">
                     <span className="text-[10px] font-bold text-slate-300 uppercase">{cat}</span>
@@ -789,54 +828,10 @@ export default function Catalogo({ isPublic = false }) {
                   </div>
                 ))}
               </div>
-           </AccordionItem>
 
-           <AccordionItem title="Cores das Etiquetas" icon={Tags} isOpen={openSection === 'etiquetas'} onClick={() => setOpenSection(openSection === 'etiquetas' ? '' : 'etiquetas')}>
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { label: 'Destaque', field: 'cor_etiqueta_destaque', def: '#fbbf24' },
-                  { label: 'Promoção', field: 'cor_etiqueta_promo', def: '#f43f5e' },
-                  { label: 'Atacado', field: 'cor_etiqueta_atacado', def: '#fb923c' },
-                  { label: 'Variações', field: 'cor_etiqueta_variacao', def: '#60a5fa' }
-                ].map(item => (
-                  <div key={item.field} className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase text-slate-500">{item.label}</label>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative w-7 h-7 rounded border border-slate-700 shrink-0" style={{ backgroundColor: st?.[item.field] || item.def }}>
-                        <input type="color" value={st?.[item.field] || item.def} onChange={(e) => setSt({...st, [item.field]: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
-                      </div>
-                      <Input value={st?.[item.field] || ''} onChange={(e) => setSt({...st, [item.field]: e.target.value})} className="h-7 font-mono text-[9px] uppercase bg-slate-800 border-slate-700 text-white" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-           </AccordionItem>
-
-           <AccordionItem title="Banner Principal" icon={ImageIcon} isOpen={openSection === 'banner'} onClick={() => setOpenSection(openSection === 'banner' ? '' : 'banner')}>
-              <div className="space-y-4">
-                <div className="relative">
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                  <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                    <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem"}
-                  </Button>
-                </div>
-                {st?.banner_url && (
-                  <div className="aspect-[21/9] rounded overflow-hidden border border-slate-700 relative">
-                    <img src={st.banner_url} className="w-full h-full object-cover" />
-                    <button onClick={() => setSt({...st, banner_url: ''})} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"><Trash2 size={10}/></button>
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Link do Banner</label>
-                  <Input value={st?.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="https://..." className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
-                </div>
-              </div>
-           </AccordionItem>
-
-           <AccordionItem title="Barra de Benefícios" icon={ShieldCheck} isOpen={openSection === 'beneficios'} onClick={() => setOpenSection(openSection === 'beneficios' ? '' : 'beneficios')}>
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4 border-t border-slate-700/50 mt-4">
                  <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md">
-                   <span className="text-[10px] font-bold uppercase text-slate-300">Mostrar Barra</span>
+                   <span className="text-[10px] font-bold uppercase text-slate-300">Faixa de Benefícios</span>
                    <button onClick={() => setSt({...st, mostrar_beneficios: !st.mostrar_beneficios})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${st?.mostrar_beneficios ? 'bg-emerald-500' : 'bg-slate-600'}`}>
                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${st?.mostrar_beneficios ? 'translate-x-4' : 'translate-x-0'}`} />
                    </button>
@@ -854,9 +849,30 @@ export default function Catalogo({ isPublic = false }) {
                    </div>
                  ))}
               </div>
-           </AccordionItem>
+           </EditorSection>
 
-           <AccordionItem title="Rodapé e Contatos" icon={Globe} isOpen={openSection === 'rodape'} onClick={() => setOpenSection(openSection === 'rodape' ? '' : 'rodape')}>
+           <EditorSection id="banners" title="Banners" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-4">
+                <div className="relative">
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                  <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
+                    <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem Full-Width"}
+                  </Button>
+                </div>
+                {st?.banner_url && (
+                  <div className="aspect-[21/9] rounded overflow-hidden border border-slate-700 relative">
+                    <img src={st.banner_url} className="w-full h-full object-cover" />
+                    <button onClick={() => setSt({...st, banner_url: ''})} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"><Trash2 size={10}/></button>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold uppercase text-slate-500">Link do Banner</label>
+                  <Input value={st?.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="https://..." className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+           </EditorSection>
+
+           <EditorSection id="rodape" title="Rodapé" icon={Globe} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold uppercase text-slate-500">Sobre a Empresa</label>
@@ -875,7 +891,7 @@ export default function Catalogo({ isPublic = false }) {
                   <Input value={st?.endereco || ''} onChange={(e) => setSt({...st, endereco: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
                 </div>
               </div>
-           </AccordionItem>
+           </EditorSection>
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-950">
@@ -885,9 +901,39 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       </div>
 
-      {/* ÁREA DE PREVIEW (CATÁLOGO AO VIVO) */}
-      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc]">
+      {/* ÁREA DE PREVIEW (CATÁLOGO AO VIVO) COM OVERLAYS MOBILE */}
+      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-16 lg:pb-0">
+        
+        {/* BOTÃO SAIR NO MOBILE */}
+        <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
+          <ArrowLeft size={18} />
+        </button>
+
+        {/* MÁSCARA ESCURA QUANDO PAINEL MOBILE ESTÁ ABERTO */}
+        {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
+
         {renderCatalog()}
+
+        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE */}
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1 pb-safe">
+          {[
+            { id: 'identidade', icon: Palette, label: 'Visual' },
+            { id: 'layout', icon: LayoutTemplate, label: 'Estrutura' },
+            { id: 'banners', icon: ImageIcon, label: 'Banners' },
+            { id: 'rodape', icon: Globe, label: 'Rodapé' }
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setOpenSection(openSection === tab.id ? '' : tab.id)} className={`flex flex-col items-center justify-center w-16 h-full gap-1.5 transition-colors ${openSection === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+               <tab.icon size={20} className={openSection === tab.id ? 'animate-pulse' : ''} />
+               <span className="text-[8px] font-bold uppercase tracking-wider">{tab.label}</span>
+            </button>
+          ))}
+          <div className="w-[1px] h-8 bg-slate-800 mx-1"></div>
+          <button onClick={handleSave} className="flex flex-col items-center justify-center w-16 h-full gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors">
+             {saved ? <Check size={20} /> : <Save size={20} />}
+             <span className="text-[8px] font-bold uppercase tracking-wider">Salvar</span>
+          </button>
+        </div>
+
       </div>
 
       {/* OVERLAY DE CARREGAMENTO */}
