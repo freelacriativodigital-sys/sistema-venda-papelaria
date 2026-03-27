@@ -48,7 +48,7 @@ const compressImageToBlob = (file) => {
 const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
   const isOpen = openSection === id;
   return (
-    <div className="lg:border-b lg:border-slate-700/50">
+    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
       {/* BOTÃO DESKTOP (SANFONA) */}
       <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
         <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
@@ -60,8 +60,9 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
       {/* CONTEÚDO (Muda fisicamente de acordo com a tela) */}
       <div className={`
         transition-all duration-300 ease-in-out
-        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden'}
-        ${isOpen ? 'fixed inset-x-0 bottom-[60px] top-auto max-h-[75vh] bg-slate-900 z-[140] overflow-y-auto p-5 rounded-t-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col' : 'hidden lg:block'}
+        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[80vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
+        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
+        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
       `}>
         <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
            <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
@@ -69,7 +70,7 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
            </div>
            <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
         </div>
-        <div className="lg:p-4 lg:pt-0 space-y-5">
+        <div className="space-y-4 pb-6 lg:pb-0">
           {children}
         </div>
       </div>
@@ -203,7 +204,6 @@ const FooterSite = ({ st }) => (
     </div>
   </footer>
 );
-
 
 export default function Catalogo({ isPublic = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -348,7 +348,7 @@ export default function Catalogo({ isPublic = false }) {
     if (!error) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      setOpenSection(''); // Fecha painel mobile ao salvar
+      setOpenSection('');
     } else {
       alert("Erro ao salvar: " + error.message);
     }
@@ -427,11 +427,6 @@ export default function Catalogo({ isPublic = false }) {
   const handleQuantidadeBlur = () => {
     const minQtd = selectedProduct?.qtd_minima || 1;
     if (!quantidade || quantidade < minQtd) setQuantidade(minQtd);
-  };
-
-  const decrementarQuantidade = () => {
-     const minQtd = selectedProduct?.qtd_minima || 1;
-     setQuantidade(prev => Math.max(minQtd, prev - 1));
   };
 
   const renderCatalog = () => {
@@ -635,12 +630,12 @@ export default function Catalogo({ isPublic = false }) {
                     <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
                   </div>
                 )}
-                <div className="fixed inset-x-0 bottom-0 bg-white p-4 pb-safe border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50 md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
+                <div className="fixed inset-x-0 bottom-[64px] bg-white p-4 pb-4 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-[100] md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
                    <div className="flex flex-col max-w-6xl mx-auto">
                       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
                         <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
                           <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
-                            <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                            <button onClick={() => setQuantidade(prev => Math.max(selectedProduct?.qtd_minima || 1, prev - 1))} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
                             <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
                             <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
                           </div>
@@ -746,13 +741,15 @@ export default function Catalogo({ isPublic = false }) {
 
   if (isPublic) return renderCatalog();
 
-  // --- VISÃO ADMINISTRATIVA: MODO EDITOR FULLSCREEN ---
+  // --- VISÃO ADMINISTRATIVA: MODO EDITOR HYBRIDO (SIDEBAR/BOTTOM SHEET) ---
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* --- SIDEBAR DO EDITOR (DESKTOP) --- */}
-      <div className="hidden lg:flex w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex-col h-full shadow-2xl z-20">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+      {/* CONTAINER HÍBRIDO DO EDITOR (Invisível no Mobile para permitir cliques na vitrine) */}
+      <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
+        
+        {/* HEADER DESKTOP ONLY */}
+        <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
           <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
           </button>
@@ -761,7 +758,8 @@ export default function Catalogo({ isPublic = false }) {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+        {/* CONTEÚDO DO EDITOR */}
+        <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
            <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome da Loja</label>
@@ -894,7 +892,8 @@ export default function Catalogo({ isPublic = false }) {
            </EditorSection>
         </div>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
+        {/* FOOTER DESKTOP ONLY */}
+        <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950">
            <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2">
              <Copy size={12} /> Copiar Link da Loja
            </Button>
@@ -902,7 +901,7 @@ export default function Catalogo({ isPublic = false }) {
       </div>
 
       {/* ÁREA DE PREVIEW (CATÁLOGO AO VIVO) COM OVERLAYS MOBILE */}
-      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-16 lg:pb-0">
+      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
         
         {/* BOTÃO SAIR NO MOBILE */}
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
@@ -915,7 +914,7 @@ export default function Catalogo({ isPublic = false }) {
         {renderCatalog()}
 
         {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE */}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1 pb-safe">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
           {[
             { id: 'identidade', icon: Palette, label: 'Visual' },
             { id: 'layout', icon: LayoutTemplate, label: 'Estrutura' },
@@ -936,11 +935,11 @@ export default function Catalogo({ isPublic = false }) {
 
       </div>
 
-      {/* OVERLAY DE CARREGAMENTO */}
+      {/* OVERLAY DE CARREGAMENTO GLOBAL DE IMAGENS */}
       {isUploadingGlobal && (
         <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center">
-          <Loader2 className="animate-spin text-white w-10 h-10 mb-3" />
-          <p className="text-white font-bold uppercase tracking-widest text-[10px] animate-pulse">Enviando Imagem...</p>
+          <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />
+          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Comprimindo e Enviando Imagem...</p>
         </div>
       )}
     </div>
