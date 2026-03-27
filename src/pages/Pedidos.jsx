@@ -29,23 +29,18 @@ export default function Pedidos() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
 
-  // --- ESTADOS PARA O MODAL DE VINCULAR CLIENTE ---
   const [acceptingTask, setAcceptingTask] = useState(null);
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // --- ESTADOS PARA O CADASTRO RÁPIDO DE CLIENTE ---
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState({ nome: '', whatsapp: '', pendente: 0, pago: 0, aniversario: '' });
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["art-tasks"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pedidos")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("pedidos").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -56,7 +51,7 @@ export default function Pedidos() {
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome", { ascending: true });
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -101,27 +96,17 @@ export default function Pedidos() {
     if ('title' in dadosLimpos && (!dadosLimpos.title || String(dadosLimpos.title).trim() === "")) {
       dadosLimpos.title = "Pedido sem título";
     }
-
     return dadosLimpos;
   };
 
   const handleUpdate = async (arg1, arg2) => {
     let finalId, finalData;
     if (typeof arg1 === 'object' && arg1 !== null) {
-      if (arg1.id !== undefined && arg1.data !== undefined) {
-        finalId = arg1.id;
-        finalData = arg1.data;
-      } else {
-        finalId = arg1.id;
-        finalData = arg1;
-      }
-    } else {
-      finalId = arg1;
-      finalData = arg2;
-    }
+      if (arg1.id !== undefined && arg1.data !== undefined) { finalId = arg1.id; finalData = arg1.data; } 
+      else { finalId = arg1.id; finalData = arg1; }
+    } else { finalId = arg1; finalData = arg2; }
     
     if (!finalId) return;
-    
     const dadosBlindados = blindarDados(finalData);
     await updateMutation.mutateAsync({ id: finalId, data: dadosBlindados });
   };
@@ -129,13 +114,8 @@ export default function Pedidos() {
   const handleCreate = async (data) => {
     const dadosBlindados = blindarDados(data);
     const { error } = await supabase.from("pedidos").insert([{ ...dadosBlindados, status: 'pendente' }]);
-    
-    if (error) {
-      console.error("Erro detalhado do Supabase:", error);
-      alert("Erro ao salvar o pedido no banco de dados:\n" + error.message);
-    } else {
-      queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
-    }
+    if (error) alert("Erro ao salvar o pedido:\n" + error.message);
+    else queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
   };
 
   const handleDelete = async (task) => {
@@ -145,51 +125,9 @@ export default function Pedidos() {
 
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
 
-  const handleExportData = async () => {
-    try {
-      const dataStr = JSON.stringify({ produtos: uniqueTasks }, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      const exportFileDefaultName = `backup_sistema_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-    } catch (error) {
-      console.error("Erro ao exportar:", error);
-    }
-  };
-
-  const handleImportData = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        const itemsToImport = importedData.produtos || importedData;
-        
-        if (Array.isArray(itemsToImport)) {
-          for (const item of itemsToImport) {
-            const { id, created_at, ...dataToImport } = item;
-            await supabase.from("pedidos").insert([blindarDados(dataToImport)]);
-          }
-          queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
-          alert("Backup enviado para a NUVEM com sucesso!");
-        }
-      } catch (error) {
-        alert("Erro ao processar o arquivo JSON.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleToggle = (task) => {
     const newStatus = task.status === "concluida" ? "pendente" : "concluida";
-    handleUpdate(task.id, { 
-      status: newStatus, 
-      completed_date: newStatus === "concluida" ? new Date().toISOString() : null 
-    });
+    handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
   const solicitacoes = uniqueTasks.filter((t) => t.status === "solicitacao");
@@ -200,17 +138,14 @@ export default function Pedidos() {
     const dataAtual = new Date();
     dataAtual.setHours(dataAtual.getHours() - 3);
     const hoje = dataAtual.toISOString().split('T')[0];
-    
     const dataAmanha = new Date(dataAtual);
     dataAmanha.setDate(dataAmanha.getDate() + 1);
     const amanha = dataAmanha.toISOString().split('T')[0];
 
     const sortByPriority = (arr) => arr.sort((a, b) => (priorityWeight[a.priority?.toLowerCase()] || 99) - (priorityWeight[b.priority?.toLowerCase()] || 99));
-
     const sortByDateAndPriority = (arr) => arr.sort((a, b) => {
       if (a.delivery_date !== b.delivery_date) {
-         if (!a.delivery_date) return 1; 
-         if (!b.delivery_date) return -1;
+         if (!a.delivery_date) return 1; if (!b.delivery_date) return -1;
          return a.delivery_date.localeCompare(b.delivery_date);
       }
       return (priorityWeight[a.priority?.toLowerCase()] || 99) - (priorityWeight[b.priority?.toLowerCase()] || 99);
@@ -225,11 +160,15 @@ export default function Pedidos() {
 
   const gruposPendentes = organizarPorData(pendingTasks);
 
-  // --- CORREÇÃO DA TELA BRANCA AQUI: (c.nome || '') ---
-  const filteredClientes = clientes.filter(c => 
-    (c.nome || '').toLowerCase().includes((clientSearch || '').toLowerCase()) || 
-    (c.whatsapp && c.whatsapp.includes(clientSearch))
-  );
+  // --- BLINDAGEM DA BUSCA PARA EVITAR TELA BRANCA ---
+  const searchStr = (clientSearch || '').toLowerCase().trim();
+  const filteredClientes = clientes.filter(c => {
+    const nomeMatch = (c.nome || '').toLowerCase().includes(searchStr);
+    const zapMatch = c.whatsapp ? String(c.whatsapp).includes(searchStr) : false;
+    return nomeMatch || zapMatch;
+  });
+  
+  const isExactMatch = filteredClientes.some(c => (c.nome || '').toLowerCase().trim() === searchStr);
 
   return (
     <div className="min-h-screen bg-background text-foreground w-full pb-20 relative">
@@ -240,15 +179,6 @@ export default function Pedidos() {
               <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
               <p className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS</p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="h-9 w-9 md:h-9 md:w-9 rounded-md border" onClick={handleExportData}>
-              <Download className="w-4 h-4 text-slate-600" />
-            </Button>
-            <label className="cursor-pointer h-9 w-9 md:h-9 md:w-9 flex items-center justify-center rounded-md border border-border bg-background hover:bg-secondary transition-colors shadow-sm">
-              <Upload className="w-4 h-4 text-slate-600" />
-              <input type="file" className="hidden" accept=".json" onChange={handleImportData} />
-            </label>
           </div>
         </div>
       </div>
@@ -264,11 +194,8 @@ export default function Pedidos() {
           <TabsList className="w-full bg-secondary/60 h-12 md:h-12 border border-border/40 p-1.5 rounded-lg flex">
             <TabsTrigger value="solicitacoes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm relative">
               <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
-              {solicitacoes.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>
-              )}
+              {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
             </TabsTrigger>
-
             <TabsTrigger value="pendentes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm">
               <Palette className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
             </TabsTrigger>
@@ -398,14 +325,7 @@ export default function Pedidos() {
             {activeTab === "concluidas" && (
               <div className="space-y-3 md:space-y-3">
                 {completedTasks.map((t) => (
-                  <TaskItem 
-                    key={t.id} 
-                    task={t} 
-                    onToggle={handleToggle} 
-                    onUpdate={handleUpdate} 
-                    onDelete={handleDelete} 
-                    showUndo 
-                  />
+                  <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} showUndo />
                 ))}
               </div>
             )}
@@ -449,12 +369,12 @@ export default function Pedidos() {
                         }}
                         onFocus={() => setShowDropdown(true)}
                         onBlur={() => setTimeout(() => setShowDropdown(false), 250)}
-                        placeholder="Busque o nome ou whatsapp do cliente..."
+                        placeholder="Busque o nome ou whatsapp..."
                         className="h-12 border-slate-300 font-semibold text-sm bg-white"
                       />
                     </div>
                     
-                    {showDropdown && clientSearch.trim().length > 0 && (
+                    {showDropdown && searchStr.length > 0 && (
                       <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-lg mt-2 z-[110] max-h-56 overflow-y-auto p-1.5">
                         {filteredClientes.map(c => (
                           <button 
@@ -473,8 +393,7 @@ export default function Pedidos() {
                           </button>
                         ))}
                         
-                        {/* --- CORREÇÃO DA TELA BRANCA AQUI TAMBÉM --- */}
-                        {!filteredClientes.some(c => (c.nome || '').toLowerCase() === clientSearch.trim().toLowerCase()) && (
+                        {!isExactMatch && (
                           <div className="pt-1 mt-1 border-t border-slate-100">
                             <button 
                               type="button"
@@ -486,7 +405,7 @@ export default function Pedidos() {
                                 setShowDropdown(false);
                               }}
                             >
-                              <UserPlus size={16} /> Cadastrar novo cliente: "{clientSearch}"
+                              <UserPlus size={16} /> Cadastrar "{clientSearch}"
                             </button>
                           </div>
                         )}
