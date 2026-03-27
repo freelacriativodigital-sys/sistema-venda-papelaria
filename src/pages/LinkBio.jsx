@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Palette, Image as ImageIcon, Upload, Check, Trash2, 
-  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft
+  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, 
+  LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft, Grid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- COMPRESSOR DE IMAGENS (800px / 80% WebP) ---
+// --- COMPRESSOR DE IMAGENS (1200px / 80% WebP) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -18,8 +19,8 @@ const compressImageToBlob = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
+        const MAX_WIDTH = 1200; 
+        const MAX_HEIGHT = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -40,22 +41,37 @@ const compressImageToBlob = (file) => {
   });
 };
 
-// --- COMPONENTE DE SANFONA PARA O EDITOR ---
-const AccordionItem = ({ title, icon: Icon, isOpen, onClick, children }) => (
-  <div className="border-b border-slate-700/50">
-    <button onClick={onClick} className="w-full flex items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
-      <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-        <Icon size={14} className="text-slate-400" /> {title}
-      </div>
-      <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-    </button>
-    <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-      <div className="p-4 pt-0 bg-slate-900/50 space-y-4">
-        {children}
+// --- COMPONENTE INTELIGENTE: SANFONA NO DESKTOP / BOTTOM SHEET NO MOBILE ---
+const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
+  const isOpen = openSection === id;
+  return (
+    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
+      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
+        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+          <Icon size={14} className="text-slate-400" /> {title}
+        </div>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      <div className={`
+        transition-all duration-300 ease-in-out
+        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[85vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
+        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
+        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
+      `}>
+        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
+           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
+             <Icon size={16} className="text-blue-400" /> {title}
+           </div>
+           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
+        </div>
+        <div className="space-y-4 pb-6 lg:pb-0">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function LinkBio({ isPublic = false }) {
   const navigate = useNavigate();
@@ -68,6 +84,8 @@ export default function LinkBio({ isPublic = false }) {
     cor_botoes: '#f472b6',
     cor_texto_botoes: '#ffffff',
     cor_texto: '#1e293b',
+    mostrar_loja: true,
+    formato_imagens: 'quadrado',
     links: [],
     banners: []
   });
@@ -77,7 +95,10 @@ export default function LinkBio({ isPublic = false }) {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
-  const [openSection, setOpenSection] = useState('textos');
+  const [openSection, setOpenSection] = useState('');
+  
+  // Estado para controlar a aba ativa na visão pública
+  const [activeTab, setActiveTab] = useState('links'); 
 
   useEffect(() => {
     async function loadData() {
@@ -86,6 +107,8 @@ export default function LinkBio({ isPublic = false }) {
         setConfig({
           ...configData,
           cor_capa: configData.cor_capa || '#cbd5e1',
+          mostrar_loja: configData.mostrar_loja ?? true,
+          formato_imagens: configData.formato_imagens || 'quadrado',
           links: configData.links || [],
           banners: configData.banners || [] 
         });
@@ -94,7 +117,8 @@ export default function LinkBio({ isPublic = false }) {
       const { data: configLoja } = await supabase.from('configuracoes').select('logo_url').eq('id', 1).single();
       if (configLoja) setLogoLoja(configLoja.logo_url);
 
-      const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(3);
+      // Puxa ATÉ 10 produtos em destaque
+      const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(10);
       if (prods) setProdutosDestaque(prods);
 
       setLoading(false);
@@ -107,6 +131,7 @@ export default function LinkBio({ isPublic = false }) {
     if (!error) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      setOpenSection(''); 
     } else {
       alert("Erro ao salvar: " + error.message);
     }
@@ -139,7 +164,6 @@ export default function LinkBio({ isPublic = false }) {
     }
   };
 
-  // --- GERENCIAMENTO DE LINKS ---
   const addLink = () => setConfig({ ...config, links: [...(config.links || []), { id: Date.now(), titulo: '', url: '', imagem_icone: '', cor_fundo: '', cor_texto: '', ativo: true }] });
   const updateLink = (id, field, value) => setConfig({ ...config, links: config.links.map(l => l.id === id ? { ...l, [field]: value } : l) });
   const removeLink = (id) => setConfig({ ...config, links: config.links.filter(l => l.id !== id) });
@@ -156,7 +180,6 @@ export default function LinkBio({ isPublic = false }) {
     }
   };
 
-  // --- GERENCIAMENTO DE BANNERS ---
   const addBanner = () => setConfig({ ...config, banners: [...(config.banners || []), { id: Date.now(), imagem_url: '', link: '', descricao: '', botao_texto: 'Acessar' }] });
   const updateBanner = (id, field, value) => setConfig({ ...config, banners: config.banners.map(b => b.id === id ? { ...b, [field]: value } : b) });
   const removeBanner = (id) => setConfig({ ...config, banners: config.banners.filter(b => b.id !== id) });
@@ -173,99 +196,132 @@ export default function LinkBio({ isPublic = false }) {
     }
   };
 
-  // --- VISUAL AO VIVO ---
-  const LivePreview = () => (
-    <div className="min-h-screen w-full flex flex-col items-center justify-start pb-20 transition-colors duration-500 overflow-x-hidden" style={{ backgroundColor: config.cor_fundo }}>
-      <div className="w-full max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative">
-        <div className="w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
-           {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div></>}
-        </div>
-        <div className="w-24 h-24 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 bg-white" style={{ borderColor: config.cor_fundo }}>
-          {logoLoja ? <img src={logoLoja} className="w-full h-full object-cover" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
-        </div>
-        <div className="px-4 mt-3 flex flex-col items-center w-full">
-           <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
-           {config.descricao && <p className="text-center text-sm font-medium mb-6 opacity-80 leading-relaxed" style={{ color: config.cor_texto }}>{config.descricao}</p>}
+  const LivePreview = () => {
+    const aspectClass = config.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
-           {config.banners?.length > 0 && (
-             <div className="w-full flex flex-col gap-6 mb-6">
-               {config.banners.map(banner => {
-                 if (!banner.imagem_url) return null;
-                 return (
-                 <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
-                   <img src={banner.imagem_url} className="w-full object-cover aspect-video" alt="Banner Promo" />
-                   {(banner.descricao || banner.link) && (
-                      <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
-                        {banner.descricao && <p className="text-[13px] font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
-                        {banner.link && (
-                           <a href={banner.link} target="_blank" className="w-full py-3 rounded-xl text-center font-bold text-[11px] uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
-                              {banner.botao_texto || 'Acessar Link'}
-                           </a>
-                        )}
-                      </div>
-                   )}
-                 </div>
-               )})}
-             </div>
-           )}
-
-           <div className="w-full flex flex-col gap-4">
-             {config.links?.map((link, i) => (
-               <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
-                 {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain" alt="" /> : <div className="w-10 h-10" /> }
-                 <span className="flex-1 text-center text-[13px] uppercase tracking-wide">{link.titulo}</span>
-                 <div className="w-10 h-10" /> 
-               </a>
-             ))}
-           </div>
-        </div>
-
-        {produtosDestaque.length > 0 && (
-          <div className="w-full mt-10 mb-2 flex flex-col items-center px-4">
-            <h3 className="text-xs font-black uppercase tracking-widest mb-4 opacity-80 flex items-center gap-2" style={{ color: config.cor_texto }}>
-              <Star size={14}/> Destaques da Loja
-            </h3>
-            <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mb-6 py-4 px-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] border border-white/20" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
-              <ShoppingBag size={18}/> Acessar o Catálogo
-            </a>
-            <div className="grid grid-cols-2 gap-3 w-full">
-              {produtosDestaque.slice(0, 3).map((prod, index) => {
-                 const imgUrl = prod.imagens?.[0] || prod.imagem_url;
-                 return (
-                   <a href={`/vitrine?produto=${prod.id}`} onClick={(e) => { e.preventDefault(); window.location.href = `/vitrine?produto=${prod.id}`; }} key={prod.id} className={`bg-white rounded-xl overflow-hidden shadow-md flex flex-col hover:scale-[1.02] transition-transform text-left ${index === 0 ? 'col-span-2' : 'col-span-1'}`}>
-                     <div className="w-full bg-slate-50 overflow-hidden aspect-[4/3]">
-                       <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover" />
-                     </div>
-                     <div className="p-3 flex flex-col flex-1 bg-white">
-                       <p className="text-[10px] font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
-                       <p className="text-xs font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
-                     </div>
-                   </a>
-                 )
-              })}
-            </div>
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-start pb-20 transition-colors duration-500 overflow-x-hidden" style={{ backgroundColor: config.cor_fundo }}>
+        <div className="w-full max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative">
+          
+          <div className="w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+             {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div></>}
           </div>
-        )}
-        <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
-           <Globe size={12} />
-           <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
+          
+          <div className="w-24 h-24 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 bg-white" style={{ borderColor: config.cor_fundo }}>
+            {logoLoja ? <img src={logoLoja} className="w-full h-full object-cover" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
+          </div>
+          
+          <div className="px-4 mt-3 flex flex-col items-center w-full">
+             <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
+             {config.descricao && <p className="text-center text-sm font-medium mb-6 opacity-80 leading-relaxed" style={{ color: config.cor_texto }}>{config.descricao}</p>}
+
+             {/* TABS (Links / Loja) */}
+             {config.mostrar_loja && produtosDestaque.length > 0 && (
+               <div className="w-full max-w-[280px] bg-black/5 p-1.5 rounded-full flex items-center mb-8 relative border border-black/5" style={{ borderColor: `${config.cor_texto}15` }}>
+                 <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
+                      style={{ 
+                        backgroundColor: config.cor_botoes, 
+                        left: activeTab === 'links' ? '6px' : 'calc(50% + 2px)' 
+                      }} 
+                 />
+                 <button 
+                   onClick={() => setActiveTab('links')} 
+                   className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors"
+                   style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}
+                 >
+                   Links
+                 </button>
+                 <button 
+                   onClick={() => setActiveTab('loja')} 
+                   className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors"
+                   style={{ color: activeTab === 'loja' ? config.cor_texto_botoes : config.cor_texto }}
+                 >
+                   Loja
+                 </button>
+               </div>
+             )}
+
+             <div className="w-full w-full max-w-md animate-in fade-in duration-300">
+               {activeTab === 'links' || !config.mostrar_loja ? (
+                 <>
+                   {config.banners?.length > 0 && (
+                     <div className="w-full flex flex-col gap-6 mb-6">
+                       {config.banners.map(banner => {
+                         if (!banner.imagem_url) return null;
+                         return (
+                         <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
+                           <img src={banner.imagem_url} className="w-full object-cover aspect-video" alt="Banner Promo" />
+                           {(banner.descricao || banner.link) && (
+                              <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
+                                {banner.descricao && <p className="text-[13px] font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
+                                {banner.link && (
+                                   <a href={banner.link} target="_blank" className="w-full py-3 rounded-xl text-center font-bold text-[11px] uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                                      {banner.botao_texto || 'Acessar Link'}
+                                   </a>
+                                )}
+                              </div>
+                           )}
+                         </div>
+                       )})}
+                     </div>
+                   )}
+
+                   <div className="w-full flex flex-col gap-4">
+                     {config.links?.map((link, i) => (
+                       <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
+                         {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
+                         <span className="flex-1 text-center text-[13px] uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
+                         <div className="w-10 h-10" /> 
+                       </a>
+                     ))}
+                   </div>
+                 </>
+               ) : (
+                 <div className="w-full flex flex-col gap-4 animate-in slide-in-from-right-8 duration-300">
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      {produtosDestaque.map((prod) => {
+                         const imgUrl = prod.imagens?.[0] || prod.imagem_url;
+                         return (
+                           <a href={`/vitrine?produto=${prod.id}`} onClick={(e) => { e.preventDefault(); window.location.href = `/vitrine?produto=${prod.id}`; }} key={prod.id} className="bg-white/80 backdrop-blur rounded-2xl overflow-hidden shadow-md border border-black/5 flex flex-col hover:scale-[1.02] transition-transform text-left">
+                             <div className={`w-full bg-slate-50 overflow-hidden ${aspectClass}`}>
+                               <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover mix-blend-multiply" />
+                             </div>
+                             <div className="p-3 flex flex-col flex-1">
+                               <p className="text-[10px] font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
+                               <p className="text-xs font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
+                             </div>
+                           </a>
+                         )
+                      })}
+                    </div>
+                    <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mt-4 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                      <ShoppingBag size={16}/> Acessar Catálogo Completo
+                    </a>
+                 </div>
+               )}
+             </div>
+          </div>
+
+          <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
+             <Globe size={12} />
+             <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-slate-300 w-10 h-10" /></div>;
 
   if (isPublic) return <LivePreview />;
 
-  // --- VISÃO ADMINISTRATIVA: MODO EDITOR FULLSCREEN ---
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* SIDEBAR DO EDITOR */}
-      <div className="w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-full shadow-2xl z-20">
+      {/* SIDEBAR DO EDITOR (DESKTOP) */}
+      <div className="hidden lg:flex w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex-col h-full shadow-2xl z-20">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
           </button>
           <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all">
@@ -274,36 +330,57 @@ export default function LinkBio({ isPublic = false }) {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
-           <AccordionItem title="Capa e Textos" icon={LayoutTemplate} isOpen={openSection === 'textos'} onClick={() => setOpenSection(openSection === 'textos' ? '' : 'textos')}>
-              <div className="space-y-4">
-                <div className="space-y-2 border-b border-slate-700/50 pb-4">
-                   <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Fundo da Capa</label>
-                   <div className="flex gap-2">
-                      <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
-                        <input type="color" value={config.cor_capa || '#cbd5e1'} onChange={(e) => setConfig({...config, cor_capa: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
-                      </div>
-                      <div className="relative flex-1">
-                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                        <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                           <Upload size={12} className="mr-1.5"/> Imagem
-                        </Button>
-                      </div>
-                      {config.capa_url && <button onClick={() => setConfig({...config, capa_url: ''})} className="bg-red-500 text-white p-1.5 rounded"><Trash2 size={12}/></button>}
-                   </div>
-                </div>
-
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Título Principal</label>
-                  <Input value={config.titulo || ''} onChange={(e) => setConfig({...config, titulo: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Descrição (Bio)</label>
-                  <textarea value={config.descricao || ''} onChange={(e) => setConfig({...config, descricao: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
-                </div>
+           <EditorSection id="textos" title="Capa e Textos" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-2 border-b border-slate-700/50 pb-4">
+                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Fundo da Capa</label>
+                 <div className="flex gap-2">
+                    <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+                      <input type="color" value={config.cor_capa || '#cbd5e1'} onChange={(e) => setConfig({...config, cor_capa: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
+                    </div>
+                    <div className="relative flex-1">
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                      <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
+                         <Upload size={12} className="mr-1.5"/> Imagem
+                      </Button>
+                    </div>
+                    {config.capa_url && <button onClick={() => setConfig({...config, capa_url: ''})} className="bg-red-500 text-white p-1.5 rounded"><Trash2 size={12}/></button>}
+                 </div>
+                 <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest text-center mt-1">Medida: 800 x 300 px</p>
               </div>
-           </AccordionItem>
 
-           <AccordionItem title="Cores Globais" icon={Palette} isOpen={openSection === 'cores'} onClick={() => setOpenSection(openSection === 'cores' ? '' : 'cores')}>
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Título Principal</label>
+                <Input value={config.titulo || ''} onChange={(e) => setConfig({...config, titulo: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Descrição (Bio)</label>
+                <textarea value={config.descricao || ''} onChange={(e) => setConfig({...config, descricao: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
+              </div>
+           </EditorSection>
+
+           <EditorSection id="layout" title="Aba da Loja" icon={Grid} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md">
+                   <span className="text-[10px] font-bold uppercase text-slate-300">Mostrar Aba Loja</span>
+                   <button onClick={() => setConfig({...config, mostrar_loja: !config.mostrar_loja})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${config.mostrar_loja ? 'bg-emerald-500' : 'bg-slate-600'}`}>
+                     <div className={`w-3 h-3 bg-white rounded-full transition-transform ${config.mostrar_loja ? 'translate-x-4' : 'translate-x-0'}`} />
+                   </button>
+                 </div>
+                 
+                 {config.mostrar_loja && (
+                   <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                     <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
+                     <div className="flex gap-2">
+                       <button onClick={() => setConfig({...config, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${config.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quad. (1:1)</button>
+                       <button onClick={() => setConfig({...config, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${config.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
+                     </div>
+                   </div>
+                 )}
+                 <p className="text-[9px] text-slate-500 font-medium">A aba loja mostrará automaticamente até 10 produtos marcados como 'Destaque' no catálogo.</p>
+              </div>
+           </EditorSection>
+
+           <EditorSection id="cores" title="Cores Globais" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="grid grid-cols-1 gap-3">
                 {[
                   { label: 'Cor do Fundo', field: 'cor_fundo', def: '#f8fafc' },
@@ -322,18 +399,21 @@ export default function LinkBio({ isPublic = false }) {
                   </div>
                 ))}
               </div>
-           </AccordionItem>
+           </EditorSection>
 
-           <AccordionItem title="Botões de Link" icon={LinkIcon} isOpen={openSection === 'links'} onClick={() => setOpenSection(openSection === 'links' ? '' : 'links')}>
+           <EditorSection id="links" title="Botões de Link" icon={LinkIcon} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-4">
                  {config.links?.map((link, index) => (
                    <div key={link.id} className="bg-slate-800 p-3 rounded border border-slate-700 space-y-3 relative group">
-                     <button onClick={() => removeLink(link.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                     <button onClick={() => removeLink(link.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"><Trash2 size={10}/></button>
                      
-                     <div className="flex gap-2">
-                       <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
-                         {link.imagem_icone ? <img src={link.imagem_icone} className="w-5 h-5 object-contain"/> : <ImageIcon size={14} className="text-slate-500"/>}
-                         <input type="file" accept="image/*" onChange={(e) => handleLinkIconUpload(e, link.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                     <div className="flex gap-2 items-start">
+                       <div className="flex flex-col items-center gap-1">
+                         <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
+                           {link.imagem_icone ? <img src={link.imagem_icone} className="w-5 h-5 object-contain"/> : <ImageIcon size={14} className="text-slate-500"/>}
+                           <input type="file" accept="image/*" onChange={(e) => handleLinkIconUpload(e, link.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                         </div>
+                         <span className="text-[6px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100px</span>
                        </div>
                        <Input value={link.titulo} onChange={e => updateLink(link.id, 'titulo', e.target.value)} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white flex-1" />
                      </div>
@@ -353,21 +433,22 @@ export default function LinkBio({ isPublic = false }) {
                    <Plus size={12} className="mr-1.5"/> Add Link
                  </Button>
               </div>
-           </AccordionItem>
+           </EditorSection>
 
-           <AccordionItem title="Banners Promocionais" icon={ImageIcon} isOpen={openSection === 'banners'} onClick={() => setOpenSection(openSection === 'banners' ? '' : 'banners')}>
+           <EditorSection id="banners" title="Banners Promo" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-4">
                  {config.banners?.map((banner) => (
                    <div key={banner.id} className="bg-slate-800 p-3 rounded border border-slate-700 space-y-3 relative group">
-                     <button onClick={() => removeBanner(banner.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                     <button onClick={() => removeBanner(banner.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"><Trash2 size={10}/></button>
 
-                     <div className="flex gap-2">
+                     <div className="flex gap-2 flex-col">
                        <div className="relative flex-1">
                          <input type="file" accept="image/*" onChange={(e) => handleBannerUpload(e, banner.id)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                          <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-900 text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-800">
                            <Upload size={12} className="mr-1.5"/> {banner.imagem_url ? "Trocar Banner" : "Subir Imagem"}
                          </Button>
                        </div>
+                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">1080 x 1080 px</span>
                      </div>
                      {banner.imagem_url && (
                        <div className="aspect-square rounded overflow-hidden border border-slate-700 relative bg-slate-950">
@@ -388,7 +469,7 @@ export default function LinkBio({ isPublic = false }) {
                    <Plus size={12} className="mr-1.5"/> Add Banner
                  </Button>
               </div>
-           </AccordionItem>
+           </EditorSection>
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-950">
@@ -399,8 +480,36 @@ export default function LinkBio({ isPublic = false }) {
       </div>
 
       {/* ÁREA DE PREVIEW (LIVE) */}
-      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc]">
+      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
+        
+        <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
+          <ArrowLeft size={18} />
+        </button>
+
+        {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
+
         <LivePreview />
+
+        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE */}
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
+          {[
+            { id: 'textos', icon: LayoutTemplate, label: 'Perfil' },
+            { id: 'layout', icon: Grid, label: 'Loja' },
+            { id: 'cores', icon: Palette, label: 'Cores' },
+            { id: 'links', icon: LinkIcon, label: 'Links' },
+            { id: 'banners', icon: ImageIcon, label: 'Banners' }
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setOpenSection(openSection === tab.id ? '' : tab.id)} className={`flex flex-col items-center justify-center flex-1 h-full gap-1.5 transition-colors ${openSection === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+               <tab.icon size={18} className={openSection === tab.id ? 'animate-pulse' : ''} />
+               <span className="text-[7px] font-bold uppercase tracking-wider">{tab.label}</span>
+            </button>
+          ))}
+          <div className="w-[1px] h-8 bg-slate-800 mx-1"></div>
+          <button onClick={handleSave} className="flex flex-col items-center justify-center w-14 h-full gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors">
+             {saved ? <Check size={20} /> : <Save size={20} />}
+             <span className="text-[7px] font-bold uppercase tracking-wider">Salvar</span>
+          </button>
+        </div>
       </div>
 
       {/* OVERLAY DE CARREGAMENTO */}
