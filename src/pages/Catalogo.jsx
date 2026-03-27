@@ -79,10 +79,6 @@ const compressImageToBlob = (file) => {
   });
 };
 
-// ============================================================
-// MÓDULO: TOPO DO SITE
-// Desktop no estilo site / Mobile no estilo do print
-// ============================================================
 const HeaderSite = ({
   st,
   searchTerm,
@@ -96,7 +92,9 @@ const HeaderSite = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const categoriasVisiveis = (categorias || []).filter((c) => c !== "Sem Categoria");
+  const categoriasVisiveis = (categorias || []).filter(
+    (c) => c && c !== "Sem Categoria"
+  );
 
   const isCategoriaSelecionada = (cat) =>
     String(selectedCategory || "").toLowerCase().trim() ===
@@ -113,7 +111,7 @@ const HeaderSite = ({
           DESKTOP
       ========================= */}
       <div className="hidden md:block w-full relative z-40">
-        {/* FAIXA ROSA SUPERIOR */}
+        {/* FAIXA SUPERIOR */}
         <div
           className="w-full border-b border-black/5"
           style={{ backgroundColor: st?.cor_principal || "#e78db8" }}
@@ -125,7 +123,7 @@ const HeaderSite = ({
               onClick={goHome}
               className="shrink-0 flex items-center justify-center"
             >
-              <div className="h-[68px] flex items-center justify-center">
+              <div className="h-[70px] flex items-center justify-center">
                 {st?.logo_url ? (
                   <img
                     src={st.logo_url}
@@ -133,7 +131,7 @@ const HeaderSite = ({
                     className="h-full w-auto object-contain"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-white/80 border border-white/70 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-white/90 border border-white/70 flex items-center justify-center">
                     <ShoppingBag
                       size={28}
                       style={{ color: st?.cor_principal || "#e78db8" }}
@@ -144,14 +142,14 @@ const HeaderSite = ({
             </button>
 
             {/* BUSCA */}
-            <div className="flex-1 max-w-[420px] lg:max-w-[520px]">
-              <div className="relative group">
+            <div className="flex-1 max-w-[430px] lg:max-w-[520px]">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="O que você procura hoje?"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-[38px] rounded-full bg-white/90 border border-slate-200 pl-4 pr-11 text-[13px] text-slate-700 placeholder:text-slate-400 shadow-sm outline-none focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-white/30 transition-all"
+                  className="w-full h-[38px] rounded-full bg-white/95 border border-slate-200 pl-4 pr-11 text-[13px] text-slate-700 placeholder:text-slate-400 shadow-sm outline-none focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-white/30 transition-all"
                 />
                 <Search
                   size={16}
@@ -160,12 +158,12 @@ const HeaderSite = ({
               </div>
             </div>
 
-            {/* LADO DIREITO VAZIO PARA MANTER PROPORÇÃO */}
-            <div className="w-[140px] shrink-0" />
+            {/* ESPAÇO VAZIO À DIREITA */}
+            <div className="w-[180px] shrink-0" />
           </div>
         </div>
 
-        {/* MENU DE CATEGORIAS DESKTOP */}
+        {/* CATEGORIAS DESKTOP */}
         {view !== "detalhe" && (
           <div className="w-full bg-white border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[42px] flex items-center gap-7 overflow-x-auto no-scrollbar">
@@ -194,7 +192,7 @@ const HeaderSite = ({
                   <line x1="4" y1="17" x2="20" y2="17"></line>
                 </svg>
                 <span>Todas as Categorias</span>
-                <ChevronDown size={14} />
+                <span className="text-[11px]">▾</span>
               </button>
 
               {categoriasVisiveis.map((cat) => {
@@ -224,13 +222,12 @@ const HeaderSite = ({
           MOBILE
       ========================= */}
       <div className="md:hidden w-full relative z-40">
-        {/* TOPO ROSA MOBILE */}
+        {/* TOPO ROSA */}
         <div
           className="w-full px-4 pt-3 pb-4"
           style={{ backgroundColor: st?.cor_principal || "#e78db8" }}
         >
           <div className="relative flex items-center justify-center min-h-[64px]">
-            {/* MENU HAMBÚRGUER */}
             {view !== "detalhe" && (
               <button
                 type="button"
@@ -256,7 +253,6 @@ const HeaderSite = ({
               </button>
             )}
 
-            {/* LOGO CENTRAL */}
             <button
               type="button"
               onClick={goHome}
@@ -284,7 +280,7 @@ const HeaderSite = ({
 
         {/* BUSCA MOBILE */}
         <div className="bg-white px-4 py-3 border-b border-slate-200">
-          <div className="relative group">
+          <div className="relative">
             <input
               type="text"
               placeholder="O que você está procurando?"
@@ -337,10 +333,10 @@ const HeaderSite = ({
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"
+                className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xl"
                 aria-label="Fechar menu"
               >
-                <X size={18} />
+                ×
               </button>
             </div>
 
