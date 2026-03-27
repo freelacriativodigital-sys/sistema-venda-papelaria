@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Palette, Image as ImageIcon, Upload, Check, Trash2, 
-  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, 
-  LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft, Grid
+  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft, Grid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 
-// --- COMPRESSOR DE IMAGENS (1200px / 80% WebP) ---
 const compressImageToBlob = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -41,7 +39,6 @@ const compressImageToBlob = (file) => {
   });
 };
 
-// --- COMPONENTE INTELIGENTE: SANFONA NO DESKTOP / BOTTOM SHEET NO MOBILE ---
 const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
   const isOpen = openSection === id;
   return (
@@ -54,10 +51,10 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
       </button>
       
       <div className={`
-        transition-all duration-300 ease-in-out
-        ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[85vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
-        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:pointer-events-auto
+        ${isOpen ? 'fixed inset-x-0 bottom-[64px] bg-slate-900 z-[200] p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 block' : 'hidden'}
+        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:p-0
         lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
+        transition-all duration-300 ease-in-out
       `}>
         <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
            <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
@@ -65,7 +62,7 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
            </div>
            <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
         </div>
-        <div className="space-y-4 pb-6 lg:pb-0">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto lg:max-h-none lg:overflow-visible pb-6 lg:pb-0 no-scrollbar">
           {children}
         </div>
       </div>
@@ -96,8 +93,6 @@ export default function LinkBio({ isPublic = false }) {
   const [saved, setSaved] = useState(false);
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
   const [openSection, setOpenSection] = useState('');
-  
-  // Estado para controlar a aba ativa na visão pública
   const [activeTab, setActiveTab] = useState('links'); 
 
   useEffect(() => {
@@ -117,7 +112,6 @@ export default function LinkBio({ isPublic = false }) {
       const { data: configLoja } = await supabase.from('configuracoes').select('logo_url').eq('id', 1).single();
       if (configLoja) setLogoLoja(configLoja.logo_url);
 
-      // Puxa ATÉ 10 produtos em destaque
       const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(10);
       if (prods) setProdutosDestaque(prods);
 
@@ -200,48 +194,34 @@ export default function LinkBio({ isPublic = false }) {
     const aspectClass = config.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-start pb-20 transition-colors duration-500 overflow-x-hidden" style={{ backgroundColor: config.cor_fundo }}>
-        <div className="w-full max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative">
+      <div className="min-h-screen w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-x-hidden bg-slate-100 lg:py-10">
+        
+        {/* CONTAINER RESPONSIVO (Desktop "Linktree" View) */}
+        <div className="w-full lg:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl min-h-screen lg:min-h-0 lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800 overflow-hidden pb-20 lg:pb-10" style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
           
-          <div className="w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
-             {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div></>}
+          {/* A CAPA SÓ EXIBE A FOTO NO MOBILE */}
+          <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+             {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
           </div>
           
-          <div className="w-24 h-24 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 bg-white" style={{ borderColor: config.cor_fundo }}>
-            {logoLoja ? <img src={logoLoja} className="w-full h-full object-cover" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 md:-mt-14 bg-white flex items-center justify-center" style={{ borderColor: config.cor_fundo }}>
+            {logoLoja ? <img src={logoLoja} className="w-full h-full object-contain p-1 bg-white" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
           </div>
           
-          <div className="px-4 mt-3 flex flex-col items-center w-full">
+          <div className="px-4 mt-3 md:mt-5 flex flex-col items-center w-full">
              <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
-             {config.descricao && <p className="text-center text-sm font-medium mb-6 opacity-80 leading-relaxed" style={{ color: config.cor_texto }}>{config.descricao}</p>}
+             {config.descricao && <p className="text-center text-sm md:text-[15px] font-medium mb-6 md:mb-8 opacity-80 leading-relaxed max-w-sm" style={{ color: config.cor_texto }}>{config.descricao}</p>}
 
-             {/* TABS (Links / Loja) */}
              {config.mostrar_loja && produtosDestaque.length > 0 && (
                <div className="w-full max-w-[280px] bg-black/5 p-1.5 rounded-full flex items-center mb-8 relative border border-black/5" style={{ borderColor: `${config.cor_texto}15` }}>
                  <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
-                      style={{ 
-                        backgroundColor: config.cor_botoes, 
-                        left: activeTab === 'links' ? '6px' : 'calc(50% + 2px)' 
-                      }} 
-                 />
-                 <button 
-                   onClick={() => setActiveTab('links')} 
-                   className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors"
-                   style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}
-                 >
-                   Links
-                 </button>
-                 <button 
-                   onClick={() => setActiveTab('loja')} 
-                   className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors"
-                   style={{ color: activeTab === 'loja' ? config.cor_texto_botoes : config.cor_texto }}
-                 >
-                   Loja
-                 </button>
+                      style={{ backgroundColor: config.cor_botoes, left: activeTab === 'links' ? '6px' : 'calc(50% + 2px)' }} />
+                 <button onClick={() => setActiveTab('links')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}>Links</button>
+                 <button onClick={() => setActiveTab('loja')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'loja' ? config.cor_texto_botoes : config.cor_texto }}>Loja</button>
                </div>
              )}
 
-             <div className="w-full w-full max-w-md animate-in fade-in duration-300">
+             <div className="w-full w-full max-w-sm animate-in fade-in duration-300">
                {activeTab === 'links' || !config.mostrar_loja ? (
                  <>
                    {config.banners?.length > 0 && (
@@ -250,12 +230,12 @@ export default function LinkBio({ isPublic = false }) {
                          if (!banner.imagem_url) return null;
                          return (
                          <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
-                           <img src={banner.imagem_url} className="w-full object-cover aspect-video" alt="Banner Promo" />
+                           <img src={banner.imagem_url} className="w-full object-cover" alt="Banner Promo" />
                            {(banner.descricao || banner.link) && (
                               <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
-                                {banner.descricao && <p className="text-[13px] font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
+                                {banner.descricao && <p className="text-[13px] md:text-sm font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
                                 {banner.link && (
-                                   <a href={banner.link} target="_blank" className="w-full py-3 rounded-xl text-center font-bold text-[11px] uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                                   <a href={banner.link} target="_blank" className="w-full py-3 md:py-4 rounded-xl text-center font-bold text-[11px] md:text-xs uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
                                       {banner.botao_texto || 'Acessar Link'}
                                    </a>
                                 )}
@@ -270,7 +250,7 @@ export default function LinkBio({ isPublic = false }) {
                      {config.links?.map((link, i) => (
                        <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
                          {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
-                         <span className="flex-1 text-center text-[13px] uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
+                         <span className="flex-1 text-center text-[13px] md:text-sm uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
                          <div className="w-10 h-10" /> 
                        </a>
                      ))}
@@ -287,14 +267,14 @@ export default function LinkBio({ isPublic = false }) {
                                <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover mix-blend-multiply" />
                              </div>
                              <div className="p-3 flex flex-col flex-1">
-                               <p className="text-[10px] font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
-                               <p className="text-xs font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
+                               <p className="text-[10px] md:text-xs font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
+                               <p className="text-xs md:text-[13px] font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
                              </div>
                            </a>
                          )
                       })}
                     </div>
-                    <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mt-4 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                    <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mt-4 py-4 rounded-2xl font-black uppercase text-[11px] md:text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
                       <ShoppingBag size={16}/> Acessar Catálogo Completo
                     </a>
                  </div>
@@ -304,7 +284,7 @@ export default function LinkBio({ isPublic = false }) {
 
           <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
              <Globe size={12} />
-             <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
+             <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
           </div>
         </div>
       </div>
@@ -318,9 +298,11 @@ export default function LinkBio({ isPublic = false }) {
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* SIDEBAR DO EDITOR (DESKTOP) */}
-      <div className="hidden lg:flex w-[320px] shrink-0 bg-slate-900 border-r border-slate-800 flex-col h-full shadow-2xl z-20">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+      {/* CONTAINER DO EDITOR */}
+      <div className="absolute inset-0 z-[140] pointer-events-none lg:static lg:w-[320px] lg:shrink-0 lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl lg:z-20 lg:pointer-events-auto flex flex-col h-full">
+        
+        {/* HEADER DESKTOP ONLY */}
+        <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950 pointer-events-auto">
           <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
           </button>
@@ -329,7 +311,7 @@ export default function LinkBio({ isPublic = false }) {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+        <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
            <EditorSection id="textos" title="Capa e Textos" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-2 border-b border-slate-700/50 pb-4">
                  <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Fundo da Capa</label>
@@ -448,7 +430,7 @@ export default function LinkBio({ isPublic = false }) {
                            <Upload size={12} className="mr-1.5"/> {banner.imagem_url ? "Trocar Banner" : "Subir Imagem"}
                          </Button>
                        </div>
-                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">1080 x 1080 px</span>
+                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center mt-1">Medida: 1200 x 1200 px</span>
                      </div>
                      {banner.imagem_url && (
                        <div className="aspect-square rounded overflow-hidden border border-slate-700 relative bg-slate-950">
@@ -472,7 +454,8 @@ export default function LinkBio({ isPublic = false }) {
            </EditorSection>
         </div>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
+        {/* FOOTER DESKTOP ONLY */}
+        <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950 pointer-events-auto">
            <Button onClick={copyBioLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2">
              <Copy size={12} /> Copiar Link da Bio
            </Button>
@@ -482,16 +465,18 @@ export default function LinkBio({ isPublic = false }) {
       {/* ÁREA DE PREVIEW (LIVE) */}
       <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
         
+        {/* BOTÃO SAIR NO MOBILE E DESKTOP FLUTUANTE */}
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
           <ArrowLeft size={18} />
         </button>
 
-        {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
+        {/* MÁSCARA ESCURA QUANDO PAINEL MOBILE ESTÁ ABERTO */}
+        {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] transition-opacity pointer-events-auto" />}
 
         <LivePreview />
 
         {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE */}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[160] px-1 pointer-events-auto">
           {[
             { id: 'textos', icon: LayoutTemplate, label: 'Perfil' },
             { id: 'layout', icon: Grid, label: 'Loja' },
@@ -512,11 +497,11 @@ export default function LinkBio({ isPublic = false }) {
         </div>
       </div>
 
-      {/* OVERLAY DE CARREGAMENTO */}
+      {/* OVERLAY DE CARREGAMENTO GLOBAL DE IMAGENS */}
       {isUploadingGlobal && (
-        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center">
-          <Loader2 className="animate-spin text-white w-10 h-10 mb-3" />
-          <p className="text-white font-bold uppercase tracking-widest text-[10px] animate-pulse">Enviando Imagem...</p>
+        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto">
+          <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />
+          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Enviando Imagem...</p>
         </div>
       )}
     </div>
