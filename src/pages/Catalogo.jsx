@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, MessageCircle, Plus, Minus, 
-  Loader2, Sparkles, Box, Package, Star,
-  Save, Palette, Globe, Image as ImageIcon, 
-  Check, Copy, Tags, ArrowLeft, LayoutTemplate
-} from "lucide-react";
+import { ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, Tags, Image as ImageIcon, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
+import { AnimatePresence, motion } from "framer-motion";
 
-// IMPORTANDO SEUS NOVOS COMPONENTES (Ajuste o caminho se a pasta for diferente)
-import { compressImageToBlob, deletePhysicalFile } from '../components/catalogo/catalogoUtils';
-import HeaderSite from '../components/catalogo/HeaderSite';
-import BenefitsBar from '../components/catalogo/BenefitsBar';
-import FooterSite from '../components/catalogo/FooterSite';
-import EditorSection from '../components/catalogo/EditorSection';
-import EditorForms from '../components/catalogo/EditorForms';
+// --- IMPORTANDO OS SEUS NOVOS COMPONENTES ---
+import { deletePhysicalFile } from '../components/Catalogo/catalogoUtils';
+import { HeaderSite } from '../components/Catalogo/HeaderSite';
+import BenefitsBar from '../components/Catalogo/BenefitsBar';
+import FooterSite from '../components/Catalogo/FooterSite';
+import EditorSection from '../components/Catalogo/EditorSection';
+import EditorForms from '../components/Catalogo/EditorForms';
 
 export default function Catalogo({ isPublic = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,6 +37,8 @@ export default function Catalogo({ isPublic = false }) {
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
 
   const [openSection, setOpenSection] = useState('');
+  const [carrinho, setCarrinho] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   
   const imageRef = useRef(null);
 
@@ -173,35 +170,6 @@ export default function Catalogo({ isPublic = false }) {
     alert("Link copiado!");
   };
 
-  const handleImageUpload = async (e, field) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setIsUploadingGlobal(true);
-    try {
-      if (st[field]) await deletePhysicalFile(st[field]);
-      const blob = await compressImageToBlob(file);
-      const fileName = `catalogo-${field}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-      const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
-      if (error) throw error;
-      const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
-      setSt(prev => ({ ...prev, [field]: publicUrlData.publicUrl }));
-    } catch (err) {
-      alert("Erro ao subir imagem: " + err.message);
-    } finally {
-      setIsUploadingGlobal(false);
-    }
-  };
-
-  const removeImageAndStorage = async (field) => {
-    const currentUrl = st[field];
-    if (currentUrl) {
-      setIsUploadingGlobal(true);
-      await deletePhysicalFile(currentUrl);
-      setSt(prev => ({ ...prev, [field]: '' }));
-      setIsUploadingGlobal(false);
-    }
-  };
-
   const filtered = produtos
     .filter(p => {
       const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -232,6 +200,10 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
+  const lidarRespostaPersonalizada = (id, valor) => {
+    setRespostasPersonalizadas(prev => ({ ...prev, [id]: valor }));
+  };
+
   const handleQuantidadeChange = (e) => {
     const val = e.target.value.replace(/\D/g, '');
     if (val === '') { setQuantidade(''); } else { setQuantidade(parseInt(val)); }
@@ -245,6 +217,51 @@ export default function Catalogo({ isPublic = false }) {
   const decrementarQuantidade = () => {
      const minQtd = selectedProduct?.qtd_minima || 1;
      setQuantidade(prev => Math.max(minQtd, prev - 1));
+  };
+
+  const finalizarPedido = () => {
+    if (carrinho.length === 0) return;
+
+    const num = st?.whatsapp?.replace(/\D/g, '');
+    let dbDesc = '';
+    let zapMsg = 'Olá! Gostaria de fazer o seguinte pedido pelo catálogo:\n\n';
+    let totalGeral = 0;
+
+    carrinho.forEach((item) => {
+       const textoVars = Object.entries(item.selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
+       
+       let textoPersonalizado = '';
+       if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
+          textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
+             const campo = item.produto.campos_personalizados?.find(c => c.id === k);
+             return `▪️ ${campo?.titulo || k}: ${v}`;
+          }).join('\n');
+       }
+
+       const itemTotal = item.precoTotal;
+       totalGeral += itemTotal;
+
+       const descItem = `🛍️ *${item.produto.nome}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
+       
+       dbDesc += descItem;
+       zapMsg += descItem;
+    });
+
+    dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
+    zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
+
+    supabase.from('pedidos').insert([{
+       title: `Catálogo: Pedido de ${carrinho.length} item(s)`,
+       description: dbDesc,
+       service_value: totalGeral,
+       status: 'solicitacao',
+       priority: 'alta',
+       category: 'Catálogo'
+    }]).then(() => {}).catch(err => console.error(err));
+
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(zapMsg)}`, '_blank');
+    setCarrinho([]); 
+    setIsCartOpen(false);
   };
 
   const renderCatalog = () => {
@@ -295,7 +312,7 @@ export default function Catalogo({ isPublic = false }) {
       const descontoPercent = calcularDesconto(selectedProduct.preco, selectedProduct.preco_promocional);
       const relacionados = produtos.filter(p => p.categoria === selectedProduct.categoria && p.id !== selectedProduct.id).slice(0, 4);
 
-      const enviarZap = () => {
+      const adicionarAoCarrinho = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
           const camposFaltando = selectedProduct.campos_personalizados.filter(
             campo => campo.obrigatorio && (!respostasPersonalizadas[campo.id] || respostasPersonalizadas[campo.id].trim() === '')
@@ -306,18 +323,20 @@ export default function Catalogo({ isPublic = false }) {
           }
         }
 
-        const num = st?.whatsapp?.replace(/\D/g, '');
-        const textoVars = Object.entries(selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
-        
-        let textoPersonalizado = '';
-        if (selectedProduct.campos_personalizados?.length > 0) {
-          textoPersonalizado = '\n\n*📝 Personalização:*\n' + selectedProduct.campos_personalizados.map(campo => {
-            return `▪️ *${campo.titulo}:* ${respostasPersonalizadas[campo.id] || 'Não preenchido'}`;
-          }).join('\n');
-        }
+        const novoItem = {
+          id_carrinho: Date.now() + Math.random(),
+          produto: selectedProduct,
+          quantidade: qtdSafe,
+          unitPriceFinal,
+          precoTotal,
+          wholesaleApplied,
+          selecoes,
+          respostasPersonalizadas,
+          activeImage
+        };
 
-        const msg = `Olá! Gostaria de encomendar este produto:\n\n🛍️ *${selectedProduct.nome}*\n${textoVars}${textoPersonalizado}\n\n*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n*Total:* R$ ${precoTotal.toFixed(2)}`;
-        window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+        setCarrinho(prev => [...prev, novoItem]);
+        setIsCartOpen(true); 
       };
 
       const variacoesJSX = selectedProduct.variacoes?.ativa && selectedProduct.variacoes?.atributos ? (
@@ -345,16 +364,25 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       ) : null;
 
+      let floatingCartBottom = 'bottom-6'; 
+      if (view === 'detalhe') {
+         floatingCartBottom = isPublic ? 'bottom-[140px]' : 'bottom-[200px]';
+      } else if (!isPublic) {
+         floatingCartBottom = 'bottom-[88px]'; 
+      }
+
       return (
-        <div className="min-h-screen bg-white flex flex-col">
+        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0">
           <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
           <BenefitsBar st={st} />
-          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 pb-40 md:pb-10">
+          
+          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 mb-10">
             <button onClick={voltarParaGrid} className="flex items-center gap-1.5 text-slate-500 font-bold text-xs hover:text-slate-900 transition-all mb-6">
               <ChevronLeft size={16} /> Voltar para loja
             </button>
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
-              {/* ESQUERDA */}
+              
+              {/* LADO ESQUERDO */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
                  <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
                    {selectedProduct.destaque && (
@@ -382,7 +410,7 @@ export default function Catalogo({ isPublic = false }) {
                  )}
               </div>
 
-              {/* DIREITA */}
+              {/* LADO DIREITO */}
               <div className="w-full md:w-[55%] flex flex-col">
                 <div className="flex flex-wrap gap-2 mb-3">
                   {descontoPercent > 0 && !wholesaleApplied && !hasVariationPrice && (
@@ -414,6 +442,7 @@ export default function Catalogo({ isPublic = false }) {
                    )}
                 </div>
                 <div className="hidden md:block">{variacoesJSX}</div>
+                
                 {atacadoData && (
                   <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-5">
                     <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Box size={14}/> Descontos por Quantidade</h3>
@@ -442,34 +471,36 @@ export default function Catalogo({ isPublic = false }) {
                     </div>
                   </div>
                 )}
-                {selectedProduct.descricao && (
-                  <div className="mb-6 border-b border-slate-100 pb-6 block md:hidden">
-                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
-                    <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedProduct.descricao}</div>
-                  </div>
-                )}
-                <div className="fixed inset-x-0 bottom-[64px] bg-white p-4 pb-4 border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-[100] md:static md:bg-transparent md:p-0 md:pb-0 md:shadow-none md:border-none md:mt-2">
-                   <div className="flex flex-col max-w-6xl mx-auto">
-                      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
-                        <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
-                          <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
-                            <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
-                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
-                            <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[9px] md:text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-0.5">Total a Pagar</p>
-                            <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
-                          </div>
-                        </div>
-                        <Button onClick={enviarZap} className="w-full md:flex-1 h-12 md:h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
-                          <MessageCircle size={20} fill="currentColor" /> Encomendar pelo WhatsApp
-                        </Button>
-                      </div>
+                
+                {/* BARRA DE COMPRA DESKTOP */}
+                <div className="hidden md:block mt-4">
+                   <div className="flex flex-col w-full max-w-6xl mx-auto">
+                     <div className={`flex flex-row items-center gap-3 md:gap-4 w-full`}>
+                       <div className="flex items-center justify-between bg-slate-50 p-3 md:p-3.5 rounded-xl border border-slate-200 w-full md:w-auto shrink-0 md:pr-6">
+                         <div className="flex items-center border border-slate-300 rounded-lg h-10 md:h-12 bg-white overflow-hidden shadow-sm mr-4">
+                           <button onClick={decrementarQuantidade} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                           <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 md:w-12 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
+                           <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 md:w-12 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-[9px] md:text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-0.5">Subtotal</p>
+                           <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
+                         </div>
+                       </div>
+                       
+                       <div className="w-full md:flex-1 flex flex-col gap-1.5">
+                         <Button onClick={adicionarAoCarrinho} className="w-full h-12 md:h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
+                           <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
+                         </Button>
+                         <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
+                       </div>
+                     </div>
                    </div>
                 </div>
+
               </div>
             </div>
+            
             {relacionados.length > 0 && (
               <div className="mt-16 md:mt-24 mb-10">
                 <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 flex items-center gap-2">Veja também</h3>
@@ -491,7 +522,118 @@ export default function Catalogo({ isPublic = false }) {
               </div>
             )}
           </div>
+          
           <FooterSite st={st} />
+
+          {/* BARRA FIXA MOBILE */}
+          <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
+             <div className="flex flex-col w-full max-w-6xl mx-auto">
+               {atacadoData && atacadoData.nextRule && (
+                 <div className="flex flex-col gap-1.5 mb-3 px-1">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">
+                      🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un
+                    </p>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                       <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
+                    </div>
+                 </div>
+               )}
+
+               <div className={`flex flex-col gap-3 w-full`}>
+                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 w-full shrink-0">
+                   <div className="flex items-center border border-slate-300 rounded-lg h-10 bg-white overflow-hidden shadow-sm mr-4">
+                     <button onClick={decrementarQuantidade} className="w-10 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors" disabled={quantidade <= minQtd}><Minus size={16} className={quantidade <= minQtd ? "opacity-30" : ""}/></button>
+                     <input type="text" inputMode="numeric" pattern="[0-9]*" value={quantidade} onChange={handleQuantidadeChange} onBlur={handleQuantidadeBlur} className="w-10 h-full text-center font-black text-slate-800 text-sm border-x border-slate-200 outline-none" />
+                     <button onClick={() => setQuantidade(qtdSafe + 1)} className="w-10 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"><Plus size={16}/></button>
+                   </div>
+                   <div className="text-right">
+                     <p className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-0.5">Subtotal</p>
+                     <p className="text-xl font-black text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
+                   </div>
+                 </div>
+                 
+                 <div className="w-full flex flex-col gap-1.5">
+                   <Button onClick={adicionarAoCarrinho} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none active:scale-[0.98]">
+                     <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
+                   </Button>
+                 </div>
+               </div>
+             </div>
+          </div>
+
+          {/* GAVETA DO CARRINHO */}
+          <AnimatePresence>
+            {isCartOpen && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]"/>
+                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-slate-50 shadow-2xl z-[210] flex flex-col border-l border-slate-200">
+                  <div className="p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><ShoppingCart size={20}/></div>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Seu Carrinho</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{carrinho.length} item(s) adicionado(s)</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                    {carrinho.length === 0 ? (
+                       <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
+                          <ShoppingBag size={48} className="mb-4 text-slate-200"/>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
+                          <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
+                       </div>
+                    ) : (
+                       carrinho.map((item) => (
+                         <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
+                            <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
+                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
+                               <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex flex-col justify-center flex-1">
+                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
+                               <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
+                               <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
+                            </div>
+                         </div>
+                       ))
+                    )}
+                  </div>
+
+                  {carrinho.length > 0 && (
+                    <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+                      <div className="flex justify-between items-end mb-4">
+                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
+                         <span className="text-2xl font-black text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
+                      </div>
+                      <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
+                        <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido
+                      </Button>
+                      <button onClick={() => setIsCartOpen(false)} className="w-full mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600">
+                        Continuar Comprando
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* BOTÃO FLUTUANTE DO CARRINHO */}
+          {carrinho.length > 0 && !isCartOpen && (
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${floatingCartBottom}`}
+            >
+              <ShoppingCart size={24} />
+              <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
+                {carrinho.length}
+              </span>
+            </button>
+          )}
+
         </div>
       );
     }
@@ -559,13 +701,13 @@ export default function Catalogo({ isPublic = false }) {
 
   if (isPublic) return renderCatalog();
 
-  // --- VISÃO ADMINISTRATIVA: MODO EDITOR HYBRIDO (SIDEBAR/BOTTOM SHEET) ---
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
       {/* CONTAINER HÍBRIDO DO EDITOR */}
       <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
         
+        {/* HEADER DESKTOP ONLY */}
         <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
           <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
@@ -600,7 +742,6 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       </div>
 
-      {/* ÁREA DE PREVIEW (CATÁLOGO AO VIVO) COM OVERLAYS MOBILE */}
       <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700"><ArrowLeft size={18} /></button>
         {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
@@ -627,11 +768,10 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       </div>
 
-      {/* OVERLAY DE CARREGAMENTO GLOBAL DE IMAGENS */}
       {isUploadingGlobal && (
         <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto">
           <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />
-          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Limpando e Enviando...</p>
+          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Processando...</p>
         </div>
       )}
     </div>
