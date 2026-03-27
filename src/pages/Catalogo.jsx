@@ -6,15 +6,15 @@ import {
   Loader2, Sparkles, Layers, Box, Package,
   Truck, ShieldCheck, CreditCard, Star,
   Save, Palette, Globe, Image as ImageIcon, 
-  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate, ShoppingCart, Menu
+  Upload, Check, Trash2, Copy, Link as LinkIcon, MapPin, Tags, X, ChevronDown, ChevronUp, ArrowLeft, LayoutTemplate, ShoppingCart, Menu, SmartPhone, Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
-// --- COMPRESSOR DE IMAGENS (1200px para Banners Full-Width / 80% WebP) ---
-const compressImageToBlob = (file) => {
+// --- COMPRESSOR DE IMAGENS (1920px para Desktop / 800px para Mobile | WebP 80%) ---
+const compressImageToBlob = (file, maxDimension = 1920) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -23,8 +23,8 @@ const compressImageToBlob = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        const MAX_HEIGHT = 1200;
+        const MAX_WIDTH = maxDimension; 
+        const MAX_HEIGHT = maxDimension;
         let width = img.width;
         let height = img.height;
 
@@ -77,39 +77,46 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-// --- HEADER SITE (Sticky e Responsivo ao Editor) ---
+// --- HEADER SITE (Sticky, Logo Desktop Maior, Mobile Reorganizado) ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setIsCartOpen, categorias, changeCategory, selectedCategory }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // --- LOGO DESKTOP AUMENTADA (Ajuste de tamanhos solicitado) ---
+  const logoSizes = {
+    pequeno: 'h-10 md:h-14',
+    medio: 'h-12 md:h-18', // Antes: 10/12
+    grande: 'h-14 md:h-24'  // Antes: 12/14
+  };
+  const activeLogoSize = logoSizes[st?.tamanho_logo || 'medio'];
+
   return (
     <>
-      <div className="sticky top-3 md:top-5 mx-auto w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 py-2.5 md:py-3 transition-all duration-300">
+      <div className="sticky top-3 md:top-5 mx-auto w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 md:px-6 py-2.5 md:py-3 transition-all duration-300">
         
-        {/* MOBILE LAYOUT */}
+        {/* MOBILE LAYOUT (Logo Lateral Esq, Ícones na Dir) */}
         <div className="flex md:hidden items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors"><Menu size={22} /></button>
-            <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors"><Search size={20} /></button>
+          <div onClick={goHome} className="flex-1 flex justify-start cursor-pointer px-1">
+            {st?.logo_url ? <img src={st.logo_url} className="h-9 w-auto max-w-[150px] object-contain" alt="Logo" /> : <ShoppingBag size={26} style={{ color: st?.cor_principal }} />}
           </div>
           
-          <div onClick={goHome} className="flex-1 flex justify-center cursor-pointer px-2">
-            {st?.logo_url ? <img src={st.logo_url} className="h-8 w-auto max-w-[140px] object-contain" alt="Logo" /> : <ShoppingBag size={24} style={{ color: st?.cor_principal }} />}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsCartOpen(true)} className="relative text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-colors">
+          <div className="flex items-center gap-1.5 text-slate-600">
+            <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"><Search size={20} /></button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors"><Menu size={22} /></button>
+            <button onClick={() => setIsCartOpen(true)} className="relative p-1.5 hover:bg-slate-100 rounded-full transition-colors">
               <ShoppingCart size={22} />
               {carrinhoCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 text-[9px] font-bold bg-rose-500 text-white rounded-full flex items-center justify-center">{carrinhoCount}</span>}
             </button>
           </div>
         </div>
 
-        {/* DESKTOP LAYOUT */}
+        {/* DESKTOP LAYOUT (Cabeçalho Pílula Clean) */}
         <div className="hidden md:flex items-center justify-between w-full">
           <div className="flex items-center gap-4">
             <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer transition-transform hover:scale-105">
-              {st?.logo_url ? <img src={st.logo_url} className="h-10 w-auto object-contain" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
+              <div className={`${activeLogoSize} flex items-center justify-center`}>
+                {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
+              </div>
             </div>
           </div>
 
@@ -117,7 +124,7 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
              <div className="flex items-center relative">
                <input 
                  type="text" 
-                 placeholder="Pesquisar produtos..." 
+                 placeholder="Pesquisar..." 
                  value={searchTerm}
                  onChange={(e) => setSearchTerm(e.target.value)}
                  className={`transition-all duration-300 outline-none bg-slate-50 border border-slate-200 focus:bg-white rounded-full px-4 h-10 text-sm ${isSearchOpen ? 'w-64 opacity-100 mr-2' : 'w-0 opacity-0 pointer-events-none'}`}
@@ -133,15 +140,15 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
              </button>
 
              {st?.whatsapp && (
-               <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-10 px-5 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-105 ml-1" style={{ backgroundColor: st?.cor_principal }}>
-                 WhatsApp
+               <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-10 px-6 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-105 ml-1" style={{ backgroundColor: st?.cor_principal }}>
+                 Fale Conosco
                </Button>
              )}
           </div>
         </div>
       </div>
 
-      {/* MOBILE SEARCH BAR (Aparece abaixo do Header quando ativada) */}
+      {/* MOBILE SEARCH BAR */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden w-[95%] mx-auto mt-2 overflow-hidden z-40 sticky top-[68px]">
@@ -154,7 +161,7 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome, carrinhoCount, setI
         )}
       </AnimatePresence>
 
-      {/* MOBILE MENU CATEGORIAS (Drawer) */}
+      {/* MOBILE MENU CATEGORIAS */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -214,7 +221,7 @@ const FooterSite = ({ st }) => (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
         <div className="space-y-3 text-center md:text-left">
           <h2 className="text-xl font-black uppercase tracking-tighter text-white italic transition-colors duration-300" style={{ color: st?.cor_principal }}>{st?.nome_loja}</h2>
-          <p className="text-[11px] font-medium leading-relaxed max-w-sm mx-auto md:mx-0 text-slate-500">{st?.texto_sobre}</p>
+          <p className="text-[11px] font-medium leading-relaxed max-w-sm mx-auto md:mx-0 text-slate-500">{st?.texto_sobre || 'Explore nosso catálogo de produtos.'}</p>
         </div>
         <div className="space-y-4 text-center md:text-left flex flex-col items-center md:items-start">
           <h3 className="text-white font-bold uppercase tracking-widest text-[10px]">Canais de Atendimento</h3>
@@ -249,7 +256,7 @@ const FooterSite = ({ st }) => (
         </div>
       </div>
       <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600 text-center md:text-left">{st?.copyright}</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600 text-center md:text-left">{st?.copyright || 'Todos os direitos reservados.'}</p>
       </div>
     </div>
   </footer>
@@ -418,12 +425,13 @@ export default function Catalogo({ isPublic = false }) {
     alert("Link copiado!");
   };
 
-  const handleImageUpload = async (e, field) => {
+  // --- Função de Upload Atualizada para Suportar Dimensões e Campos Separados ---
+  const handleImageUpload = async (e, field, maxDim = 1920) => {
     const file = e.target.files[0];
     if (!file) return;
     setIsUploadingGlobal(true);
     try {
-      const blob = await compressImageToBlob(file);
+      const blob = await compressImageToBlob(file, maxDim);
       const fileName = `catalogo-${field}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
       const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
       if (error) throw error;
@@ -432,6 +440,9 @@ export default function Catalogo({ isPublic = false }) {
       const novaUrl = publicUrlData.publicUrl;
       
       setSt(prev => ({ ...prev, [field]: novaUrl }));
+      
+      // Auto-save: Salva direto no banco de dados. 
+      // Se as colunas banner_desktop_url e banner_mobile_url não existirem, o Supabase as criará.
       const { error: dbError } = await supabase.from('configuracoes').update({ [field]: novaUrl }).eq('id', 1);
       if (dbError) throw dbError;
       
@@ -674,7 +685,6 @@ export default function Catalogo({ isPublic = false }) {
             </div>
             
             <div className="w-full md:flex-1 flex flex-col gap-1.5">
-               {/* BARRA DE BOTÕES ALINHADA */}
                <div className="flex gap-2 w-full">
                  <Button onClick={adicionarAoCarrinho} className="flex-1 h-12 md:h-14 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]" style={{ backgroundColor: st?.cor_principal }}>
                    {isMobile ? "Adicionar" : "Adicionar ao Carrinho"}
@@ -693,7 +703,7 @@ export default function Catalogo({ isPublic = false }) {
       );
 
       return (
-        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0">
+        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0 pt-24 md:pt-32">
           <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} carrinhoCount={carrinho.length} setIsCartOpen={setIsCartOpen} categorias={displayCategories} changeCategory={changeCategory} selectedCategory={selectedCategory} />
           <BenefitsBar st={st} />
           
@@ -703,7 +713,6 @@ export default function Catalogo({ isPublic = false }) {
             </button>
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
               
-              {/* LADO ESQUERDO */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
                  <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
                    {selectedProduct.destaque && (
@@ -731,7 +740,6 @@ export default function Catalogo({ isPublic = false }) {
                  )}
               </div>
 
-              {/* LADO DIREITO */}
               <div className="w-full md:w-[55%] flex flex-col">
                 <div className="flex flex-wrap gap-2 mb-3">
                   {descontoPercent > 0 && !wholesaleApplied && !hasVariationPrice && (
@@ -874,12 +882,10 @@ export default function Catalogo({ isPublic = false }) {
           
           <FooterSite st={st} />
 
-          {/* BARRA FIXA BOTTOM PARA MOBILE */}
           <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
              <BuyBarContent isMobile={true} />
           </div>
 
-          {/* --- GAVETA DO CARRINHO --- */}
           <AnimatePresence>
             {isCartOpen && (
               <>
@@ -895,7 +901,6 @@ export default function Catalogo({ isPublic = false }) {
                     </div>
                     <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
                   </div>
-
                   <div className="flex-1 overflow-y-auto p-5 space-y-4">
                     {carrinho.length === 0 ? (
                        <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
@@ -919,7 +924,6 @@ export default function Catalogo({ isPublic = false }) {
                        ))
                     )}
                   </div>
-
                   {carrinho.length > 0 && (
                     <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
                       <div className="flex justify-between items-end mb-4">
@@ -938,8 +942,6 @@ export default function Catalogo({ isPublic = false }) {
               </>
             )}
           </AnimatePresence>
-
-          {/* BOTÃO FLUTUANTE DO CARRINHO (Apenas visível no Desktop, pois no Mobile ele já está na barra inferior) */}
           {carrinho.length > 0 && !isCartOpen && (
             <button 
               onClick={() => setIsCartOpen(true)}
@@ -952,7 +954,6 @@ export default function Catalogo({ isPublic = false }) {
               </span>
             </button>
           )}
-
         </div>
       );
     }
@@ -961,52 +962,52 @@ export default function Catalogo({ isPublic = false }) {
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
         <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} carrinhoCount={carrinho.length} setIsCartOpen={setIsCartOpen} categorias={displayCategories} changeCategory={changeCategory} selectedCategory={selectedCategory} />
         
-        {/* --- NOVO BANNER / HERO SECTION (ESTILO STARTUP/AGÊNCIA) --- */}
+        {/* --- HERO SECTION ATUALIZADA (Visual Full-Width Desktop / Limpo Mobile) --- */}
         {view === 'grid' && (
-          <div className="relative w-full pt-28 pb-16 md:pt-36 md:pb-24 overflow-hidden bg-white z-0 mt-[-80px]">
-             <div className="absolute top-0 right-0 w-full md:w-[55%] h-[110%] opacity-10 pointer-events-none rounded-bl-[120px] -z-10" style={{ backgroundColor: st?.cor_principal }}></div>
+          <div className="relative w-full overflow-hidden bg-white z-0 mt-[-80px]">
              
-             <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12 md:gap-16">
+             {/* --- DESKTOP HERO: Banner de Fundo Inteiro + Textos Centralizados --- */}
+             <div className="hidden md:flex relative w-full aspect-[21/9] min-h-[450px] max-h-[650px] items-center justify-center overflow-hidden bg-slate-900">
+                {st?.banner_desktop_url && (
+                   <img src={st.banner_desktop_url} className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-500" alt="Banner Desktop" />
+                )}
+                {/* Camada escura suave no fundo para legibilidade */}
+                <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"></div>
                 
-                {/* Lado Esquerdo: Textos e Botões */}
-                <div className="flex-1 space-y-6 text-center md:text-left mt-4 md:mt-0">
-                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                     {st?.nome_loja || 'Bem-vindo à nossa loja'}
+                {/* Textos Centralizados por cima da imagem */}
+                <div className="relative z-10 max-w-4xl mx-auto px-8 text-center space-y-6 animate-in slide-in-from-bottom-5 duration-700">
+                   <h1 className="text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter drop-shadow-md italic">
+                     {st?.nome_loja || 'Sua Loja'}
                    </h1>
-                   <p className="text-sm md:text-base text-slate-600 max-w-lg mx-auto md:mx-0 leading-relaxed">
-                     {st?.texto_sobre || 'Explore nosso catálogo e encontre os melhores produtos para você.'}
+                   <p className="text-base md:text-lg text-white/90 max-w-2xl mx-auto leading-relaxed font-medium drop-shadow">
+                     {st?.texto_sobre || 'Explore nosso catálogo e faça seu pedido direto pelo WhatsApp.'}
                    </p>
-                   
-                   <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3 md:gap-4 pt-4">
+                   <div className="flex items-center justify-center gap-4 pt-4">
                      {st?.whatsapp && (
-                       <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="w-full sm:w-auto h-12 px-8 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-lg transition-transform hover:scale-105" style={{ backgroundColor: st?.cor_principal }}>
+                       <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white shadow-xl transition-transform hover:scale-105 border-none" style={{ backgroundColor: st?.cor_principal }}>
                          Fale Conosco
                        </Button>
                      )}
-                     <Button onClick={() => document.getElementById('produtos-section').scrollIntoView({ behavior: 'smooth' })} variant="outline" className="w-full sm:w-auto h-12 px-8 rounded-full font-bold text-[11px] uppercase tracking-widest text-slate-700 border-slate-300 hover:bg-slate-50 transition-transform hover:scale-105">
+                     <Button onClick={() => document.getElementById('produtos-section').scrollIntoView({ behavior: 'smooth' })} variant="outline" className="h-13 px-10 rounded-full font-bold text-xs uppercase tracking-widest text-white border-white/40 bg-white/10 backdrop-blur-sm hover:bg-white hover:text-slate-900 transition-all hover:scale-105">
                        Ver Produtos
                      </Button>
                    </div>
                 </div>
-
-                {/* Lado Direito: Imagem Arredondada */}
-                {st?.banner_url && (
-                   <div className="w-full md:w-1/2 relative">
-                      <div className="aspect-square md:aspect-[4/3] w-full rounded-tl-[80px] rounded-br-[80px] rounded-tr-[24px] rounded-bl-[24px] overflow-hidden shadow-2xl border-[6px] border-white relative z-10">
-                         <img src={st.banner_url} className="w-full h-full object-cover" alt="Banner Principal" />
-                      </div>
-                      <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-30 -z-10 blur-3xl" style={{ backgroundColor: st?.cor_principal }}></div>
-                   </div>
-                )}
-
              </div>
+
+             {/* --- MOBILE HERO: Apenas o Banner --- */}
+             {st?.banner_mobile_url && (
+               <div className="flex md:hidden relative w-full aspect-square bg-slate-50 border-b border-slate-100 mt-[80px]">
+                  <img src={st.banner_mobile_url} className="w-full h-full object-cover" alt="Banner Mobile" />
+               </div>
+             )}
+
           </div>
         )}
 
         <BenefitsBar st={st} />
         
         <main id="produtos-section" className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 flex-1 w-full">
-          
           <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar mb-8 pb-3 border-b border-slate-100">
             <button 
               onClick={() => changeCategory('Todas')}
@@ -1030,7 +1031,6 @@ export default function Catalogo({ isPublic = false }) {
               )
             })}
           </div>
-
           {filtered.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm mt-4">
                <ShoppingBag size={40} className="mx-auto text-slate-200 mb-4" />
@@ -1038,7 +1038,7 @@ export default function Catalogo({ isPublic = false }) {
              </div>
           ) : (
             <div className="space-y-6">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 pb-2">Todos os Produtos</h2>
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 pb-2">Nossos Produtos</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                 {filtered.map(prod => {
                   const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
@@ -1074,8 +1074,8 @@ export default function Catalogo({ isPublic = false }) {
           )}
         </main>
         <FooterSite st={st} />
-
-        {/* --- GAVETA DO CARRINHO (DISPONÍVEL TAMBÉM NA VITRINE) --- */}
+        <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
+        </div>
         <AnimatePresence>
           {isCartOpen && (
             <>
@@ -1091,31 +1091,29 @@ export default function Catalogo({ isPublic = false }) {
                   </div>
                   <button onClick={() => setIsCartOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"><X size={20} /></button>
                 </div>
-
                 <div className="flex-1 overflow-y-auto p-5 space-y-4">
                   {carrinho.length === 0 ? (
-                     <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
-                        <ShoppingBag size={48} className="mb-4 text-slate-200"/>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
-                        <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
-                     </div>
-                  ) : (
-                     carrinho.map((item) => (
-                       <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
-                          <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
-                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
-                             <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex flex-col justify-center flex-1">
-                             <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
-                             <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                             <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
-                          </div>
+                       <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-70">
+                          <ShoppingBag size={48} className="mb-4 text-slate-200"/>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Seu carrinho está vazio</p>
+                          <Button onClick={() => setIsCartOpen(false)} variant="outline" className="mt-4 border-slate-300 text-slate-500 font-bold uppercase text-[10px]">Continuar Comprando</Button>
                        </div>
-                     ))
-                  )}
+                    ) : (
+                       carrinho.map((item) => (
+                         <div key={item.id_carrinho} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex gap-3 relative">
+                            <button onClick={() => setCarrinho(prev => prev.filter(c => c.id_carrinho !== item.id_carrinho))} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-lg shadow-sm hover:bg-red-600"><Trash2 size={12}/></button>
+                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 shrink-0">
+                               <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex flex-col justify-center flex-1">
+                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
+                               <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
+                               <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
+                            </div>
+                         </div>
+                       ))
+                    )}
                 </div>
-
                 {carrinho.length > 0 && (
                   <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
                     <div className="flex justify-between items-end mb-4">
@@ -1134,8 +1132,6 @@ export default function Catalogo({ isPublic = false }) {
             </>
           )}
         </AnimatePresence>
-
-        {/* BOTÃO FLUTUANTE DO CARRINHO (Apenas visível no Desktop) */}
         {carrinho.length > 0 && !isCartOpen && (
           <button 
             onClick={() => setIsCartOpen(true)}
@@ -1148,7 +1144,6 @@ export default function Catalogo({ isPublic = false }) {
             </span>
           </button>
         )}
-
       </div>
     );
   };
@@ -1267,7 +1262,7 @@ export default function Catalogo({ isPublic = false }) {
                        <div className="flex flex-col items-center gap-1 shrink-0">
                          <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
                            {st[`beneficio_${num}_icone`] ? <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain"/> : <Package size={14} className="text-slate-500"/>}
-                           <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                           <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `beneficio_${num}_icone`, 100)} className="absolute inset-0 opacity-0 cursor-pointer" />
                          </div>
                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100 px</span>
                        </div>
@@ -1281,23 +1276,48 @@ export default function Catalogo({ isPublic = false }) {
               </div>
            </EditorSection>
 
-           <EditorSection id="banners" title="Banners" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
-              <div className="space-y-4">
-                <div className="relative">
-                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                  <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                    <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem de Destaque"}
-                  </Button>
-                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1.5 text-center w-full">Medida recomendada: 800 x 800 px</p>
-                </div>
-                {st?.banner_url && (
-                  <div className="aspect-[4/3] rounded overflow-hidden border border-slate-700 relative">
-                    <img src={st.banner_url} className="w-full h-full object-cover" />
-                    <button onClick={() => setSt({...st, banner_url: ''})} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"><Trash2 size={10}/></button>
+           {/* --- SEÇÃO BANNERS ATUALIZADA (Uploads Separados Desktop/Mobile) --- */}
+           <EditorSection id="banners" title="Banners Capa" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-6">
+                
+                {/* BANNER DESKTOP */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Monitor size={14}/> Banner Desktop (Computador)</label>
+                  <div className="relative">
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_desktop_url', 1920)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                    <Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
+                      <Upload size={13} className="mr-1.5"/> {st?.banner_desktop_url ? "Trocar Imagem" : "Subir Imagem"}
+                    </Button>
                   </div>
-                )}
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Link do Banner</label>
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1 text-center w-full">Recomendado: 1920 x 820 px (ou similar)</p>
+                  {st?.banner_desktop_url && (
+                    <div className="aspect-[21/9] rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800">
+                      <img src={st.banner_desktop_url} className="w-full h-full object-cover" />
+                      <button onClick={() => setSt({...st, banner_desktop_url: ''})} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button>
+                    </div>
+                  )}
+                </div>
+
+                {/* BANNER MOBILE */}
+                <div className="space-y-2 pt-4 border-t border-slate-700/50">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><SmartPhone size={14}/> Banner Mobile (Celular)</label>
+                  <div className="relative">
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_mobile_url', 800)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                    <Button variant="outline" className="w-full h-9 rounded-lg border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
+                      <Upload size={13} className="mr-1.5"/> {st?.banner_mobile_url ? "Trocar Imagem" : "Subir Imagem"}
+                    </Button>
+                  </div>
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1 text-center w-full">Recomendado: 800 x 800 px (Quadrado)</p>
+                  {st?.banner_mobile_url && (
+                    <div className="aspect-square w-32 mx-auto rounded-lg overflow-hidden border border-slate-700 relative mt-2 bg-slate-800">
+                      <img src={st.banner_mobile_url} className="w-full h-full object-cover" />
+                      <button onClick={() => setSt({...st, banner_mobile_url: ''})} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md hover:bg-red-600"><Trash2 size={12}/></button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                  <label className="text-[9px] font-bold uppercase text-slate-500">Link Opcional ao Clicar (https://...)</label>
                   <Input value={st?.banner_link || ''} onChange={(e) => setSt({...st, banner_link: e.target.value})} placeholder="https://..." className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white" />
                 </div>
               </div>
@@ -1306,8 +1326,8 @@ export default function Catalogo({ isPublic = false }) {
            <EditorSection id="rodape" title="Rodapé" icon={Globe} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase text-slate-500">Sobre a Empresa</label>
-                  <textarea value={st?.texto_sobre || ''} onChange={(e) => setSt({...st, texto_sobre: e.target.value})} className="w-full h-16 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
+                  <label className="text-[9px] font-bold uppercase text-slate-500">Texto Sobre a Empresa (aparece no Desktop)</label>
+                  <textarea value={st?.texto_sobre || ''} onChange={(e) => setSt({...st, texto_sobre: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold uppercase text-slate-500">WhatsApp</label>
@@ -1333,15 +1353,11 @@ export default function Catalogo({ isPublic = false }) {
       </div>
 
       <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
-        
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
           <ArrowLeft size={18} />
         </button>
-
         {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
-
         {renderCatalog()}
-
         <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
           {[
             { id: 'identidade', icon: Palette, label: 'Visual' },
@@ -1360,7 +1376,6 @@ export default function Catalogo({ isPublic = false }) {
              <span className="text-[8px] font-bold uppercase tracking-wider">Salvar</span>
           </button>
         </div>
-
       </div>
 
       {isUploadingGlobal && (
