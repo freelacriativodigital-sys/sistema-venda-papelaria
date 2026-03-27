@@ -49,7 +49,6 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   const isOpen = openSection === id;
   return (
     <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
-      {/* BOTÃO DESKTOP (SANFONA) */}
       <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
         <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
           <Icon size={14} className="text-slate-400" /> {title}
@@ -57,7 +56,6 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
         <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
-      {/* CONTEÚDO (Muda fisicamente de acordo com a tela) */}
       <div className={`
         transition-all duration-300 ease-in-out
         ${isOpen ? 'fixed inset-x-0 bottom-[64px] top-auto max-h-[80vh] bg-slate-900 z-[160] overflow-y-auto p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 flex flex-col opacity-100' : 'fixed inset-x-0 bottom-[64px] max-h-0 opacity-0 overflow-hidden pointer-events-none'}
@@ -78,7 +76,6 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-// --- HEADER DA VITRINE (LOGO LIMPA SEM BORDA) ---
 const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => (
   <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
     <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
@@ -129,7 +126,6 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
   </div>
 );
 
-// --- FAIXA DE BENEFÍCIOS ---
 const BenefitsBar = ({ st }) => {
   if (!st?.mostrar_beneficios) return null;
   return (
@@ -157,7 +153,6 @@ const BenefitsBar = ({ st }) => {
   );
 };
 
-// --- RODAPÉ ---
 const FooterSite = ({ st }) => (
   <footer className="bg-slate-950 text-slate-400 pt-12 pb-32 md:pb-8 border-t-[6px] mt-16 transition-colors duration-300" style={{ borderColor: st?.cor_principal || '#f472b6' }}>
     <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -482,6 +477,7 @@ export default function Catalogo({ isPublic = false }) {
       const descontoPercent = calcularDesconto(selectedProduct.preco, selectedProduct.preco_promocional);
       const relacionados = produtos.filter(p => p.categoria === selectedProduct.categoria && p.id !== selectedProduct.id).slice(0, 4);
 
+      // --- LÓGICA ATUALIZADA: INTEGRAÇÃO CATÁLOGO -> PEDIDOS ---
       const enviarZap = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
           const camposFaltando = selectedProduct.campos_personalizados.filter(
@@ -503,6 +499,20 @@ export default function Catalogo({ isPublic = false }) {
           }).join('\n');
         }
 
+        const descBanco = `*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n${textoVars ? `\n*Variações:*\n${textoVars}` : ''}${textoPersonalizado}`;
+
+        // Envia silenciosamente o pedido para o banco com status 'solicitacao' (Gera a notificação no painel)
+        // Isso é feito SEM o "await" para evitar que o navegador bloqueie o redirecionamento do WhatsApp!
+        supabase.from('pedidos').insert([{
+           title: `Catálogo: ${selectedProduct.nome}`,
+           description: descBanco,
+           service_value: precoTotal,
+           status: 'solicitacao',
+           priority: 'alta', // Marca como alta prioridade para o admin ver rápido
+           category: selectedProduct.categoria || 'Catálogo'
+        }]).then(() => {}).catch(err => console.error("Erro ao registrar no banco:", err));
+
+        // Envia o cliente direto para o WhatsApp
         const msg = `Olá! Gostaria de encomendar este produto:\n\n🛍️ *${selectedProduct.nome}*\n${textoVars}${textoPersonalizado}\n\n*Quantidade:* ${qtdSafe} un.\n*Valor Unitário:* R$ ${unitPriceFinal.toFixed(2)} ${wholesaleApplied ? '(Atacado)' : ''}\n*Total:* R$ ${precoTotal.toFixed(2)}`;
         window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
       };
@@ -687,7 +697,6 @@ export default function Catalogo({ isPublic = false }) {
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
         <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
         
-        {/* BANNER FULL WIDTH - Fora do container para ir de ponta a ponta */}
         {view === 'grid' && st?.banner_url && (
           <div className="w-full cursor-pointer hover:opacity-95 transition-opacity bg-slate-900" onClick={() => st.banner_link && window.open(st.banner_link, '_blank')}>
               <img src={st.banner_url} className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" alt="Banner Principal" />
@@ -746,14 +755,11 @@ export default function Catalogo({ isPublic = false }) {
 
   if (isPublic) return renderCatalog();
 
-  // --- VISÃO ADMINISTRATIVA: MODO EDITOR HYBRIDO (SIDEBAR/BOTTOM SHEET) ---
   return (
     <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* CONTAINER HÍBRIDO DO EDITOR (Invisível no Mobile para permitir cliques na vitrine) */}
       <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
         
-        {/* HEADER DESKTOP ONLY */}
         <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
           <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
@@ -763,7 +769,6 @@ export default function Catalogo({ isPublic = false }) {
           </Button>
         </div>
 
-        {/* CONTEÚDO DO EDITOR */}
         <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
            <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-1.5">
@@ -906,7 +911,6 @@ export default function Catalogo({ isPublic = false }) {
            </EditorSection>
         </div>
 
-        {/* FOOTER DESKTOP ONLY */}
         <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950">
            <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2">
              <Copy size={12} /> Copiar Link da Loja
@@ -914,20 +918,16 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       </div>
 
-      {/* ÁREA DE PREVIEW (CATÁLOGO AO VIVO) COM OVERLAYS MOBILE */}
       <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
         
-        {/* BOTÃO SAIR NO MOBILE */}
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
           <ArrowLeft size={18} />
         </button>
 
-        {/* MÁSCARA ESCURA QUANDO PAINEL MOBILE ESTÁ ABERTO */}
         {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] transition-opacity" />}
 
         {renderCatalog()}
 
-        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE */}
         <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[150] px-1">
           {[
             { id: 'identidade', icon: Palette, label: 'Visual' },
@@ -949,7 +949,6 @@ export default function Catalogo({ isPublic = false }) {
 
       </div>
 
-      {/* OVERLAY DE CARREGAMENTO GLOBAL DE IMAGENS */}
       {isUploadingGlobal && (
         <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center">
           <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />

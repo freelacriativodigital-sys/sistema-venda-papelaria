@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskItem from "@/components/tasks/TaskItem";
 import NewTaskForm from "@/components/tasks/NewTaskForm";
@@ -18,7 +18,6 @@ const priorityWeight = {
   baixa: 4,
 };
 
-// Lista exata de colunas que existem na tabela 'pedidos' no Supabase
 const COLUNAS_PERMITIDAS = [
   'title', 'description', 'priority', 'category', 'service_value', 
   'checklist', 'status', 'kanban_stage', 'payment_status', 'valor_pago', 
@@ -49,34 +48,21 @@ export default function Pedidos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["art-tasks"] }),
   });
 
-  // Função para limpar os dados antes de enviar ao banco
   const blindarDados = (dadosBrutos) => {
     const dadosLimpos = {};
-    
-    // Tratamento de segurança caso o form envie com chaves diferentes
     if (dadosBrutos.nome && !dadosBrutos.title) dadosLimpos.title = dadosBrutos.nome;
     if (dadosBrutos.valor && dadosBrutos.service_value === undefined) dadosLimpos.service_value = dadosBrutos.valor;
 
     Object.keys(dadosBrutos).forEach(key => {
       if (COLUNAS_PERMITIDAS.includes(key)) {
         let valor = dadosBrutos[key];
-
-        // Se for string vazia em campos de ID ou Data, o Supabase exige que seja null
-        if ((key === 'cliente_id' || key === 'delivery_date') && valor === "") {
-          valor = null;
-        }
-        
-        // Se for campo de valor, garante que seja número
-        if ((key === 'service_value' || key === 'valor_pago') && (valor === "" || isNaN(valor))) {
-          valor = 0;
-        }
-
+        if ((key === 'cliente_id' || key === 'delivery_date') && valor === "") valor = null;
+        if ((key === 'service_value' || key === 'valor_pago') && (valor === "" || isNaN(valor))) valor = 0;
         dadosLimpos[key] = valor;
       }
     });
 
-    // Garante que o title (obrigatório no banco) nunca vá vazio
-    if (!dadosLimpos.title || dadosLimpos.title.trim() === "") {
+    if ('title' in dadosLimpos && (!dadosLimpos.title || String(dadosLimpos.title).trim() === "")) {
       dadosLimpos.title = "Pedido sem título";
     }
 
@@ -106,7 +92,6 @@ export default function Pedidos() {
 
   const handleCreate = async (data) => {
     const dadosBlindados = blindarDados(data);
-    
     const { error } = await supabase.from("pedidos").insert([{ ...dadosBlindados, status: 'pendente' }]);
     
     if (error) {
@@ -171,7 +156,9 @@ export default function Pedidos() {
     });
   };
 
-  const pendingTasks = uniqueTasks.filter((t) => t.status !== "concluida");
+  // --- FILTROS DE STATUS ---
+  const solicitacoes = uniqueTasks.filter((t) => t.status === "solicitacao");
+  const pendingTasks = uniqueTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
   const completedTasks = uniqueTasks.filter((t) => t.status === "concluida");
 
   const organizarPorData = (lista) => {
@@ -234,6 +221,14 @@ export default function Pedidos() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 md:mb-8">
           <TabsList className="w-full bg-secondary/60 h-12 md:h-12 border border-border/40 p-1.5 rounded-lg flex">
+            {/* NOVA ABA DE SOLICITAÇÕES */}
+            <TabsTrigger value="solicitacoes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm relative">
+              <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
+              {solicitacoes.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>
+              )}
+            </TabsTrigger>
+
             <TabsTrigger value="pendentes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm">
               <Palette className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
             </TabsTrigger>
@@ -250,6 +245,51 @@ export default function Pedidos() {
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin text-primary" /></div>
         ) : (
           <>
+            {/* CONTEÚDO DA NOVA ABA */}
+            {activeTab === "solicitacoes" && (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-blue-800">
+                   <h2 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ShoppingBag size={16}/> Novas Solicitações</h2>
+                   <p className="text-[10px] mt-1">Pedidos iniciados pelos clientes através do seu Catálogo ou Link da Bio. Aprove para iniciar a produção ou exclua caso o cliente não tenha fechado no WhatsApp.</p>
+                </div>
+                
+                {solicitacoes.length === 0 ? (
+                   <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+                     <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                     <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Nenhum pedido novo</p>
+                   </div>
+                ) : (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <AnimatePresence>
+                       {solicitacoes.map(t => (
+                         <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white border border-blue-200 shadow-sm rounded-xl p-4 flex flex-col justify-between">
+                            <div>
+                              <div className="flex justify-between items-start gap-2 mb-2">
+                                 <h3 className="font-bold text-slate-800 text-sm leading-tight uppercase">{t.title}</h3>
+                                 <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs shrink-0 border border-emerald-100">
+                                   {(t.service_value || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                 </span>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-[11px] text-slate-600 whitespace-pre-wrap mb-4">
+                                 {t.description}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-auto">
+                               <Button onClick={() => handleUpdate(t.id, { status: 'pendente' })} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-10 text-[10px] uppercase font-bold tracking-widest">
+                                 <CheckCheck size={14} className="mr-1.5"/> Aceitar Pedido
+                               </Button>
+                               <Button onClick={() => handleDelete(t)} variant="outline" className="h-10 px-3 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600">
+                                 <Trash2 size={16} />
+                               </Button>
+                            </div>
+                         </motion.div>
+                       ))}
+                     </AnimatePresence>
+                   </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "pendentes" && (
               <div className="space-y-6 md:space-y-6">
                 <NewTaskForm onSubmit={handleCreate} />
