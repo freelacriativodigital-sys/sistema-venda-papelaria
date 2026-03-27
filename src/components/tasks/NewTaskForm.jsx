@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, ChevronDown, ChevronUp, UserSquare2, Loader2, CalendarDays, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Importações do calendário
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -172,7 +171,7 @@ export default function NewTaskForm({ onSubmit }) {
                
                {mostrarDropdownCliente && task.title.trim().length > 0 && !clienteId && (
                  <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-lg shadow-lg max-h-56 overflow-y-auto p-1.5 space-y-0.5 z-[100]">
-                   {clientes.filter(c => c.nome.toLowerCase().includes(task.title.toLowerCase()) || (c.whatsapp && c.whatsapp.includes(task.title))).map(cli => (
+                   {clientes.filter(c => (c.nome || '').toLowerCase().includes((task.title || '').toLowerCase()) || (c.whatsapp && c.whatsapp.includes(task.title))).map(cli => (
                      <div 
                        key={cli.id} 
                        onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} 
@@ -182,8 +181,8 @@ export default function NewTaskForm({ onSubmit }) {
                      </div>
                    ))}
                    
-                   {/* BOTÃO CADASTRAR NOVO SE NÃO EXISTIR */}
-                   {!clientes.some(c => c.nome.toLowerCase() === task.title.trim().toLowerCase()) && (
+                   {/* --- CORREÇÃO DA TELA BRANCA AQUI TAMBÉM --- */}
+                   {!clientes.some(c => (c.nome || '').toLowerCase() === (task.title || '').trim().toLowerCase()) && (
                      <div className="pt-1 mt-1 border-t border-border">
                        <button 
                          type="button"
