@@ -77,61 +77,32 @@ const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, chi
   );
 };
 
-const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
+// --- NOVO HEADER SITE: Pílula flutuante e fixa ---
+const HeaderSite = ({ st, searchTerm, setSearchTerm, goHome }) => {
   const logoSizes = {
-    pequeno: 'h-8 md:h-12',
-    medio: 'h-12 md:h-16',
-    grande: 'h-16 md:h-24'
+    pequeno: 'h-8 md:h-10',
+    medio: 'h-10 md:h-12',
+    grande: 'h-12 md:h-14'
   };
   const activeLogoSize = logoSizes[st?.tamanho_logo || 'medio'];
 
   return (
-    <div className="w-full bg-white relative md:sticky top-0 z-40 shadow-sm border-b border-slate-100">
-      <div className="h-1.5 w-full transition-colors duration-300" style={{ backgroundColor: st?.cor_principal || '#f472b6' }} />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-center gap-4 md:gap-8">
-        <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group w-full md:w-auto justify-center md:justify-start">
-          <div className={`${activeLogoSize} flex items-center justify-center transition-transform group-hover:scale-105`}>
-            {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={32} style={{ color: st?.cor_principal }} />}
-          </div>
-        </div>
-        <div className="flex-1 w-full max-w-3xl relative group">
-          <input 
-            type="text" 
-            placeholder="O que você procura hoje?" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-10 md:h-12 bg-slate-50/80 hover:bg-slate-50 rounded-lg px-4 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400 shadow-sm"
-          />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-500 transition-colors" size={18} />
+    <div className="fixed top-3 md:top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between gap-4 transition-all duration-500 animate-in slide-in-from-top-4">
+      <div onClick={goHome} className="flex items-center shrink-0 cursor-pointer group">
+        <div className={`${activeLogoSize} flex items-center justify-center transition-transform group-hover:scale-105`}>
+          {st?.logo_url ? <img src={st.logo_url} className="h-full w-auto object-contain" alt="Logo" /> : <ShoppingBag size={28} style={{ color: st?.cor_principal }} />}
         </div>
       </div>
-      {view !== 'detalhe' && (
-        <div className="border-t border-slate-100 bg-white">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-3 flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar">
-            <button 
-              onClick={() => changeCategory('Todas')}
-              className={`text-[10px] md:text-xs font-semibold whitespace-nowrap transition-all px-3 py-1.5 md:px-4 md:py-2 rounded-md border flex items-center gap-1.5 ${selectedCategory === 'Todas' ? 'text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-            >
-              <Layers size={12} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
-              Todas
-            </button>
-            {categorias?.filter(c => c !== 'Sem Categoria').map(cat => {
-              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
-              return (
-                <button 
-                  key={cat}
-                  onClick={() => changeCategory(cat)}
-                  className={`text-[10px] md:text-xs font-semibold whitespace-nowrap transition-all px-3 py-1.5 md:px-4 md:py-2 rounded-md border ${isSelected ? 'text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <div className="flex-1 w-full max-w-xl relative group">
+        <input 
+          type="text" 
+          placeholder="Pesquisar produtos..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full h-10 bg-slate-50 hover:bg-slate-100 rounded-full px-5 pl-12 border border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-2 focus:ring-slate-100 transition-all outline-none text-sm text-slate-700 placeholder:text-slate-400"
+        />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
+      </div>
     </div>
   );
 };
@@ -139,22 +110,22 @@ const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCat
 const BenefitsBar = ({ st }) => {
   if (!st?.mostrar_beneficios) return null;
   return (
-    <div className="bg-slate-50 border-b border-slate-100 hidden md:block transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+    <div className="bg-white border-y border-slate-100 hidden md:block transition-all duration-300 z-10 relative">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
         {[1, 2, 3].map(num => (
            <div key={num} className="flex items-center gap-3 text-slate-600">
-              <div className="bg-white p-2 rounded-full border border-slate-200 shadow-sm">
+              <div className="bg-slate-50 p-2.5 rounded-full border border-slate-100 shadow-sm">
                 {st[`beneficio_${num}_icone`] ? (
-                   <img src={st[`beneficio_${num}_icone`]} className="w-4 h-4 object-contain" alt="" />
+                   <img src={st[`beneficio_${num}_icone`]} className="w-5 h-5 object-contain" alt="" />
                 ) : (
-                   num === 1 ? <Truck size={16} className="text-rose-500" /> : 
-                   num === 2 ? <CreditCard size={16} className="text-blue-500" /> : 
-                   <ShieldCheck size={16} className="text-emerald-500" />
+                   num === 1 ? <Truck size={18} className="text-rose-500" /> : 
+                   num === 2 ? <CreditCard size={18} className="text-blue-500" /> : 
+                   <ShieldCheck size={18} className="text-emerald-500" />
                 )}
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-800 leading-none mb-0.5">{st[`beneficio_${num}_titulo`]}</p>
-                <p className="text-[9px] font-medium text-slate-500">{st[`beneficio_${num}_desc`]}</p>
+                <p className="text-xs font-bold text-slate-800 leading-none mb-1">{st[`beneficio_${num}_titulo`]}</p>
+                <p className="text-[10px] font-medium text-slate-500">{st[`beneficio_${num}_desc`]}</p>
               </div>
            </div>
         ))}
@@ -164,7 +135,7 @@ const BenefitsBar = ({ st }) => {
 };
 
 const FooterSite = ({ st }) => (
-  <footer className="bg-slate-950 text-slate-400 pt-12 pb-32 md:pb-8 border-t-[6px] mt-16 transition-colors duration-300" style={{ borderColor: st?.cor_principal || '#f472b6' }}>
+  <footer className="bg-slate-950 text-slate-400 pt-16 pb-32 md:pb-8 border-t-[6px] mt-16 transition-colors duration-300" style={{ borderColor: st?.cor_principal || '#f472b6' }}>
     <div className="max-w-7xl mx-auto px-4 md:px-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
         <div className="space-y-3 text-center md:text-left">
@@ -309,7 +280,12 @@ export default function Catalogo({ isPublic = false }) {
     }
   }, [searchParams, produtos]);
 
-  const changeCategory = (cat) => { setSearchParams({ categoria: cat }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const changeCategory = (cat) => { 
+    setSearchParams({ categoria: cat }); 
+    const section = document.getElementById('produtos-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+  };
+  
   const goHome = () => { setSearchParams({}); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   const abrirDetalhe = (prod) => {
@@ -377,8 +353,14 @@ export default function Catalogo({ isPublic = false }) {
       const fileName = `catalogo-${field}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
       const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
       if (error) throw error;
+      
       const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
-      setSt(prev => ({ ...prev, [field]: publicUrlData.publicUrl }));
+      const novaUrl = publicUrlData.publicUrl;
+      
+      setSt(prev => ({ ...prev, [field]: novaUrl }));
+      const { error: dbError } = await supabase.from('configuracoes').update({ [field]: novaUrl }).eq('id', 1);
+      if (dbError) throw dbError;
+      
     } catch (err) {
       alert("Erro ao subir imagem: " + err.message);
     } finally {
@@ -495,6 +477,7 @@ export default function Catalogo({ isPublic = false }) {
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
+      // ... (Lógica de detalhe e cálculo de preço permanece a mesma) ...
       let baseProductPrice = selectedProduct.preco_promocional > 0 ? selectedProduct.preco_promocional : selectedProduct.preco;
       let currentPrice = baseProductPrice;
       let hasVariationPrice = false;
@@ -635,8 +618,8 @@ export default function Catalogo({ isPublic = false }) {
       }
 
       return (
-        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0">
-          <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
+        <div className="min-h-screen bg-white flex flex-col relative pb-[160px] md:pb-0 pt-24 md:pt-32"> {/* Adicionado PADDING TOP para o header fixo não cobrir */}
+          <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} />
           <BenefitsBar st={st} />
           
           <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 flex-1 w-full animate-in fade-in duration-500 mb-10">
@@ -884,7 +867,7 @@ export default function Catalogo({ isPublic = false }) {
           {carrinho.length > 0 && !isCartOpen && (
             <button 
               onClick={() => setIsCartOpen(true)}
-              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${floatingCartBottom}`}
+              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 bottom-6`}
             >
               <ShoppingCart size={24} />
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-sm">
@@ -899,25 +882,89 @@ export default function Catalogo({ isPublic = false }) {
 
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
-        <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
+        <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} goHome={goHome} />
         
-        {view === 'grid' && st?.banner_url && (
-          <div className="w-full cursor-pointer hover:opacity-95 transition-opacity bg-slate-900" onClick={() => st.banner_link && window.open(st.banner_link, '_blank')}>
-              <img src={st.banner_url} className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" alt="Banner Principal" />
+        {/* --- NOVO BANNER / HERO SECTION (ESTILO STARTUP/AGÊNCIA) --- */}
+        {view === 'grid' && (
+          <div className="relative w-full pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden bg-white z-0">
+             {/* Fundo Curvado Dinâmico com a cor principal */}
+             <div className="absolute top-0 right-0 w-full md:w-[55%] h-[110%] opacity-10 pointer-events-none rounded-bl-[120px] -z-10" style={{ backgroundColor: st?.cor_principal }}></div>
+             
+             <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12 md:gap-16">
+                
+                {/* Lado Esquerdo: Textos e Botões */}
+                <div className="flex-1 space-y-6 text-center md:text-left mt-4 md:mt-0">
+                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                     {st?.nome_loja || 'Bem-vindo à nossa loja'}
+                   </h1>
+                   <p className="text-sm md:text-base text-slate-600 max-w-lg mx-auto md:mx-0 leading-relaxed">
+                     {st?.texto_sobre || 'Explore nosso catálogo e encontre os melhores produtos para você.'}
+                   </p>
+                   
+                   <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3 md:gap-4 pt-4">
+                     {st?.whatsapp && (
+                       <Button onClick={() => window.open(`https://wa.me/${st.whatsapp.replace(/\D/g, '')}`, '_blank')} className="w-full sm:w-auto h-12 px-8 rounded-full font-bold text-[11px] uppercase tracking-widest text-white shadow-lg transition-transform hover:scale-105" style={{ backgroundColor: st?.cor_principal }}>
+                         Fale Conosco
+                       </Button>
+                     )}
+                     <Button onClick={() => document.getElementById('produtos-section').scrollIntoView({ behavior: 'smooth' })} variant="outline" className="w-full sm:w-auto h-12 px-8 rounded-full font-bold text-[11px] uppercase tracking-widest text-slate-700 border-slate-300 hover:bg-slate-50 transition-transform hover:scale-105">
+                       Ver Produtos
+                     </Button>
+                   </div>
+                </div>
+
+                {/* Lado Direito: Imagem Arredondada */}
+                {st?.banner_url && (
+                   <div className="w-full md:w-1/2 relative">
+                      <div className="aspect-square md:aspect-[4/3] w-full rounded-tl-[80px] rounded-br-[80px] rounded-tr-[24px] rounded-bl-[24px] overflow-hidden shadow-2xl border-[6px] border-white relative z-10">
+                         <img src={st.banner_url} className="w-full h-full object-cover" alt="Banner Principal" />
+                      </div>
+                      {/* Mancha colorida atras da imagem */}
+                      <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-30 -z-10 blur-3xl" style={{ backgroundColor: st?.cor_principal }}></div>
+                   </div>
+                )}
+
+             </div>
           </div>
         )}
 
         <BenefitsBar st={st} />
-        <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 w-full space-y-10 md:space-y-14">
+        
+        <main id="produtos-section" className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-14 flex-1 w-full">
           
+          {/* --- MENU DE CATEGORIAS MOVIDO PARA CÁ --- */}
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar mb-8 pb-3 border-b border-slate-100">
+            <button 
+              onClick={() => changeCategory('Todas')}
+              className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border flex items-center gap-1.5 ${selectedCategory === 'Todas' ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+              style={selectedCategory === 'Todas' ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+            >
+              <Layers size={14} className={selectedCategory === 'Todas' ? "text-white/80" : "text-slate-400"} />
+              Todas
+            </button>
+            {categoriasRaw?.filter(c => c !== 'Sem Categoria').map(cat => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.toLowerCase().trim();
+              return (
+                <button 
+                  key={cat}
+                  onClick={() => changeCategory(cat)}
+                  className={`text-[10px] md:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-all px-4 py-2 md:py-2.5 rounded-full border ${isSelected ? 'text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+                  style={isSelected ? { backgroundColor: st?.cor_principal, borderColor: st?.cor_principal } : {}}
+                >
+                  {cat}
+                </button>
+              )
+            })}
+          </div>
+
           {filtered.length === 0 ? (
-             <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+             <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm mt-4">
                <ShoppingBag size={40} className="mx-auto text-slate-200 mb-4" />
                <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Nenhum produto encontrado.</p>
              </div>
           ) : (
             <div className="space-y-6">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 border-b border-slate-200 pb-3">Todos os Produtos</h2>
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 pb-2">Todos os Produtos</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                 {filtered.map(prod => {
                   const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
@@ -1014,6 +1061,7 @@ export default function Catalogo({ isPublic = false }) {
           )}
         </AnimatePresence>
 
+        {/* BOTÃO FLUTUANTE DO CARRINHO */}
         {carrinho.length > 0 && !isCartOpen && (
           <button 
             onClick={() => setIsCartOpen(true)}
@@ -1163,12 +1211,13 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="relative">
                   <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'banner_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                   <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
-                    <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem Full-Width"}
+                    <Upload size={12} className="mr-1.5"/> {st?.banner_url ? "Trocar Banner" : "Subir Imagem de Destaque"}
                   </Button>
-                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1.5 text-center w-full">Medida recomendada: 1200 x 400 px</p>
+                  {/* --- Medida atualizada para refletir o novo formato do layout --- */}
+                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest mt-1.5 text-center w-full">Medida recomendada: 800 x 800 px</p>
                 </div>
                 {st?.banner_url && (
-                  <div className="aspect-[21/9] rounded overflow-hidden border border-slate-700 relative">
+                  <div className="aspect-[4/3] rounded overflow-hidden border border-slate-700 relative">
                     <img src={st.banner_url} className="w-full h-full object-cover" />
                     <button onClick={() => setSt({...st, banner_url: ''})} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"><Trash2 size={10}/></button>
                   </div>
