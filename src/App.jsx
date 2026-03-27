@@ -181,10 +181,13 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const location = useLocation();
   const { Pages, Layout, mainPage } = pagesConfig;
 
-  const isVitrine = location.pathname === '/' || location.pathname === '/vitrine';
-  const isBriefingClient = location.pathname.startsWith('/briefing/');
-  const isEntregaPortal = location.pathname.startsWith('/entrega/');
-  const isBio = location.pathname === '/bio' || location.pathname === '/minhabio'; 
+  // Convertendo para minúsculo para garantir que rotas públicas sejam reconhecidas independente de como forem digitadas
+  const pathNormalizado = location.pathname.toLowerCase();
+  
+  const isVitrine = pathNormalizado === '/' || pathNormalizado === '/vitrine';
+  const isBriefingClient = pathNormalizado.startsWith('/briefing/');
+  const isEntregaPortal = pathNormalizado.startsWith('/entrega/');
+  const isBio = pathNormalizado === '/bio' || pathNormalizado === '/minhabio'; 
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
@@ -208,7 +211,9 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
       <Route path="/briefing/:slug" element={<BriefingPublico />} />
-      <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage /> : <PageNotFound />} />
+      
+      {/* Aqui foi adicionada a prop isPublic={true} na EntregaPage para seguir o mesmo padrão das outras rotas públicas */}
+      <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage isPublic={true} /> : <PageNotFound />} />
 
       <Route
         path="/app"
@@ -220,7 +225,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       />
 
       {Pages && Object.entries(Pages).map(([path, PageComponent]) => (
-        path !== "" && path !== mainPageKey && path !== "vitrine" && path !== "bio" && !path.startsWith("entrega/") && (
+        path !== "" && path !== mainPageKey && path !== "vitrine" && path !== "bio" && !path.toLowerCase().startsWith("entrega/") && (
           <Route
             key={path}
             path={`/${path}`}
