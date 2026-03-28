@@ -701,7 +701,7 @@ export default function Catalogo({ isPublic = false }) {
           ) : (
             <div className="space-y-12">
               
-              {/* --- 1. SESSÃO DE DESTAQUES (Carrossel Horizontal - Só aparece na Home) --- */}
+              {/* --- 1. SESSÃO DE DESTAQUES (Carrossel Horizontal) --- */}
               {selectedCategory === 'Todas' && !searchTerm && filtered.filter(p => p.destaque).length > 0 && (
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
@@ -734,13 +734,20 @@ export default function Catalogo({ isPublic = false }) {
                               {descontoPercent > 0 && <span className="text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}%</span>}
                               {prod.atacado?.ativa && <span className="text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}>Atacado</span>}
                             </div>
-                            <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight flex-1">{prod.nome}</h3>
-                            <div className="flex flex-col mt-2">
-                              {prod.preco_promocional > 0 ? (
-                                <><span className="text-[9px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-sm font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                              ) : (
-                                <span className="text-sm font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                              )}
+                            <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight">{prod.nome}</h3>
+                            
+                            {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
+                            <div className="mt-auto pt-3 flex flex-col gap-3">
+                              <div className="flex flex-col">
+                                {prod.preco_promocional > 0 ? (
+                                  <><span className="text-[9px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-sm font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                                ) : (
+                                  <span className="text-sm font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                                )}
+                              </div>
+                              <button className="w-full h-8 rounded-lg text-white text-[10px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
+                                Ver Detalhes
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -772,18 +779,20 @@ export default function Catalogo({ isPublic = false }) {
                             {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
                           </div>
                           
-                          {/* O Segredo do Alinhamento: flex-1 no título */}
-                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight flex-1">{prod.nome}</h3>
+                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight">{prod.nome}</h3>
                           
-                          <div className="flex flex-col mt-4">
-                            {prod.preco_promocional > 0 ? (
-                              <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                            ) : (
-                              <span className="text-base md:text-lg font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                            )}
-                          </div>
-                          <div className="mt-4">
-                            <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
+                          {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
+                          <div className="mt-auto pt-4 flex flex-col gap-3">
+                            <div className="flex flex-col">
+                              {prod.preco_promocional > 0 ? (
+                                <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                              ) : (
+                                <span className="text-base md:text-lg font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                              )}
+                            </div>
+                            <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
+                              Ver Detalhes
+                            </button>
                           </div>
                         </div>
                       </div>
