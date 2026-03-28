@@ -700,7 +700,9 @@ export default function Catalogo({ isPublic = false }) {
              </div>
           ) : (
             <div className="space-y-6">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 border-b border-slate-200 pb-3">Todos os Produtos</h2>
+              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
+                {selectedCategory === 'Todas' ? 'Todos os Produtos' : selectedCategory}
+              </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                 {filtered.map(prod => {
                   const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
