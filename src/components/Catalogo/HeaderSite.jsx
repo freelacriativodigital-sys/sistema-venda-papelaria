@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ImageIcon, Trash2, Upload, ChevronUp, ChevronDown, Package, LayoutTemplate } from "lucide-react";
+import { Search, Menu, X, Share2, ChevronDown, Instagram, MessageCircle, ImageIcon, Trash2, Upload, ChevronUp, Package, LayoutTemplate } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {

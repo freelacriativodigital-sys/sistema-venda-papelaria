@@ -253,23 +253,17 @@ export default function App() {
       try {
         const { data, error } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Erro ao verificar sessão:', error);
+        if (error || !data.session) {
           localStorage.removeItem('sistema_user_role');
+          localStorage.removeItem('sistema_auth');
           setIsAuthorized(false);
         } else {
-          const temSessao = !!data.session;
-          setIsAuthorized(temSessao);
-
-          if (temSessao) {
-            localStorage.setItem('sistema_user_role', 'admin');
-          } else {
-            localStorage.removeItem('sistema_user_role');
-          }
+          setIsAuthorized(true);
+          localStorage.setItem('sistema_user_role', 'admin');
+          localStorage.setItem('sistema_auth', 'true');
         }
       } catch (err) {
-        console.error('Erro inesperado ao verificar sessão:', err);
-        localStorage.removeItem('sistema_user_role');
+        console.error('Erro de sessão:', err);
         setIsAuthorized(false);
       } finally {
         setCheckingAuth(false);
