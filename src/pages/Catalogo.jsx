@@ -301,7 +301,7 @@ export default function Catalogo({ isPublic = false }) {
   };
 
   const renderCatalog = () => {
-    // --- ESTA É A VARIÁVEL QUE FALTAVA ---
+    // --- VARIÁVEL DO FORMATO DAS FOTOS ---
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
@@ -775,7 +775,7 @@ export default function Catalogo({ isPublic = false }) {
                             {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
                           </div>
                           
-                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight">{prod.nome}</h3>
+                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight flex-1">{prod.nome}</h3>
                           
                           {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
                           <div className="mt-auto pt-4 flex flex-col gap-3">

@@ -101,7 +101,6 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
 
           {/* --- MENU HAMBÚRGUER (MOBILE APENAS) --- */}
           <div className="md:hidden flex w-1/2 justify-end items-center gap-4">
-            {/* BOTÃO COMPARTILHAR MINIMALISTA SEM O FUNDO ESCURO E SEM A BOLA */}
             <button onClick={handleShare} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center hover:scale-105 active:scale-95 p-1">
               {st?.icone_compartilhar ? <img src={st.icone_compartilhar} className="w-5 h-5 object-contain" /> : <Share2 size={20} />}
             </button>
