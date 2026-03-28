@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, 
-  ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, 
-  Tags, Image as ImageIcon, Globe, Package, Box, Layers, Sparkles 
-} from "lucide-react";
+import { ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, Tags, Image as ImageIcon, Globe, Box, Package, Layers, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
