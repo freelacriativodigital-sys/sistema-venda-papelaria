@@ -699,39 +699,99 @@ export default function Catalogo({ isPublic = false }) {
                <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Nenhum produto encontrado.</p>
              </div>
           ) : (
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
-                {selectedCategory === 'Todas' ? 'Todos os Produtos' : selectedCategory}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-                {filtered.map(prod => {
-                  const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
-                  return (
-                  <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                    <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
-                      {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
-                      <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
-                    </div>
-                    <div className="flex flex-col flex-1 p-3 md:p-4">
-                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                        {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
-                        {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
-                        {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Variações</span>}
-                        {!descontoPercent && !prod.atacado?.ativa && !prod.variacoes?.ativa && <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5"><Package size={10} /> {prod.categoria}</span>}
-                      </div>
-                      <h3 className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-2">{prod.nome}</h3>
-                      <div className="flex flex-col mb-3">
-                        {prod.preco_promocional > 0 ? (
-                          <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-black text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                        ) : (
-                          <span className="text-base md:text-lg font-black text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                        )}
-                      </div>
-                      <div className="mt-auto pt-2"><button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button></div>
+            <div className="space-y-12">
+              
+              {/* --- 1. SESSÃO DE DESTAQUES (Carrossel Horizontal - Só aparece na Home) --- */}
+              {selectedCategory === 'Todas' && !searchTerm && filtered.filter(p => p.destaque).length > 0 && (
+                <div className="w-full">
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <span className="text-xl">🔥</span> Destaques
+                    </h2>
+                    {/* Setinhas do Carrossel (Desktop) */}
+                    <div className="hidden md:flex items-center gap-2">
+                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: -300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm">
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: 300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm">
+                        <ChevronLeft size={18} className="rotate-180" />
+                      </button>
                     </div>
                   </div>
-                )})}
+                  
+                  {/* Container do Carrossel */}
+                  <div id="carrossel-destaques" className="flex overflow-x-auto gap-4 md:gap-5 pb-6 no-scrollbar snap-x">
+                    {filtered.filter(p => p.destaque).map(prod => {
+                      const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
+                      return (
+                        <div key={prod.id} className="w-[160px] md:w-[220px] shrink-0 snap-start group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer" onClick={() => abrirDetalhe(prod)}>
+                          <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative shrink-0`}>
+                            <span className="absolute top-2 left-2 z-10 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={8} fill="currentColor" /> Destaque</span>
+                            <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+                          </div>
+                          <div className="flex flex-col flex-1 p-3">
+                            <div className="flex flex-wrap items-center gap-1 mb-2">
+                              {descontoPercent > 0 && <span className="text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}%</span>}
+                              {prod.atacado?.ativa && <span className="text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}>Atacado</span>}
+                            </div>
+                            <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight flex-1">{prod.nome}</h3>
+                            <div className="flex flex-col mt-2">
+                              {prod.preco_promocional > 0 ? (
+                                <><span className="text-[9px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-sm font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                              ) : (
+                                <span className="text-sm font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* --- 2. SESSÃO PRINCIPAL DA GRADE (Todos ou Categoria) --- */}
+              <div className="w-full">
+                <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3 mb-6">
+                  {selectedCategory === 'Todas' ? 'Todos os Produtos' : selectedCategory}
+                </h2>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
+                  {filtered.map(prod => {
+                    const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
+                    return (
+                      <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
+                        <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative shrink-0`}>
+                          {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
+                          <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+                        </div>
+                        <div className="flex flex-col flex-1 p-3 md:p-4">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                            {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
+                            {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
+                            {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
+                          </div>
+                          
+                          {/* O Segredo do Alinhamento: flex-1 no título */}
+                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight flex-1">{prod.nome}</h3>
+                          
+                          <div className="flex flex-col mt-4">
+                            {prod.preco_promocional > 0 ? (
+                              <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                            ) : (
+                              <span className="text-base md:text-lg font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                            )}
+                          </div>
+                          <div className="mt-4">
+                            <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
+
             </div>
           )}
         </main>
