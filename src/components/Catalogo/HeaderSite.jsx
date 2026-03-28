@@ -101,8 +101,9 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
 
           {/* --- MENU HAMBÚRGUER (MOBILE APENAS) --- */}
           <div className="md:hidden flex w-1/2 justify-end items-center gap-4">
-            <button onClick={handleShare} className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center hover:scale-105 transition-all shadow-sm">
-              {st?.icone_compartilhar ? <img src={st.icone_compartilhar} className="w-3.5 h-3.5 object-contain invert" /> : <Share2 size={14} />}
+            {/* BOTÃO COMPARTILHAR MINIMALISTA SEM O FUNDO ESCURO E SEM A BOLA */}
+            <button onClick={handleShare} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center hover:scale-105 active:scale-95 p-1">
+              {st?.icone_compartilhar ? <img src={st.icone_compartilhar} className="w-5 h-5 object-contain" /> : <Share2 size={20} />}
             </button>
             <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-800 active:scale-95 transition-transform">
               <Menu size={28} strokeWidth={2.5} />
