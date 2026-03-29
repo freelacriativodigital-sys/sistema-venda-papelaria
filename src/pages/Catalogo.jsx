@@ -301,7 +301,6 @@ export default function Catalogo({ isPublic = false }) {
   };
 
   const renderCatalog = () => {
-    // --- VARIÁVEL DO FORMATO DAS FOTOS ---
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
@@ -683,13 +682,6 @@ export default function Catalogo({ isPublic = false }) {
       <div className="min-h-screen bg-[#f8fafc] flex flex-col relative">
         <HeaderSite st={st} searchTerm={searchTerm} setSearchTerm={setSearchTerm} selectedCategory={selectedCategory} changeCategory={changeCategory} categorias={displayCategories} isPublic={isPublic} goHome={goHome} view={view} />
         
-        {/* BANNER FULL WIDTH */}
-        {view === 'grid' && st?.banner_url && (
-          <div className="w-full cursor-pointer hover:opacity-95 transition-opacity bg-slate-900" onClick={() => st.banner_link && window.open(st.banner_link, '_blank')}>
-              <img src={st.banner_url} className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" alt="Banner Principal" />
-          </div>
-        )}
-
         <BenefitsBar st={st} />
         <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 flex-1 w-full space-y-10 md:space-y-14">
           
