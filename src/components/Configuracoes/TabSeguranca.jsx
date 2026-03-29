@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Mail, Key, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "../../../lib/supabase"; // Ajuste o caminho conforme a sua estrutura
+import { supabase } from "../../lib/supabase";
 
 export default function TabSeguranca() {
   const [email, setEmail] = useState('');
