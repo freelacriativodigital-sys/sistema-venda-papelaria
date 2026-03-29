@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Building2, ImageIcon, Trash2, Upload, Plus, X, Palette, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "../../../lib/supabase"; // Ajuste o caminho do supabase se necessário
+import { supabase } from "../../lib/supabase"; // Ajuste o caminho do supabase se necessário
 import { deletePhysicalFile, compressImageToBlob } from '../Catalogo/catalogoUtils';
 
 export default function TabEmpresa({ st, setSt }) {
