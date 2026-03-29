@@ -3,12 +3,11 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2, Plus } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2, Plus, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskItem from "@/components/tasks/TaskItem";
 import NewTaskForm from "@/components/tasks/NewTaskForm";
 import EmptyState from "@/components/tasks/EmptyState";
-import FinancialSummary from "@/components/tasks/FinancialSummary";
 import FinancialTab from "@/components/tasks/FinancialTab";
 
 const priorityWeight = { urgente: 1, alta: 2, media: 3, baixa: 4 };
@@ -23,7 +22,6 @@ export default function Pedidos() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
 
-  // Estados da Nova Tela Sobreposta
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
 
@@ -139,7 +137,7 @@ export default function Pedidos() {
             await supabase.from("pedidos").insert([blindarDados(dataToImport)]);
           }
           queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
-          alert("Backup enviado para a NUVEM com sucesso!");
+          alert("Backup enviado com sucesso!");
         }
       } catch (error) {
         alert("Erro ao processar o arquivo JSON.");
@@ -153,6 +151,50 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
+  // --- CÁLCULOS DOS CARDS SUPERIORES ---
+  const getTaskValue = (task) => {
+    const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
+    if (checklistTotal > 0) return checklistTotal;
+    let baseValue = 0;
+    if (task.service_value !== undefined && task.service_value !== null && task.service_value !== "") {
+       baseValue = Number(task.service_value);
+    } else if (task.price) {
+       const priceStr = typeof task.price === 'string' ? task.price.replace(/[^0-9.,]/g, '').replace(',', '.') : String(task.price);
+       baseValue = (parseFloat(priceStr) || 0) * (Number(task.quantity) || 1);
+    }
+    return baseValue;
+  };
+
+  let ganhosReais = 0;
+  let pendentesValor = 0;
+  let totalPedidos = 0;
+
+  uniqueTasks.forEach(task => {
+    const totalValue = getTaskValue(task);
+    const statusLower = String(task.status || '').toLowerCase().trim();
+    const paymentLower = String(task.payment_status || '').toLowerCase().trim();
+    
+    const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
+    const isPartial = paymentLower === 'parcial';
+    const valorAdiantado = Number(task.valor_pago || 0);
+
+    totalPedidos += totalValue;
+
+    if (isPaid) {
+      ganhosReais += totalValue;
+    } else if (isPartial || valorAdiantado > 0) {
+      ganhosReais += valorAdiantado;
+      pendentesValor += (totalValue - valorAdiantado);
+    } else {
+      pendentesValor += totalValue;
+    }
+  });
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  };
+
+  // --- SEPARAÇÃO DOS STATUS ---
   const solicitacoes = uniqueTasks.filter((t) => t.status === "solicitacao");
   const pendingTasks = uniqueTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
   const completedTasks = uniqueTasks.filter((t) => t.status === "concluida");
@@ -184,8 +226,8 @@ export default function Pedidos() {
   const gruposPendentes = organizarPorData(pendingTasks);
 
   return (
-    <div className="min-h-screen bg-background text-foreground w-full pb-20 relative">
-      <div className="border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-10">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-20 relative">
+      <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between transition-all gap-3">
           <div className="flex items-center gap-3">
             <div>
@@ -201,7 +243,7 @@ export default function Pedidos() {
             <Button variant="outline" size="icon" className="h-9 w-9 rounded-md border hover:bg-slate-50 text-slate-500" onClick={handleExportData}>
               <Download className="w-4 h-4" />
             </Button>
-            <label className="cursor-pointer h-9 w-9 flex items-center justify-center rounded-md border border-border bg-background hover:bg-secondary transition-colors shadow-sm text-slate-500">
+            <label className="cursor-pointer h-9 w-9 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm text-slate-500">
               <Upload className="w-4 h-4" />
               <input type="file" className="hidden" accept=".json" onChange={handleImportData} />
             </label>
@@ -210,33 +252,63 @@ export default function Pedidos() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
+        
+        {/* CARDS SUPERIORES COLORIDOS (Padrão Executivo) */}
         {!isLoading && (
-          <div className="mb-6">
-            <FinancialSummary tasks={uniqueTasks} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+             <div className="bg-violet-600 rounded-xl p-3 md:p-4 border border-violet-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+               <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><ShoppingBag size={70}/></div>
+               <div className="flex items-center justify-between mb-1.5 relative z-10">
+                 <span className="text-[9px] font-semibold uppercase tracking-widest text-violet-100/90">Total em Pedidos</span>
+               </div>
+               <div className="relative z-10">
+                 <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(totalPedidos)}</h3>
+               </div>
+             </div>
+
+             <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+               <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 size={70}/></div>
+               <div className="flex items-center justify-between mb-1.5 relative z-10">
+                 <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-100/90">Já Recebido (Sinal)</span>
+               </div>
+               <div className="relative z-10">
+                 <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(ganhosReais)}</h3>
+               </div>
+             </div>
+
+             <div className="bg-rose-600 rounded-xl p-3 md:p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+               <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Wallet size={70}/></div>
+               <div className="flex items-center justify-between mb-1.5 relative z-10">
+                 <span className="text-[9px] font-semibold uppercase tracking-widest text-rose-100/90">Falta Receber</span>
+               </div>
+               <div className="relative z-10">
+                 <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(pendentesValor)}</h3>
+               </div>
+             </div>
           </div>
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="w-full bg-secondary/60 h-11 border border-border/40 p-1 rounded-md flex">
-            <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm relative">
+          <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
+            <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
               <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
               {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
             </TabsTrigger>
             
-            <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+            <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
               <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
             </TabsTrigger>
-            <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+            <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
               <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
             </TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+            <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
               <Wallet className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         {isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
         ) : (
           <>
             {activeTab === "solicitacoes" && (

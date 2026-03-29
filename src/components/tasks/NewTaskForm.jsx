@@ -121,83 +121,83 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
     >
       {/* HEADER DA PÁGINA */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
-              <ArrowLeft size={18} />
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <button onClick={onClose} className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+              <ArrowLeft size={16} />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 hidden sm:flex items-center justify-center border border-blue-100">
-               <Palette className="text-blue-600 w-4 h-4" />
+            <div className="w-7 h-7 rounded-md bg-blue-50 hidden sm:flex items-center justify-center border border-blue-100">
+               <Palette className="text-blue-600 w-3.5 h-3.5" />
             </div>
             <div>
-              <h2 className="text-sm md:text-base font-semibold text-slate-800 uppercase tracking-tight leading-none">
+              <h2 className="text-xs md:text-sm font-semibold text-slate-800 uppercase tracking-tight leading-none">
                 {taskToEdit ? 'Editar Pedido' : 'Novo Pedido'}
               </h2>
             </div>
           </div>
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-6 rounded-md font-semibold uppercase text-[10px] tracking-widest shadow-sm transition-colors">
-            <Save size={14} className="mr-2"/> Salvar
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-5 rounded-md font-semibold uppercase text-[9px] tracking-widest shadow-sm transition-colors">
+            <Save size={12} className="mr-1.5"/> Salvar
           </Button>
         </div>
       </div>
 
       {/* CORPO DO FORMULÁRIO */}
-      <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 pb-24">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-6">
+      <div className="flex-1 w-full max-w-3xl mx-auto p-3 md:p-4 pb-20">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
           
-          <div className="space-y-1.5 relative">
-            <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Cliente / Título</label>
+          <div className="space-y-1 relative">
+            <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Cliente / Título</label>
             <div className="relative z-40">
-               <UserSquare2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+               <UserSquare2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
                <Input
-                 placeholder="Busque o cliente ou digite o título do pedido..."
+                 placeholder="Busque o cliente ou digite..."
                  value={form.title}
                  onChange={(e) => { setForm({ ...form, title: e.target.value }); setClienteId(null); setMostrarDropdownCliente(true); }}
                  onFocus={() => setMostrarDropdownCliente(true)}
                  onBlur={() => setTimeout(() => setMostrarDropdownCliente(false), 250)}
-                 className="bg-slate-50 border-slate-200 h-11 text-sm font-medium pl-9 focus:bg-white"
+                 className="bg-slate-50 border-slate-200 h-9 text-xs font-medium pl-8 focus:bg-white"
                  autoFocus={!taskToEdit}
                />
-               {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 animate-spin" />}
+               {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 animate-spin" />}
                
                {mostrarDropdownCliente && searchStr.length > 0 && !clienteId && (
-                 <div className="absolute top-12 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto p-1.5 space-y-0.5 z-50">
+                 <div className="absolute top-10 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto p-1 space-y-0.5 z-50">
                    {filteredClientes.map(cli => (
-                     <div key={cli.id} onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} className="flex flex-col p-2.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors">
-                       <span className="text-xs font-semibold text-slate-800 uppercase">{cli.nome}</span>
+                     <div key={cli.id} onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} className="flex flex-col p-2 hover:bg-slate-50 rounded cursor-pointer transition-colors">
+                       <span className="text-[10px] font-semibold text-slate-800 uppercase">{cli.nome}</span>
                      </div>
                    ))}
-                   {filteredClientes.length === 0 && <div className="p-3 text-xs text-slate-500 text-center">Nenhum cliente encontrado.</div>}
+                   {filteredClientes.length === 0 && <div className="p-2 text-[10px] text-slate-500 text-center">Nenhum encontrado.</div>}
                  </div>
                )}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
-            <Textarea placeholder="Detalhes do pedido, referências, tamanhos..." value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-slate-50 border-slate-200 text-sm font-medium text-slate-700 min-h-[90px] focus:bg-white" />
+          <div className="space-y-1">
+            <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+            <Textarea placeholder="Detalhes do pedido, tamanhos..." value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-slate-50 border-slate-200 text-xs font-medium text-slate-700 min-h-[60px] focus:bg-white" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Data de Entrega</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Entrega</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={`h-11 w-full justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-semibold uppercase transition-colors hover:bg-white ${!selectedDate ? "text-slate-400" : "text-slate-700"}`}>
-                    {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
-                    <CalendarDays className="h-4 w-4 text-slate-400" />
+                  <Button variant="outline" className={`h-9 w-full justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-[10px] font-semibold uppercase transition-colors hover:bg-white ${!selectedDate ? "text-slate-400" : "text-slate-700"}`}>
+                    {selectedDate ? format(selectedDate, "dd/MM/yy", { locale: ptBR }) : "Selecionar"}
+                    <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" align="start">
-                  <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-3 bg-white" />
+                  <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-2 bg-white scale-90 origin-top-left" />
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
               <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                <SelectTrigger className="h-11 text-xs font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,10 +206,10 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
+            <div className="space-y-1">
+              <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
               <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger className="h-11 text-xs font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,14 +221,14 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor do Serviço (R$)</label>
-              <div className="relative max-w-sm">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">R$</span>
-                <Input type="number" value={form.service_value || ""} onChange={(e) => setForm({ ...form, service_value: e.target.value })} className="bg-slate-50 border-slate-200 text-sm font-semibold text-slate-800 pl-9 h-11 focus:bg-white" disabled={hasChecklist} />
+          <div className="pt-3 border-t border-slate-100 space-y-3">
+            <div className="space-y-1">
+              <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor do Serviço (R$)</label>
+              <div className="relative max-w-xs">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">R$</span>
+                <Input type="number" value={form.service_value || ""} onChange={(e) => setForm({ ...form, service_value: e.target.value })} className="bg-slate-50 border-slate-200 text-xs font-semibold text-slate-800 pl-7 h-9 focus:bg-white" disabled={hasChecklist} />
               </div>
-              {hasChecklist && <p className="text-[9px] text-slate-400 mt-1 font-medium uppercase tracking-widest px-1">Valor automático pelo Checklist abaixo.</p>}
+              {hasChecklist && <p className="text-[8px] text-slate-400 mt-0.5 font-medium uppercase tracking-widest px-1">Valor automático pelo Checklist.</p>}
             </div>
 
             <div>
@@ -238,35 +238,35 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
           {/* STATUS FINANCEIRO */}
           {displayValue > 0 && (
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4">
-              <label className="text-[10px] font-semibold text-slate-500 mb-3 block uppercase tracking-widest text-center">Status do Pagamento</label>
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-3">
+              <label className="text-[9px] font-semibold text-slate-500 mb-2 block uppercase tracking-widest text-center">Status do Pagamento</label>
               
               <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => setForm({ ...form, payment_status: "em_aberto" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "em_aberto" || !form.payment_status ? "border-rose-500 bg-rose-50 text-rose-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-rose-200"}`}>
-                  <TrendingUp className="w-4 h-4" /> Pendente
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "em_aberto" })} className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md border text-[8px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "em_aberto" || !form.payment_status ? "border-rose-500 bg-rose-50 text-rose-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-rose-200"}`}>
+                  <TrendingUp className="w-3.5 h-3.5" /> Pendente
                 </button>
-                <button type="button" onClick={() => setForm({ ...form, payment_status: "parcial" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "parcial" ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-blue-200"}`}>
-                  <PercentCircle className="w-4 h-4" /> Sinal
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "parcial" })} className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md border text-[8px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "parcial" ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-blue-200"}`}>
+                  <PercentCircle className="w-3.5 h-3.5" /> Sinal
                 </button>
-                <button type="button" onClick={() => setForm({ ...form, payment_status: "pago" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "pago" ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-200"}`}>
-                  <DollarSign className="w-4 h-4" /> Pago
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "pago" })} className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md border text-[8px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "pago" ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-200"}`}>
+                  <DollarSign className="w-3.5 h-3.5" /> Pago
                 </button>
               </div>
 
               <AnimatePresence>
                 {form.payment_status === "parcial" && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 pt-4 border-t border-slate-200">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-3 pt-3 border-t border-slate-200">
                      <div className="flex items-center gap-3">
                         <div className="flex-1">
-                           <label className="text-[9px] font-semibold text-blue-600 mb-1 block uppercase tracking-widest">Valor do Sinal Pago (R$)</label>
+                           <label className="text-[8px] font-semibold text-blue-600 mb-1 block uppercase tracking-widest">Valor do Sinal (R$)</label>
                            <div className="relative">
-                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-400">R$</span>
-                             <Input type="number" value={form.valor_pago || ""} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} className="bg-white border-blue-200 text-sm font-semibold text-blue-700 pl-8 h-10 focus:border-blue-400 shadow-sm" />
+                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-blue-400">R$</span>
+                             <Input type="number" value={form.valor_pago || ""} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} className="bg-white border-blue-200 text-xs font-semibold text-blue-700 pl-7 h-8 focus:border-blue-400 shadow-sm" />
                            </div>
                         </div>
                         <div className="w-24 text-right">
-                           <span className="text-[9px] font-semibold text-slate-400 block uppercase tracking-widest mb-1">Falta Pagar</span>
-                           <span className="text-sm font-semibold text-rose-500">
+                           <span className="text-[8px] font-semibold text-slate-400 block uppercase tracking-widest mb-0.5">Falta Pagar</span>
+                           <span className="text-xs font-semibold text-rose-500">
                              {(displayValue - (Number(form.valor_pago) || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                            </span>
                         </div>
