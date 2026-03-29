@@ -620,7 +620,7 @@ export default function Orcamentos() {
                     style={{ 
                       width: '210mm', 
                       minHeight: '295mm', 
-                      padding: '15mm', 
+                      padding: '40mm', 
                       boxSizing: 'border-box' 
                     }}
                   >
