@@ -200,7 +200,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
     return <Login onLogin={onLogin} />;
   }
 
-  const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/seguranca', '/assinantes', '/links'];
+  const paginasProibidasParaPadrao = ['/app', '/despesas', '/precificacao', '/configuracoes', '/assinantes', '/links'];
   if (userRole === 'padrao' && paginasProibidasParaPadrao.includes(location.pathname)) {
     return <Navigate to="/pedidos" replace />;
   }

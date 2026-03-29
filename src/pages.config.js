@@ -9,7 +9,7 @@ import Despesas from './pages/Despesas';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
-import Seguranca from './pages/Seguranca';
+import Configuracoes from './pages/Configuracoes';
 
 // Importação da página de Entrega para o Cliente
 import EntregaCliente from './pages/EntregaCliente';
@@ -33,7 +33,7 @@ export const pagesConfig = {
     "minhabio": LinkBio, 
     "briefings": Briefings, 
     "precificacao": Precificacao,
-    "seguranca": Seguranca,
+    "configuracoes": Configuracoes,
     // Rota pública de entrega (não precisa de isMaster)
     "entrega/:driveFolderId": EntregaCliente,
     // Rotas master só entram no objeto se for a sua Vercel
@@ -78,7 +78,7 @@ export const pagesConfig = {
     {
       titulo: "Sistema",
       items: [
-        { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, 
+        { id: "configuracoes", label: "Configurações Gerais", roles: ['admin'] }, 
         // Menu Master só é adicionado se for a sua Vercel
         ...(isMaster ? [
           { id: "assinantes", label: "Assinantes SaaS", roles: ['admin'] },

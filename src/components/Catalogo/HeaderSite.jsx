@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Menu, X, Share2, ChevronDown, Instagram, MessageCircle, ImageIcon, Trash2, Upload, ChevronUp, Package, LayoutTemplate } from "lucide-react";
+import { Search, Menu, X, Share2, ChevronDown, Instagram, Facebook, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, changeCategory, categorias, isPublic, goHome, view }) => {
@@ -21,6 +21,13 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
     changeCategory(cat);
     setIsMobileMenuOpen(false);
   };
+
+  // Ícone do TikTok (SVG Personalizado, pois não tem no Lucide)
+  const TikTokIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+    </svg>
+  );
 
   return (
     <>
@@ -55,7 +62,6 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
             
             {categorias?.filter(c => c !== 'Sem Categoria').slice(0, 5).map(cat => {
               const isSelected = selectedCategory === cat;
-              // Futuramente, se a categoria tiver subcategorias reais no banco, isso muda para true
               const hasSubcategories = false; 
 
               return (
@@ -83,14 +89,19 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
 
           {/* --- COLUNA 3: ÍCONES SOCIAIS E COMPARTILHAR (DESKTOP) --- */}
           <div className="hidden md:flex w-1/3 justify-end items-center gap-4">
-            {st?.link_social_1 && (
-              <a href={st.link_social_1} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center hover:scale-105">
-                {st?.icone_social_1 ? <img src={st.icone_social_1} className="w-5 h-5 object-contain" /> : <Instagram size={20} />}
+            {st?.link_instagram && (
+              <a href={st.link_instagram} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-pink-600 transition-colors flex items-center justify-center hover:scale-110">
+                <Instagram size={20} />
               </a>
             )}
-            {st?.link_social_2 && (
-              <a href={st.link_social_2} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-800 transition-colors flex items-center justify-center hover:scale-105">
-                {st?.icone_social_2 ? <img src={st.icone_social_2} className="w-5 h-5 object-contain" /> : <MessageCircle size={20} />}
+            {st?.link_tiktok && (
+              <a href={st.link_tiktok} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center hover:scale-110">
+                <TikTokIcon />
+              </a>
+            )}
+            {st?.link_facebook && (
+              <a href={st.link_facebook} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors flex items-center justify-center hover:scale-110">
+                <Facebook size={20} />
               </a>
             )}
             <div className="w-[1px] h-5 bg-slate-200 mx-2"></div>
@@ -138,14 +149,24 @@ export const HeaderSite = ({ st, searchTerm, setSearchTerm, selectedCategory, ch
                </div>
                
                <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-4 justify-center">
-                 {st?.link_social_1 && (
-                    <a href={st.link_social_1} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform">
-                       {st?.icone_social_1 ? <img src={st.icone_social_1} className="w-5 h-5 object-contain" /> : <Instagram size={20} className="text-slate-600"/>}
+                 {st?.link_instagram && (
+                    <a href={st.link_instagram} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform text-pink-600">
+                       <Instagram size={18} />
                     </a>
                  )}
-                 {st?.link_social_2 && (
-                    <a href={st.link_social_2} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform">
-                       {st?.icone_social_2 ? <img src={st.icone_social_2} className="w-5 h-5 object-contain" /> : <MessageCircle size={20} className="text-slate-600"/>}
+                 {st?.link_tiktok && (
+                    <a href={st.link_tiktok} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform text-slate-900">
+                       <TikTokIcon />
+                    </a>
+                 )}
+                 {st?.link_facebook && (
+                    <a href={st.link_facebook} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform text-blue-600">
+                       <Facebook size={18} />
+                    </a>
+                 )}
+                 {st?.link_email && (
+                    <a href={`mailto:${st.link_email}`} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-200 active:scale-95 transition-transform text-slate-600">
+                       <Mail size={18} />
                     </a>
                  )}
                </div>
