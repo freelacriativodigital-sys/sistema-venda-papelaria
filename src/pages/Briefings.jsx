@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Link as LinkIcon, Save, Palette, AlignLeft, Calendar, Clock, MapPin, Upload, Image as ImageIcon, ChevronLeft, MessageSquare, Edit3, Type, List, Loader2, X } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Save, Palette, AlignLeft, Calendar, Clock, MapPin, Image as ImageIcon, ChevronLeft, MessageSquare, Edit3, Type, List, Loader2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Função para transformar o Título em Link (Slug)
@@ -64,6 +64,10 @@ export default function Briefings() {
     if (novoTemplate.campos.length === 0) return alert("Adicione pelo menos uma pergunta!");
 
     setIsSaving(true);
+
+    // BUCAR O USUÁRIO LOGADO PARA EVITAR O ERRO DE CONSTRAINT (usuario_id null)
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
     
     // Se for edição (tem ID), atualiza. Se não, insere.
     if (novoTemplate.id) {
@@ -72,7 +76,6 @@ export default function Briefings() {
         descricao: novoTemplate.descricao,
         banner_url: novoTemplate.banner_url,
         campos: novoTemplate.campos
-        // O slug não muda na edição para não quebrar links antigos
       }).eq('id', novoTemplate.id);
 
       if (!error) {
@@ -84,7 +87,18 @@ export default function Briefings() {
       }
     } else {
       const slug = criarSlug(novoTemplate.titulo) + '-' + Math.floor(Math.random() * 1000);
-      const { error } = await supabase.from('briefing_templates').insert([{ ...novoTemplate, slug }]);
+      
+      const payload = {
+        ...novoTemplate,
+        slug
+      };
+
+      if (userId) {
+        payload.usuario_id = userId;
+      }
+
+      const { error } = await supabase.from('briefing_templates').insert([payload]);
+      
       if (!error) {
         alert("Formulário criado com sucesso!");
         setIsBuilding(false);
@@ -115,7 +129,6 @@ export default function Briefings() {
       case 'data': return <Calendar size={14} className="text-amber-500" />;
       case 'hora': return <Clock size={14} className="text-purple-500" />;
       case 'endereco': return <MapPin size={14} className="text-rose-500" />;
-      case 'upload': return <Upload size={14} className="text-indigo-500" />;
       default: return <List size={14} />;
     }
   };
@@ -276,13 +289,12 @@ export default function Briefings() {
 
                  <div className="pt-2">
                    <p className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest mb-2">Adicionar Novo Campo:</p>
-                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                      <Button variant="outline" onClick={() => adicionarCampo('texto_curto', 'Nome Completo')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><Type size={12} className="text-blue-500"/> Texto Curto</Button>
                      <Button variant="outline" onClick={() => adicionarCampo('texto_longo', 'Fale mais sobre...')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><AlignLeft size={12} className="text-emerald-500"/> Texto Longo</Button>
                      <Button variant="outline" onClick={() => adicionarCampo('data', 'Data do Evento')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><Calendar size={12} className="text-amber-500"/> Data</Button>
                      <Button variant="outline" onClick={() => adicionarCampo('hora', 'Horário')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><Clock size={12} className="text-purple-500"/> Hora</Button>
                      <Button variant="outline" onClick={() => adicionarCampo('endereco', 'Endereço')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><MapPin size={12} className="text-rose-500"/> Endereço</Button>
-                     <Button variant="outline" onClick={() => adicionarCampo('upload', 'Envie sua Logo')} className="h-9 text-[9px] font-semibold uppercase tracking-widest flex items-center gap-1.5 bg-slate-50 border-slate-200 text-slate-600 hover:bg-white rounded-md shadow-sm px-2"><Upload size={12} className="text-indigo-500"/> Upload</Button>
                    </div>
                  </div>
               </div>
