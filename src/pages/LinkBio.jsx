@@ -88,6 +88,7 @@ export default function LinkBio({ isPublic = false }) {
   });
 
   const [logoLoja, setLogoLoja] = useState('');
+  const [paletaCores, setPaletaCores] = useState([]); // <- Nova inteligência de Cores
   const [produtosDestaque, setProdutosDestaque] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -109,8 +110,12 @@ export default function LinkBio({ isPublic = false }) {
         });
       }
 
-      const { data: configLoja } = await supabase.from('configuracoes').select('logo_url').eq('id', 1).single();
-      if (configLoja) setLogoLoja(configLoja.logo_url);
+      // Busca a logo e a paleta de cores globais
+      const { data: configLoja } = await supabase.from('configuracoes').select('logo_url, paleta_cores').eq('id', 1).single();
+      if (configLoja) {
+        setLogoLoja(configLoja.logo_url);
+        setPaletaCores(configLoja.paleta_cores || []);
+      }
 
       const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(10);
       if (prods) setProdutosDestaque(prods);
@@ -188,6 +193,28 @@ export default function LinkBio({ isPublic = false }) {
       } catch (err) { alert("Erro no upload: " + err.message); } 
       finally { setIsUploadingGlobal(false); }
     }
+  };
+
+  // --- MÁGICA DAS CORES (Brand Kit) ---
+  const PaletaSugestoes = ({ field, isLink = false, linkId = null }) => {
+    if (!paletaCores || paletaCores.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        <span className="text-[7px] text-slate-500 font-bold uppercase w-full">Cores da sua Marca:</span>
+        {paletaCores.map(cor => (
+          <button
+            key={cor}
+            onClick={() => {
+              if (isLink) updateLink(linkId, field, cor);
+              else setConfig({...config, [field]: cor});
+            }}
+            className="w-4 h-4 rounded-full border border-slate-600 shadow-sm hover:scale-125 transition-transform"
+            style={{ backgroundColor: cor }}
+            title={cor}
+          />
+        ))}
+      </div>
+    );
   };
 
   const LivePreview = () => {
@@ -327,6 +354,7 @@ export default function LinkBio({ isPublic = false }) {
                     </div>
                     {config.capa_url && <button onClick={() => setConfig({...config, capa_url: ''})} className="bg-red-500 text-white p-1.5 rounded"><Trash2 size={12}/></button>}
                  </div>
+                 <PaletaSugestoes field="cor_capa" />
                  <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest text-center mt-1">Medida: 800 x 300 px</p>
               </div>
 
@@ -370,14 +398,15 @@ export default function LinkBio({ isPublic = false }) {
                   { label: 'Fundo dos Botões', field: 'cor_botoes', def: '#f472b6' },
                   { label: 'Texto dos Botões', field: 'cor_texto_botoes', def: '#ffffff' }
                 ].map(item => (
-                  <div key={item.field} className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase text-slate-500">{item.label}</label>
+                  <div key={item.field} className="space-y-2 bg-slate-800 p-2 rounded border border-slate-700">
+                    <label className="text-[9px] font-bold uppercase text-slate-400">{item.label}</label>
                     <div className="flex gap-2 items-center">
-                      <div className="relative w-7 h-7 rounded border border-slate-700 shrink-0" style={{ backgroundColor: config?.[item.field] || item.def }}>
+                      <div className="relative w-7 h-7 rounded border border-slate-600 shrink-0" style={{ backgroundColor: config?.[item.field] || item.def }}>
                         <input type="color" value={config?.[item.field] || item.def} onChange={(e) => setConfig({...config, [item.field]: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
                       </div>
-                      <Input value={config?.[item.field] || ''} onChange={(e) => setConfig({...config, [item.field]: e.target.value})} className="h-7 font-mono text-[9px] uppercase bg-slate-800 border-slate-700 text-white" />
+                      <Input value={config?.[item.field] || ''} onChange={(e) => setConfig({...config, [item.field]: e.target.value})} className="h-7 font-mono text-[9px] uppercase bg-slate-900 border-slate-600 text-white" />
                     </div>
+                    <PaletaSugestoes field={item.field} />
                   </div>
                 ))}
               </div>
@@ -401,12 +430,22 @@ export default function LinkBio({ isPublic = false }) {
                      </div>
                      <Input value={link.url} onChange={e => updateLink(link.id, 'url', e.target.value)} placeholder="https://..." className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400" />
                      
-                     <div className="flex gap-2 pt-2 border-t border-slate-700/50">
-                        <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0" style={{ backgroundColor: link.cor_fundo || config.cor_botoes }}>
-                           <input type="color" value={link.cor_fundo || config.cor_botoes} onChange={e => updateLink(link.id, 'cor_fundo', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                     <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
+                        <div className="flex gap-2">
+                          <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0" style={{ backgroundColor: link.cor_fundo || config.cor_botoes }}>
+                             <input type="color" value={link.cor_fundo || config.cor_botoes} onChange={e => updateLink(link.id, 'cor_fundo', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                          </div>
+                          <span className="text-[9px] text-slate-400 flex items-center">Fundo</span>
+                          
+                          <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0 ml-2" style={{ backgroundColor: link.cor_texto || config.cor_texto_botoes }}>
+                             <input type="color" value={link.cor_texto || config.cor_texto_botoes} onChange={e => updateLink(link.id, 'cor_texto', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                          </div>
+                          <span className="text-[9px] text-slate-400 flex items-center">Texto</span>
                         </div>
-                        <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0" style={{ backgroundColor: link.cor_texto || config.cor_texto_botoes }}>
-                           <input type="color" value={link.cor_texto || config.cor_texto_botoes} onChange={e => updateLink(link.id, 'cor_texto', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                        
+                        <div className="flex gap-4">
+                           <div className="flex-1"><PaletaSugestoes field="cor_fundo" isLink={true} linkId={link.id} /></div>
+                           <div className="flex-1"><PaletaSugestoes field="cor_texto" isLink={true} linkId={link.id} /></div>
                         </div>
                      </div>
                    </div>
