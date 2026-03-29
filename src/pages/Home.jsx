@@ -7,13 +7,83 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+// ============================================================================
+// 🧠 CÉREBRO FINANCEIRO (Fica fora da tela para evitar telas brancas e bugs)
+// ============================================================================
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+};
+
+const getTaskValue = (task) => {
+  const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
+  if (checklistTotal > 0) return checklistTotal;
+  let baseValue = 0;
+  if (task.service_value !== undefined && task.service_value !== null && task.service_value !== "") {
+     baseValue = Number(task.service_value);
+  } else if (task.price) {
+     const priceStr = typeof task.price === 'string' ? task.price.replace(/[^0-9.,]/g, '').replace(',', '.') : String(task.price);
+     baseValue = (parseFloat(priceStr) || 0) * (Number(task.quantity) || 1);
+  }
+  return baseValue;
+};
+
+const processFinancialData = (tasks = []) => {
+  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
+  let pedidosGanhosReal = 0;
+  let pedidosPendentesValor = 0;
+
+  uniqueTasks.forEach(task => {
+    const totalValue = getTaskValue(task);
+    const statusLower = String(task.status || '').toLowerCase().trim();
+    const paymentLower = String(task.payment_status || '').toLowerCase().trim();
+    
+    const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
+    const isPartial = paymentLower === 'parcial';
+    const valorAdiantado = Number(task.valor_pago || 0);
+
+    if (isPaid) {
+      pedidosGanhosReal += totalValue;
+    } else if (isPartial || valorAdiantado > 0) {
+      pedidosGanhosReal += valorAdiantado;
+      pedidosPendentesValor += (totalValue - valorAdiantado);
+    } else {
+      pedidosPendentesValor += totalValue;
+    }
+  });
+
+  return { pedidosGanhosReal, pedidosPendentesValor };
+};
+
+const createCashAdjustment = async ({ difference, saldo, caixa }) => {
+  if (difference === 0) return null;
+  const isPositive = difference > 0;
+  const absDiff = Math.abs(difference);
+  
+  const payload = {
+    title: `Ajuste de Caixa (${isPositive ? 'Entrada' : 'Saída'})`,
+    service_value: isPositive ? absDiff : -absDiff, 
+    priority: 'media',
+    status: 'concluida', 
+    payment_status: 'pago', 
+    description: `Ajuste automático para coincidir com saldo bancário de ${formatCurrency(Number(saldo))}. Caixa sistema era ${formatCurrency(caixa)}.`
+  };
+
+  const { data, error } = await supabase.from('pedidos').insert([payload]).select().single();
+  if (error) throw error;
+  return data;
+};
+
+// ============================================================================
+// 🖥️ TELA PRINCIPAL (DASHBOARD)
+// ============================================================================
+
 export default function Home() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [alertasDespesas, setAlertasDespesas] = useState([]);
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
 
-  // --- ESTADOS DO SALDO BANCÁRIO ---
   const [saldoBancario, setSaldoBancario] = useState(() => {
     const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
@@ -31,7 +101,6 @@ export default function Home() {
     despesas: { pagas: 0, pendentes: 0, count: 0 }
   });
 
-  // --- BUSCA OS PEDIDOS ---
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ["art-tasks"],
     queryFn: async () => {
@@ -41,44 +110,8 @@ export default function Home() {
     },
   });
 
-  // --- FUNÇÕES DE CÁLCULO E FORMATAÇÃO (Protegidas dentro do componente) ---
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-  };
-
-  const getTaskValue = (task) => {
-    const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
-    if (checklistTotal > 0) return checklistTotal;
-    let baseValue = 0;
-    if (task.service_value !== undefined && task.service_value !== null && task.service_value !== "") {
-       baseValue = Number(task.service_value);
-    } else if (task.price) {
-       const priceStr = typeof task.price === 'string' ? task.price.replace(/[^0-9.,]/g, '').replace(',', '.') : String(task.price);
-       baseValue = (parseFloat(priceStr) || 0) * (Number(task.quantity) || 1);
-    }
-    return baseValue;
-  };
-
-  // --- MUTAÇÃO DO AJUSTE DE CAIXA ---
   const adjustmentMutation = useMutation({
-    mutationFn: async ({ difference, saldo, caixa }) => {
-      if (difference === 0) return null;
-      const isPositive = difference > 0;
-      const absDiff = Math.abs(difference);
-      
-      const payload = {
-        title: `Ajuste de Caixa (${isPositive ? 'Entrada' : 'Saída'})`,
-        service_value: isPositive ? absDiff : -absDiff, 
-        priority: 'media',
-        status: 'concluida', 
-        payment_status: 'pago', 
-        description: `Ajuste automático para coincidir com saldo bancário de ${formatCurrency(Number(saldo))}. Caixa sistema era ${formatCurrency(caixa)}.`
-      };
-
-      const { data, error } = await supabase.from('pedidos').insert([payload]).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: createCashAdjustment,
     onSuccess: () => {
       queryClient.invalidateQueries(["art-tasks"]);
       alert("Ajuste de caixa registrado com sucesso em Pedidos!");
@@ -88,7 +121,6 @@ export default function Home() {
     }
   });
 
-  // --- BUSCA OS DADOS GERAIS DO DASHBOARD ---
   useEffect(() => {
     async function fetchDashboardData() {
       try {
@@ -164,51 +196,16 @@ export default function Home() {
     if (!isLoadingTasks) fetchDashboardData();
   }, [isLoadingTasks, tasks]);
 
-
-  if (loading || isLoadingTasks) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Carregando Dashboard...</p>
-      </div>
-    );
-  }
-
-  // --- PROCESSAMENTO FINANCEIRO ---
-  let pedidosGanhosReal = 0;
-  let pedidosPendentesValor = 0;
-
-  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
-  
-  uniqueTasks.forEach(task => {
-    const totalValue = getTaskValue(task);
-    const statusLower = String(task.status || '').toLowerCase().trim();
-    const paymentLower = String(task.payment_status || '').toLowerCase().trim();
-    
-    const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
-    const isPartial = paymentLower === 'parcial';
-    const valorAdiantado = Number(task.valor_pago || 0);
-
-    if (isPaid) {
-      pedidosGanhosReal += totalValue;
-    } else if (isPartial || valorAdiantado > 0) {
-      pedidosGanhosReal += valorAdiantado;
-      pedidosPendentesValor += (totalValue - valorAdiantado);
-    } else {
-      pedidosPendentesValor += totalValue;
-    }
-  });
-
+  // Executamos a matemática ANTES de renderizar a tela
+  const { pedidosGanhosReal, pedidosPendentesValor } = processFinancialData(tasks);
   const faturamentoRealEntrado = data.clientes.pago + pedidosGanhosReal;
   const caixaRealLimpo = faturamentoRealEntrado - data.despesas.pagas;
   const faturamentoPendenteTotal = data.clientes.pendente + pedidosPendentesValor;
   const contasAPagar = data.despesas.pendentes;
-
   const diferencaBanco = saldoBancario !== '' ? Number(saldoBancario) - caixaRealLimpo : 0;
 
   const handleRegistrarAjuste = () => {
     if (diferencaBanco === 0) return;
-    
     const absDiff = Math.abs(diferencaBanco);
     const msg = diferencaBanco > 0 
       ? `Deseja registrar uma ENTRADA de ${formatCurrency(absDiff)} em Pedidos para igualar ao banco?`
@@ -243,6 +240,16 @@ export default function Home() {
       dicaAcao = `Tudo tranquilo! Sem contas pendentes este mês. Que tal criar uma promoção para aquecer as vendas?`;
       corDica = "text-blue-200";
     }
+  }
+
+  // Se estiver carregando, mostra o Loader (agora protegido)
+  if (loading || isLoadingTasks) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Carregando Dashboard...</p>
+      </div>
+    );
   }
 
   return (
@@ -298,7 +305,6 @@ export default function Home() {
 
       {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
-         {/* Cartão 1: Total Entrou - VERDE */}
          <div className="bg-emerald-600 rounded-2xl p-4 md:p-5 border border-emerald-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -311,7 +317,6 @@ export default function Home() {
            </div>
          </div>
 
-         {/* Cartão 2: Total Saiu - VERMELHO */}
          <div className="bg-rose-600 rounded-2xl p-4 md:p-5 border border-rose-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -324,7 +329,6 @@ export default function Home() {
            </div>
          </div>
 
-         {/* Cartão 3: A Receber (Pedidos) - AZUL */}
          <Link to="/pedidos" className="bg-blue-600 rounded-2xl p-4 md:p-5 border border-blue-700 shadow-xl hover:shadow-2xl transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><Palette size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -389,7 +393,7 @@ export default function Home() {
                                adjustmentMutation.isPending ? 'bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'
                              }`}
                             >
-                             {adjustmentMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : "(ajuste de caixa)"}
+                             {adjustmentMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : "(ajuste)"}
                            </button>
                          </div>
                       </div>
