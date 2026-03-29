@@ -3,9 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, Search, Plus, MessageCircle, Trash2, Edit3, 
-  Wallet, CheckCircle2, AlertCircle, X, Save,
-  ArrowRight, Loader2, Copy, Palette, Gift,
-  LayoutGrid, List
+  CheckCircle2, AlertCircle, X, Loader2, Palette, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +11,6 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function Clientes() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid'); 
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -127,72 +124,52 @@ export default function Clientes() {
   const isLoading = isLoadingClientes || isLoadingTasks;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 flex items-center gap-2 uppercase tracking-tight">
-                <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" /> Clientes
-              </h1>
-              <p className="text-[10px] md:text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Base de Dados Centralizada</p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-              
-              {/* --- BOTÕES DE ALTERNAR VISUALIZAÇÃO (CARDS / LINHAS) --- */}
-              <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200 shrink-0 w-full sm:w-auto justify-center">
-                <button 
-                  onClick={() => setViewMode('grid')} 
-                  className={`flex-1 sm:flex-none p-1.5 px-4 rounded transition-all flex items-center justify-center gap-2 ${viewMode === 'grid' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-                  title="Visão em Cards"
-                >
-                  <LayoutGrid size={18} /> <span className="text-[10px] font-bold uppercase sm:hidden">Cards</span>
-                </button>
-                <button 
-                  onClick={() => setViewMode('list')} 
-                  className={`flex-1 sm:flex-none p-1.5 px-4 rounded transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-                  title="Visão em Linhas"
-                >
-                  <List size={18} /> <span className="text-[10px] font-bold uppercase sm:hidden">Linhas</span>
-                </button>
-              </div>
-
-              <div className="relative w-full md:w-72 lg:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  placeholder="Pesquisar cliente..." 
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="h-10 md:h-9 pl-9 border-slate-200 bg-slate-50/50 rounded-md font-medium text-xs w-full"
-                />
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  setEditingClient({ nome: '', whatsapp: '', pendente: 0, pago: 0, aniversario: '' });
-                  setIsModalOpen(true);
-                }}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-md h-10 md:h-9 px-6 shadow-sm flex gap-2 font-semibold text-xs uppercase"
-              >
-                <Plus className="w-4 h-4" /> NOVO CLIENTE
-              </Button>
-            </div>
-
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-20 relative">
+      
+      {/* HEADER FIXO - ESTILO EXECUTIVO */}
+      <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg md:text-xl font-semibold text-slate-800 uppercase leading-none tracking-tight flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" /> Clientes
+            </h1>
+            <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
+            <p className="text-[9px] md:text-[10px] text-slate-500 font-medium uppercase tracking-widest hidden md:block mt-0.5">
+              Base de Dados Centralizada
+            </p>
           </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Input 
+                placeholder="Pesquisar cliente..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-9 pl-8 border-slate-200 bg-slate-50 rounded-md font-medium text-xs w-full focus:bg-white"
+              />
+            </div>
+            
+            <Button 
+              onClick={() => {
+                setEditingClient({ nome: '', whatsapp: '', pendente: 0, pago: 0, aniversario: '' });
+                setIsModalOpen(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-md h-9 px-4 shadow-sm flex gap-1.5 font-semibold text-[10px] uppercase tracking-widest shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Novo</span>
+            </Button>
+          </div>
+
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 md:mt-8">
+      <div className="max-w-5xl mx-auto px-4 mt-6">
         {isLoading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
         ) : (
-          <motion.div 
-            layout 
-            className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5" : "flex flex-col gap-3"}
-          >
+          <div className="flex flex-col gap-2.5">
             <AnimatePresence mode="popLayout">
               {filteredClientes.map((cliente) => {
                 const clientTasks = tasks.filter(t => 
@@ -227,184 +204,124 @@ export default function Clientes() {
                 <motion.div
                   key={cliente.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`bg-white border border-slate-200 shadow-sm overflow-hidden group ${
-                    viewMode === 'grid' 
-                      ? 'p-4 md:p-5 rounded-xl md:rounded-lg flex flex-col justify-between relative' 
-                      : 'p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors hover:border-blue-300'
-                  }`}
+                  className="bg-white border border-slate-200 shadow-sm p-3 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 transition-colors hover:border-blue-200"
                 >
                   
-                  {/* --- MODO: CARDS (GRADE) --- */}
-                  {viewMode === 'grid' && (
-                    <>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex gap-3">
-                          <div className="w-12 h-12 md:w-10 md:h-10 bg-slate-50 border border-slate-100 rounded-lg md:rounded-md flex items-center justify-center font-bold text-blue-600 text-lg md:text-base shrink-0">
-                            {cliente.nome.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="pr-2">
-                            <h3 className="font-bold text-slate-800 text-sm md:text-[13px] leading-tight uppercase line-clamp-1 mb-1">{cliente.nome}</h3>
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <div className="flex items-center gap-1 text-slate-500 font-medium text-[10px] md:text-[11px]">
-                                  <MessageCircle className="w-3 h-3 text-emerald-500" /> {cliente.whatsapp}
-                                </div>
-                                {cliente.aniversario && (
-                                  <div className="flex items-center gap-1 text-slate-500 font-medium text-[10px] md:text-[11px]">
-                                    <Gift className="w-3 h-3 text-pink-500" /> {formatBirthday(cliente.aniversario)}
-                                  </div>
-                                )}
-                              </div>
-                              <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest ${tier.text}`}>
-                                {tier.icon} {tier.nome}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => { setEditingClient(cliente); setIsModalOpen(true); }} className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-md transition-colors"><Edit3 className="w-4 h-4 md:w-3.5 md:h-3.5" /></button>
-                          <button onClick={() => deleteMutation.mutate(cliente.id)} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 className="w-4 h-4 md:w-3.5 md:h-3.5" /></button>
-                        </div>
+                  {/* Avatar e Nome */}
+                  <div className="flex items-center gap-3 w-full md:w-1/3 min-w-[220px]">
+                    <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center font-semibold text-blue-600 text-sm shrink-0 shadow-sm">
+                      {cliente.nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="overflow-hidden">
+                      <h3 className="font-semibold text-slate-800 text-xs uppercase truncate leading-tight">{cliente.nome}</h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`text-[8px] font-semibold uppercase tracking-widest flex items-center gap-1 ${tier.text}`}>{tier.icon} {tier.nome}</span>
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="grid grid-cols-2 gap-2 mt-auto">
-                        <div className="bg-red-50/50 p-3 md:p-2.5 rounded-lg md:rounded-md border border-red-50 flex flex-col justify-center">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <AlertCircle className="w-3 h-3 text-red-400" />
-                            <span className="text-[9px] md:text-[10px] font-semibold uppercase text-red-500">Pendente</span>
-                          </div>
-                          <p className="font-semibold text-red-600 text-xs md:text-sm">{formatCurrency(totalPendenteReal)}</p>
-                        </div>
-                        <div className="bg-emerald-50/50 p-3 md:p-2.5 rounded-lg md:rounded-md border border-emerald-50 flex flex-col justify-center">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span className="text-[9px] md:text-[10px] font-semibold uppercase text-emerald-500">Total Pago</span>
-                          </div>
-                          <p className="font-semibold text-emerald-600 text-xs md:text-sm">{formatCurrency(totalGastoReal)}</p>
-                        </div>
+                  {/* Contato (Escondido em telas muito pequenas) */}
+                  <div className="hidden sm:flex flex-col gap-1 w-full md:w-1/4">
+                    {cliente.whatsapp && (
+                      <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
+                        <MessageCircle className="w-3 h-3 text-emerald-500" /> {cliente.whatsapp}
                       </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                        <Button variant="outline" onClick={() => { setSelectedClientForPedidos(cliente); setIsPedidosModalOpen(true); }} className="w-full h-9 md:h-8 border-dashed border-slate-200 text-slate-500 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors flex justify-between items-center px-3">
-                          <div className="flex items-center gap-2"><Palette size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">Pedidos</span></div>
-                          {clientTasks.length > 0 ? <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1.5">{clientTasks.length} <span className="opacity-40">|</span> {formatCurrency(totalGastoReal + totalPendenteReal)}</span> : <span className="text-[10px] font-semibold text-slate-400 uppercase">Vazio</span>}
-                        </Button>
+                    )}
+                    {cliente.aniversario && (
+                      <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
+                        <Gift className="w-3 h-3 text-pink-500" /> {formatBirthday(cliente.aniversario)}
                       </div>
+                    )}
+                  </div>
 
-                      <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" className="mt-3 w-full h-10 md:h-8 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg md:rounded-md flex items-center justify-center gap-2 transition-colors font-semibold uppercase text-[10px] md:text-xs border border-slate-100 hover:border-emerald-200">
-                        Abrir Conversa <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                      </a>
-                    </>
-                  )}
+                  {/* Valores Financeiros (Estilo do Print) */}
+                  <div className="flex items-center justify-between sm:justify-start gap-2 w-full md:w-auto shrink-0">
+                    <div className="flex flex-col bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 items-center justify-center min-w-[80px]">
+                      <span className="text-[8px] font-semibold uppercase text-rose-400 flex items-center gap-1 tracking-widest"><AlertCircle className="w-2.5 h-2.5"/> Pendente</span>
+                      <span className="font-semibold text-rose-600 text-xs">{formatCurrency(totalPendenteReal)}</span>
+                    </div>
+                    <div className="flex flex-col bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 items-center justify-center min-w-[80px]">
+                      <span className="text-[8px] font-semibold uppercase text-emerald-500 flex items-center gap-1 tracking-widest"><CheckCircle2 className="w-2.5 h-2.5"/> Pago</span>
+                      <span className="font-semibold text-emerald-600 text-xs">{formatCurrency(totalGastoReal)}</span>
+                    </div>
+                  </div>
 
-                  {/* --- MODO: LINHAS (LISTA) --- */}
-                  {viewMode === 'list' && (
-                    <>
-                      {/* Avatar e Nome */}
-                      <div className="flex items-center gap-3 w-full md:w-1/3 min-w-[200px]">
-                        <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center font-bold text-blue-600 text-lg shrink-0">
-                          {cliente.nome.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="overflow-hidden">
-                          <h3 className="font-bold text-slate-800 text-[13px] uppercase truncate leading-tight">{cliente.nome}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${tier.text}`}>{tier.icon} {tier.nome}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Contato (Escondido em telas muito pequenas) */}
-                      <div className="hidden sm:flex flex-col gap-1.5 w-full md:w-1/4">
-                        <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
-                          <MessageCircle className="w-3.5 h-3.5 text-emerald-500" /> {cliente.whatsapp}
-                        </div>
-                        {cliente.aniversario && (
-                          <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
-                            <Gift className="w-3.5 h-3.5 text-pink-500" /> {formatBirthday(cliente.aniversario)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Valores Financeiros */}
-                      <div className="flex items-center justify-between sm:justify-start gap-4 w-full md:w-auto mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-slate-100 shrink-0">
-                        <div className="flex flex-col bg-red-50/50 px-3 py-1.5 rounded-md border border-red-50">
-                          <span className="text-[9px] font-bold uppercase text-red-400 flex items-center gap-1 tracking-widest"><AlertCircle className="w-3 h-3"/> Pendente</span>
-                          <span className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(totalPendenteReal)}</span>
-                        </div>
-                        <div className="flex flex-col bg-emerald-50/50 px-3 py-1.5 rounded-md border border-emerald-50">
-                          <span className="text-[9px] font-bold uppercase text-emerald-500 flex items-center gap-1 tracking-widest"><CheckCircle2 className="w-3 h-3"/> Pago</span>
-                          <span className="font-bold text-emerald-600 text-xs sm:text-sm">{formatCurrency(totalGastoReal)}</span>
-                        </div>
-                      </div>
-
-                      {/* Botões de Ação Rápida */}
-                      <div className="flex items-center gap-1.5 shrink-0 w-full md:w-auto mt-2 md:mt-0 justify-end">
-                        <Button variant="ghost" size="icon" title="Pedidos" onClick={() => { setSelectedClientForPedidos(cliente); setIsPedidosModalOpen(true); }} className="h-9 w-9 text-purple-600 bg-purple-50 hover:bg-purple-100 relative rounded-lg">
-                          <Palette size={16} />
-                          {clientTasks.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[9px] font-bold text-white shadow-sm">{clientTasks.length}</span>}
-                        </Button>
-                        <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" title="WhatsApp" className="h-9 w-9 flex items-center justify-center rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
-                          <MessageCircle size={16} />
-                        </a>
-                        <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
-                        <button onClick={() => { setEditingClient(cliente); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-md transition-colors"><Edit3 size={16} /></button>
-                        <button onClick={() => deleteMutation.mutate(cliente.id)} className="p-2 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    </>
-                  )}
+                  {/* Botões de Ação Rápida */}
+                  <div className="flex items-center gap-1 shrink-0 w-full md:w-auto mt-2 md:mt-0 justify-end">
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedClientForPedidos(cliente); setIsPedidosModalOpen(true); }} className="h-8 w-8 text-purple-600 bg-purple-50 hover:bg-purple-100 relative rounded-md">
+                      <Palette size={14} />
+                      {clientTasks.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-purple-600 text-[8px] font-semibold text-white shadow-sm">{clientTasks.length}</span>}
+                    </Button>
+                    <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" className="h-8 w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                      <MessageCircle size={14} />
+                    </a>
+                    <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+                    <button onClick={() => { setEditingClient(cliente); setIsModalOpen(true); }} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-blue-600 rounded-md transition-colors"><Edit3 size={14} /></button>
+                    <button onClick={() => deleteMutation.mutate(cliente.id)} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-500 rounded-md transition-colors"><Trash2 size={14} /></button>
+                  </div>
                   
                 </motion.div>
               )})}
             </AnimatePresence>
-          </motion.div>
+            
+            {filteredClientes.length === 0 && !isLoading && (
+               <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm mt-4">
+                 <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                 <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px]">Nenhum cliente encontrado</p>
+               </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* MODAL: DADOS DO CLIENTE */}
+      {/* MODAL: CRIAR / EDITAR CLIENTE (Estilo Lipoaspiração) */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-md rounded-2xl md:rounded-xl p-6 md:p-6 shadow-xl relative z-10 overflow-hidden">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg md:text-xl font-semibold text-slate-800 uppercase tracking-tight">Dados do Cliente</h2>
-                <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-xl relative z-10 border border-slate-100">
+              
+              <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight">
+                   {editingClient?.id ? 'Editar Cliente' : 'Novo Cliente'}
+                </h2>
+                <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-100 text-slate-500 rounded transition-colors"><X size={16} /></button>
               </div>
               
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Nome Completo</label>
-                  <Input value={editingClient.nome} onChange={e => setEditingClient({...editingClient, nome: e.target.value})} className="h-11 md:h-9 border-slate-200 bg-white rounded-md font-medium text-sm md:text-xs" />
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Nome Completo</label>
+                  <Input value={editingClient.nome} onChange={e => setEditingClient({...editingClient, nome: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
-                    <Input value={editingClient.whatsapp} onChange={e => setEditingClient({...editingClient, whatsapp: e.target.value})} className="h-11 md:h-9 border-slate-200 bg-white rounded-md font-medium text-sm md:text-xs" />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
+                    <Input value={editingClient.whatsapp} onChange={e => setEditingClient({...editingClient, whatsapp: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
-                    <Input type="date" value={editingClient.aniversario || ''} onChange={e => setEditingClient({...editingClient, aniversario: e.target.value})} className="h-11 md:h-9 border-slate-200 bg-white rounded-md font-medium text-sm md:text-xs text-slate-600" />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
+                    <Input type="date" value={editingClient.aniversario || ''} onChange={e => setEditingClient({...editingClient, aniversario: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-red-500 tracking-widest ml-1">Acrescer Pendência</label>
-                    <Input type="number" value={editingClient.pendente} onChange={e => setEditingClient({...editingClient, pendente: Number(e.target.value)})} className="h-11 md:h-9 border-red-100 bg-red-50/50 rounded-md font-semibold text-red-600 text-sm md:text-xs" />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-rose-500 tracking-widest ml-1">Acrescer Pendência</label>
+                    <Input type="number" value={editingClient.pendente} onChange={e => setEditingClient({...editingClient, pendente: Number(e.target.value)})} className="h-9 border-rose-100 bg-rose-50 focus:bg-white rounded-md font-semibold text-rose-600 text-xs" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-emerald-500 tracking-widest ml-1">Acrescer Pago</label>
-                    <Input type="number" value={editingClient.pago} onChange={e => setEditingClient({...editingClient, pago: Number(e.target.value)})} className="h-11 md:h-9 border-emerald-100 bg-emerald-50/50 rounded-md font-semibold text-emerald-600 text-sm md:text-xs" />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-emerald-500 tracking-widest ml-1">Acrescer Pago</label>
+                    <Input type="number" value={editingClient.pago} onChange={e => setEditingClient({...editingClient, pago: Number(e.target.value)})} className="h-9 border-emerald-100 bg-emerald-50 focus:bg-white rounded-md font-semibold text-emerald-600 text-xs" />
                   </div>
                 </div>
-                <p className="text-[9px] text-slate-400 font-medium px-1 leading-tight">Os valores acima são somados automaticamente com os pedidos do sistema.</p>
+                <p className="text-[8px] text-slate-400 font-medium px-1 uppercase tracking-widest">Os valores acima somam com os pedidos do sistema.</p>
 
-                <Button onClick={handleSave} className="w-full h-12 md:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase text-xs mt-2 shadow-sm">
-                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar Cliente"}
+                <Button onClick={handleSave} className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase text-[10px] tracking-widest mt-2 shadow-sm">
+                  {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save size={14} className="mr-1.5"/> Salvar Cliente</>}
                 </Button>
               </div>
             </motion.div>
@@ -415,42 +332,41 @@ export default function Clientes() {
       {/* MODAL: HISTÓRICO DE PEDIDOS */}
       <AnimatePresence>
         {isPedidosModalOpen && selectedClientForPedidos && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsPedidosModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-lg rounded-2xl md:rounded-xl p-6 md:p-6 shadow-xl relative z-10 flex flex-col max-h-[85vh]">
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-md rounded-xl p-5 shadow-xl relative z-10 flex flex-col max-h-[85vh]">
               
-              <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+              <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
                 <div>
-                  <h2 className="text-lg md:text-xl font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                    <Palette className="text-purple-500 w-5 h-5" /> Pedidos do Cliente
+                  <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
+                    <Palette className="text-purple-500 w-4 h-4" /> Histórico de Pedidos
                   </h2>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 tracking-widest">{selectedClientForPedidos.nome}</p>
+                  <p className="text-[9px] font-semibold text-slate-500 uppercase mt-1 tracking-widest">{selectedClientForPedidos.nome}</p>
                 </div>
-                <button onClick={() => setIsPedidosModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsPedidosModalOpen(false)} className="p-1 hover:bg-slate-100 text-slate-500 rounded transition-colors"><X size={16} /></button>
               </div>
 
               {(() => {
                 const modalTasks = tasks.filter(t => t.cliente_id === selectedClientForPedidos.id || (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === selectedClientForPedidos.nome.trim().toLowerCase()));
                 return (
                   <>
-                    <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-4 flex justify-between items-center shadow-sm">
+                    <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-3 flex justify-between items-center shadow-sm">
                       <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-purple-600 mb-1">Total em Pedidos</p>
-                        <p className="text-2xl font-black text-purple-700 leading-none">
+                        <p className="text-[8px] font-semibold uppercase tracking-widest text-purple-600 mb-0.5">Total em Pedidos</p>
+                        <p className="text-lg font-semibold text-purple-700 leading-none">
                           {formatCurrency(modalTasks.reduce((a, t) => a + getTaskValue(t), 0))}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-purple-600 mb-1">Qtd.</p>
-                        <p className="text-xl font-black text-purple-700 leading-none">{modalTasks.length}</p>
+                        <p className="text-[8px] font-semibold uppercase tracking-widest text-purple-600 mb-0.5">Qtd.</p>
+                        <p className="text-base font-semibold text-purple-700 leading-none">{modalTasks.length}</p>
                       </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2.5 pr-1">
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pr-1">
                       {modalTasks.length === 0 ? (
-                        <div className="text-center py-10 bg-slate-50 rounded-lg border border-slate-100">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Nenhum pedido encontrado.</p>
-                          <p className="text-[10px] text-slate-400 mt-1">Crie na aba "Pedidos".</p>
+                        <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-100">
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Nenhum pedido encontrado.</p>
                         </div>
                       ) : (
                         modalTasks.map(task => {
@@ -458,18 +374,18 @@ export default function Clientes() {
                           const isPaid = String(task.payment_status || '').toLowerCase().trim() === 'pago' || String(task.status || '').toLowerCase().trim() === 'concluida';
                           
                           return (
-                            <div key={task.id} className="flex flex-col bg-slate-50 hover:bg-slate-100 transition-colors p-3.5 rounded-lg border border-slate-200">
-                              <div className="flex justify-between items-start gap-2 mb-1">
-                                 <span className="text-xs font-bold text-slate-800 leading-snug line-clamp-2">{task.title}</span>
-                                 <span className={`text-xs font-black shrink-0 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            <div key={task.id} className="flex flex-col bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                              <div className="flex justify-between items-start gap-2 mb-1.5">
+                                 <span className="text-[11px] font-semibold text-slate-800 leading-tight uppercase">{task.title}</span>
+                                 <span className={`text-[11px] font-semibold shrink-0 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
                                    {formatCurrency(val)}
                                  </span>
                               </div>
-                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
-                                 <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                              <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-slate-50">
+                                 <span className="text-[8px] font-semibold uppercase tracking-widest text-slate-400">
                                    {task.category || 'Serviço'}
                                  </span>
-                                 <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                 <span className={`text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded-full ${isPaid ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
                                    {isPaid ? 'Pago' : 'Pendente'}
                                  </span>
                               </div>
