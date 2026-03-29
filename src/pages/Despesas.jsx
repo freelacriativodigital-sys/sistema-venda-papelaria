@@ -5,7 +5,7 @@ import {
   Search, Plus, Trash2, Edit3, CheckCircle2, 
   AlertCircle, X, Save, TrendingDown, Calendar, 
   Tag, Loader2, Wallet, Clock, CreditCard, PieChart,
-  ArrowRight
+  ArrowLeft, ArrowDownRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,11 @@ export default function Despesas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('pendentes'); // 'todas', 'pendentes', 'pagas'
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Telas Sobrepostas (Overlays)
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   
-  // Modal de Pagamento Rápido
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isPayOpen, setIsPayOpen] = useState(false);
   const [payData, setPayData] = useState({ id: null, descricao: '', valorTotal: 0, valorJaPago: 0, valorPagamentoAgora: 0 });
 
   const queryClient = useQueryClient();
@@ -45,7 +45,6 @@ export default function Despesas() {
       const valor = Number(expenseData.valor || 0);
       const valorPago = Number(expenseData.valor_pago || 0);
       
-      // Auto-calcula o status baseado no valor pago
       let status = 'pendente';
       if (valorPago >= valor) status = 'pago';
       else if (valorPago > 0) status = 'parcial';
@@ -69,7 +68,7 @@ export default function Despesas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
-      setIsModalOpen(false);
+      setIsFormOpen(false);
       setEditingExpense(null);
     },
   });
@@ -101,7 +100,7 @@ export default function Despesas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
-      setIsPayModalOpen(false);
+      setIsPayOpen(false);
     },
   });
 
@@ -121,7 +120,7 @@ export default function Despesas() {
       categoria: 'Insumos',
       status: 'pendente'
     });
-    setIsModalOpen(true);
+    setIsFormOpen(true);
   };
 
   const handleDelete = (id) => {
@@ -130,7 +129,7 @@ export default function Despesas() {
     }
   };
 
-  const openPayModal = (despesa) => {
+  const openPayPage = (despesa) => {
     const restante = Number(despesa.valor) - Number(despesa.valor_pago || 0);
     setPayData({
       id: despesa.id,
@@ -139,7 +138,7 @@ export default function Despesas() {
       valorJaPago: Number(despesa.valor_pago || 0),
       valorPagamentoAgora: restante > 0 ? restante : 0
     });
-    setIsPayModalOpen(true);
+    setIsPayOpen(true);
   };
 
   const confirmPayment = () => {
@@ -169,7 +168,7 @@ export default function Despesas() {
   };
 
   const analisarVencimento = (dataString, status) => {
-    if (status === 'pago') return { texto: 'Pago', cor: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' };
+    if (status === 'pago') return { texto: 'Pago', cor: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', iconCor: 'text-emerald-500' };
     
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -177,106 +176,109 @@ export default function Despesas() {
     const diffTime = vencimento.getTime() - hoje.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDias < 0) return { texto: `Atrasada há ${Math.abs(diffDias)} dias`, cor: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', iconCor: 'text-red-500' };
-    if (diffDias === 0) return { texto: 'Vence HOJE!', cor: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
-    if (diffDias <= 3) return { texto: `Vence em ${diffDias} dias`, cor: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
+    if (diffDias < 0) return { texto: `Atrasada ${Math.abs(diffDias)}d`, cor: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', iconCor: 'text-rose-500' };
+    if (diffDias === 0) return { texto: 'Vence Hoje', cor: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
+    if (diffDias <= 3) return { texto: `Vence em ${diffDias}d`, cor: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
     
-    return { texto: `Vence em ${diffDias} dias`, cor: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', iconCor: 'text-slate-400' };
+    return { texto: `Para ${formatarData(dataString)}`, cor: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', iconCor: 'text-slate-400' };
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 text-slate-900">
+    <div className="min-h-screen bg-[#f8fafc] pb-20 text-slate-900">
       
-      {/* HEADER FIXO */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 flex items-center gap-2 uppercase tracking-tight">
-                <TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-rose-500" /> Despesas
-              </h1>
-              <p className="text-[10px] md:text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Controle Financeiro de Contas</p>
-            </div>
-
-            <Button 
-              onClick={handleNew}
-              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-md h-11 md:h-10 px-6 shadow-sm flex gap-2 font-semibold text-xs uppercase transition-all"
-            >
-              <Plus className="w-4 h-4" /> Nova Despesa
-            </Button>
-
+      {/* HEADER DA PÁGINA */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 mb-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2.5">
+              <TrendingDown className="text-rose-600" size={24} /> Despesas
+            </h1>
+            <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">Controle Financeiro de Contas</p>
           </div>
+          <Button onClick={handleNew} className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold uppercase tracking-widest text-[10px] shadow-sm transition-all w-full md:w-auto px-6">
+            <Plus className="w-4 h-4 mr-2" /> Nova Despesa
+          </Button>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 md:mt-8 space-y-6 md:space-y-8 animate-in fade-in">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 animate-in fade-in">
         
-        {/* CARDS DE RESUMO */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
-           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0"><Wallet size={24}/></div>
-              <div>
-                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Total das Contas</p>
-                 <p className="text-xl font-bold text-slate-800 tracking-tight">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              </div>
+        {/* CARDS DE RESUMO (KPIs COLORIDOS PADRÃO) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+           {/* Total */}
+           <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+             <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Wallet size={70}/></div>
+             <div className="flex items-center justify-between mb-1.5 relative z-10">
+               <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-300">Total Lançado</span>
+             </div>
+             <div className="relative z-10">
+               <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+             </div>
            </div>
-           <div className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-2 h-full bg-emerald-500" />
-              <div className="w-12 h-12 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0"><CheckCircle2 size={24}/></div>
-              <div>
-                 <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mb-0.5">Total Já Pago</p>
-                 <p className="text-xl font-bold text-emerald-700 tracking-tight">R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              </div>
+           
+           {/* Pago */}
+           <div className="bg-emerald-600 rounded-xl p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+             <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 size={70}/></div>
+             <div className="flex items-center justify-between mb-1.5 relative z-10">
+               <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-100/90">Total Já Pago</span>
+             </div>
+             <div className="relative z-10">
+               <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+             </div>
            </div>
-           <div className="bg-white p-5 rounded-xl border border-red-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-2 h-full bg-red-500" />
-              <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-red-500 shrink-0"><AlertCircle size={24}/></div>
-              <div>
-                 <p className="text-[10px] font-semibold text-red-500 uppercase tracking-widest mb-0.5">Falta Pagar (Restante)</p>
-                 <p className="text-xl font-bold text-red-600 tracking-tight">R$ {totalRestante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              </div>
+
+           {/* Restante */}
+           <div className="bg-rose-600 rounded-xl p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+             <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><AlertCircle size={70}/></div>
+             <div className="flex items-center justify-between mb-1.5 relative z-10">
+               <span className="text-[9px] font-semibold uppercase tracking-widest text-rose-100/90">Falta Pagar</span>
+             </div>
+             <div className="relative z-10">
+               <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">R$ {totalRestante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+             </div>
            </div>
         </div>
 
-        {/* BARRA DE FILTROS E ABAS */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-          
+        {/* BARRA DE FILTROS E PESQUISA */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex w-full md:w-auto bg-slate-50 p-1 rounded-lg border border-slate-100">
-            <button onClick={() => setStatusFilter('pendentes')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'pendentes' ? 'bg-white shadow-sm text-blue-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            <button onClick={() => setStatusFilter('pendentes')} className={`flex-1 md:px-5 py-2 rounded-md text-[9px] md:text-[10px] font-semibold uppercase tracking-widest transition-all ${statusFilter === 'pendentes' ? 'bg-white shadow-sm text-blue-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
               Pendentes
             </button>
-            <button onClick={() => setStatusFilter('pagas')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'pagas' ? 'bg-white shadow-sm text-emerald-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            <button onClick={() => setStatusFilter('pagas')} className={`flex-1 md:px-5 py-2 rounded-md text-[9px] md:text-[10px] font-semibold uppercase tracking-widest transition-all ${statusFilter === 'pagas' ? 'bg-white shadow-sm text-emerald-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
               Pagas
             </button>
-            <button onClick={() => setStatusFilter('todas')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'todas' ? 'bg-white shadow-sm text-slate-800 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+            <button onClick={() => setStatusFilter('todas')} className={`flex-1 md:px-5 py-2 rounded-md text-[9px] md:text-[10px] font-semibold uppercase tracking-widest transition-all ${statusFilter === 'todas' ? 'bg-white shadow-sm text-slate-800 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
               Todas
             </button>
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input 
               type="text" 
               placeholder="Buscar despesa..." 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
-              className="w-full h-10 pl-9 pr-4 bg-slate-50 outline-none text-xs font-medium border border-slate-200 rounded-lg focus:border-blue-300 focus:bg-white transition-all" 
+              className="w-full h-9 pl-9 pr-3 bg-slate-50 outline-none text-xs font-medium border border-slate-200 rounded-lg focus:border-blue-300 focus:bg-white transition-all placeholder:text-slate-400" 
             />
           </div>
         </div>
 
         {/* LISTAGEM DE DESPESAS */}
         {isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Carregando...</p>
+          </div>
         ) : filteredDespesas.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CheckCircle2 size={48} className="mx-auto text-emerald-400 mb-4" />
-            <h3 className="text-base font-semibold text-slate-800 uppercase mb-1.5">Tudo limpo por aqui!</h3>
-            <p className="text-[10px] font-medium uppercase text-slate-400 tracking-widest">Nenhuma despesa encontrada para este filtro.</p>
+          <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <CheckCircle2 size={32} className="mx-auto text-emerald-400 mb-3" />
+            <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-tight mb-1">Tudo limpo!</h3>
+            <p className="text-[9px] font-medium uppercase text-slate-400 tracking-widest">Nenhuma despesa encontrada.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence mode="popLayout">
               {filteredDespesas.map((despesa) => {
                 const isPago = despesa.status === 'pago';
@@ -295,35 +297,32 @@ export default function Despesas() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className={`bg-white p-4 md:p-5 rounded-xl border shadow-sm flex flex-col relative transition-all duration-300 ${isPago ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200 hover:border-blue-300'}`}
+                    className={`bg-white p-4 rounded-xl border shadow-sm flex flex-col relative transition-all duration-300 ${isPago ? 'border-emerald-200 bg-emerald-50/10 opacity-70' : 'border-slate-200 hover:border-blue-200'}`}
                   >
                     
                     {/* AÇÕES TOPO */}
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Tag size={10}/> {despesa.categoria}</p>
-                        <h3 className={`font-semibold text-sm leading-tight line-clamp-2 ${isPago ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-800'}`}>{despesa.descricao}</h3>
+                        <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Tag size={10}/> {despesa.categoria}</p>
+                        <h3 className={`font-semibold text-sm leading-tight line-clamp-2 ${isPago ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{despesa.descricao}</h3>
                       </div>
-                      <div className="flex gap-1 bg-slate-50 rounded-md shadow-sm border border-slate-100 shrink-0">
-                        <button onClick={() => { setEditingExpense(despesa); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 transition-colors rounded-l-md"><Edit3 size={14} /></button>
+                      <div className="flex gap-1 bg-slate-50 rounded-md border border-slate-100 shrink-0">
+                        <button onClick={() => { setEditingExpense(despesa); setIsFormOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors rounded-l-md"><Edit3 size={12} /></button>
                         <div className="w-px bg-slate-200"></div>
-                        <button onClick={() => handleDelete(despesa.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-100 transition-colors rounded-r-md"><Trash2 size={14} /></button>
+                        <button onClick={() => handleDelete(despesa.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors rounded-r-md"><Trash2 size={12} /></button>
                       </div>
                     </div>
 
-                    {/* AVISO DE VENCIMENTO */}
-                    {!isPago && (
-                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${alerta.bg} ${alerta.border} mb-4`}>
-                        <Clock size={12} className={alerta.iconCor}/>
-                        <span className={`text-[10px] font-bold uppercase tracking-wide ${alerta.cor}`}>
-                          {alerta.texto} ({formatarData(despesa.vencimento)})
-                        </span>
-                      </div>
-                    )}
+                    {/* ALERTA VENCIMENTO (ESTILO PÍLULA/TAG) */}
+                    <div className="mb-3">
+                       <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-widest w-fit border ${alerta.bg} ${alerta.border} ${alerta.cor}`}>
+                         <Clock size={10} className={alerta.iconCor}/> {alerta.texto}
+                       </span>
+                    </div>
 
-                    {/* PROGRESSO DE PAGAMENTO */}
+                    {/* PROGRESSO FINO */}
                     <div className="space-y-1.5 mb-4">
-                      <div className="flex justify-between text-[9px] font-semibold uppercase text-slate-500">
+                      <div className="flex justify-between text-[9px] font-semibold uppercase tracking-widest text-slate-500">
                         <span>Progresso</span>
                         <span className={percentualPago === 100 ? 'text-emerald-600' : 'text-blue-600'}>{percentualPago}% Pago</span>
                       </div>
@@ -332,19 +331,18 @@ export default function Despesas() {
                       </div>
                     </div>
 
-                    {/* VALORES E BOTÃO DE PAGAR */}
-                    <div className="mt-auto pt-4 border-t border-slate-100">
-                      
-                      <div className="flex justify-between items-end mb-4">
+                    {/* VALORES E BOTÃO */}
+                    <div className="mt-auto pt-3 border-t border-slate-100">
+                      <div className="flex justify-between items-end mb-3">
                         <div>
-                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
+                           <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
                            <p className="text-xs font-semibold text-slate-600">R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="text-right">
-                           <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${isPago ? 'text-emerald-500' : 'text-red-400'}`}>
+                           <p className={`text-[8px] font-semibold uppercase tracking-widest mb-0.5 ${isPago ? 'text-emerald-500' : 'text-rose-400'}`}>
                              {isPago ? 'Pago' : 'Falta Pagar'}
                            </p>
-                           <p className={`text-lg font-black tracking-tight leading-none ${isPago ? 'text-emerald-600' : 'text-red-600'}`}>
+                           <p className={`text-lg font-semibold tracking-tight leading-none ${isPago ? 'text-emerald-600' : 'text-rose-600'}`}>
                              R$ {(isPago ? valorTotal : valorRestanteItem).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                            </p>
                         </div>
@@ -352,21 +350,20 @@ export default function Despesas() {
                       
                       {!isPago ? (
                         <button 
-                          onClick={() => openPayModal(despesa)}
-                          className="w-full h-10 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all shadow-sm border bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-1.5"
+                          onClick={() => openPayPage(despesa)}
+                          className="w-full h-9 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all shadow-sm bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-1.5"
                         >
-                          <CreditCard size={16}/> Registrar Pagamento
+                          <CreditCard size={14}/> Registrar Pagto
                         </button>
                       ) : (
                         <button 
-                          onClick={() => openPayModal(despesa)} // Abre o mesmo modal para poder estornar
-                          className="w-full h-10 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all border bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 flex items-center justify-center gap-1.5"
+                          onClick={() => openPayPage(despesa)} 
+                          className="w-full h-9 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all border bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 flex items-center justify-center gap-1.5"
                         >
-                          <Edit3 size={16}/> Ajustar Pagamento
+                          <Edit3 size={14}/> Ajustar
                         </button>
                       )}
                     </div>
-
                   </motion.div>
                 );
               })}
@@ -375,126 +372,88 @@ export default function Despesas() {
         )}
       </div>
 
-      {/* --- MODAL PARA REGISTRAR PAGAMENTO --- */}
+      {/* ========================================================================= */}
+      {/* TELA SOBREPOSTA: NOVA / EDITAR DESPESA (ESTILO PÁGINA) */}
+      {/* ========================================================================= */}
       <AnimatePresence>
-        {isPayModalOpen && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsPayModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl relative z-10 overflow-hidden">
-              
-              <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><CreditCard size={16}/></div>
-                  <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight leading-none">Pagamento</h2>
-                </div>
-                <button onClick={() => setIsPayModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
-                  <p className="text-[10px] font-semibold uppercase text-slate-500 mb-1">Pagando</p>
-                  <p className="text-sm font-bold text-slate-800 line-clamp-1">{payData.descricao}</p>
-                </div>
-
-                <div className="flex justify-between items-center text-xs font-semibold px-1">
-                  <span className="text-slate-500 uppercase">Valor Total:</span>
-                  <span className="text-slate-800">R$ {payData.valorTotal.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center text-xs font-semibold px-1">
-                  <span className="text-emerald-600 uppercase">Já Pago:</span>
-                  <span className="text-emerald-700">R$ {payData.valorJaPago.toFixed(2)}</span>
-                </div>
-
-                <div className="space-y-1.5 pt-3 border-t border-slate-100">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Valor do Pagamento de Hoje</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-lg">R$</span>
-                    <Input 
-                      type="number" 
-                      value={payData.valorPagamentoAgora} 
-                      onChange={e => setPayData({...payData, valorPagamentoAgora: e.target.value})} 
-                      className="h-14 pl-10 border-blue-200 bg-blue-50/50 focus:bg-white rounded-lg font-black text-blue-700 text-lg text-right pr-4" 
-                    />
+        {isFormOpen && (
+          <motion.div 
+            initial={{ opacity: 0, x: '10%' }} 
+            animate={{ opacity: 1, x: 0 }} 
+            exit={{ opacity: 0, x: '10%' }} 
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+            className="fixed inset-0 z-[200] bg-[#f8fafc] overflow-y-auto flex flex-col"
+          >
+            {/* Header Estilo Página */}
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+              <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setIsFormOpen(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center border border-rose-100">
+                     <TrendingDown className="text-rose-500 w-4 h-4" />
                   </div>
-                  <p className="text-[9px] font-medium text-slate-400 uppercase text-right pt-1">
-                    *Dica: Pode ser o valor total ou parcial. Use números negativos para estornar.
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={confirmPayment} 
-                  disabled={registerPaymentMutation.isPending}
-                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold uppercase text-xs mt-4 shadow-sm transition-all"
-                >
-                  {registerPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pagamento"}
-                </Button>
-              </div>
-
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* --- MODAL PARA CRIAR/EDITAR DESPESA (COMPLETO) --- */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-md rounded-2xl md:rounded-xl p-6 shadow-xl relative z-10 overflow-hidden">
-              
-              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><TrendingDown size={16}/></div>
-                  <h2 className="text-lg md:text-xl font-bold text-slate-800 uppercase tracking-tight leading-none">
+                  <h2 className="text-sm md:text-base font-semibold text-slate-800 uppercase tracking-tight">
                     {editingExpense?.id ? 'Editar Despesa' : 'Nova Despesa'}
                   </h2>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={saveMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-5 rounded-md font-semibold uppercase text-[9px] tracking-widest shadow-sm transition-colors"
+                >
+                  {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Save size={14} className="mr-2"/>}
+                  Salvar
+                </Button>
               </div>
-              
-              <div className="space-y-4">
+            </div>
+
+            {/* Corpo do Formulário */}
+            <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-6">
+              <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                
                 <div className="space-y-1.5">
-                  <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+                  <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
                   <Input 
                     placeholder="Ex: Conta de Luz, Fornecedor X..."
-                    value={editingExpense.descricao} 
+                    value={editingExpense?.descricao || ''} 
                     onChange={e => setEditingExpense({...editingExpense, descricao: e.target.value})} 
-                    className="h-11 md:h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-sm text-slate-800" 
+                    className="h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-sm text-slate-800" 
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor Total (R$)</label>
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor Total (R$)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-xs">R$</span>
                       <Input 
                         type="number" 
-                        value={editingExpense.valor} 
+                        value={editingExpense?.valor || ''} 
                         onChange={e => setEditingExpense({...editingExpense, valor: e.target.value})} 
-                        className="h-11 md:h-10 pl-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-bold text-slate-800 text-sm" 
+                        className="h-10 pl-8 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-semibold text-slate-800 text-sm" 
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Vencimento</label>
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Vencimento</label>
                     <Input 
                       type="date" 
-                      value={editingExpense.vencimento} 
+                      value={editingExpense?.vencimento || ''} 
                       onChange={e => setEditingExpense({...editingExpense, vencimento: e.target.value})} 
-                      className="h-11 md:h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-semibold text-slate-800 text-sm" 
+                      className="h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-slate-800 text-sm" 
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-1 border-b border-slate-100 pb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
                     <select 
-                      value={editingExpense.categoria} 
+                      value={editingExpense?.categoria || 'Insumos'} 
                       onChange={e => setEditingExpense({...editingExpense, categoria: e.target.value})}
-                      className="w-full h-11 md:h-10 border border-slate-200 rounded-md px-3 text-[11px] md:text-xs font-semibold uppercase outline-none bg-slate-50 focus:bg-white text-slate-700"
+                      className="w-full h-10 border border-slate-200 rounded-md px-3 text-[10px] font-semibold uppercase tracking-widest outline-none bg-slate-50 focus:bg-white text-slate-700"
                     >
                       <option value="Fornecedores">Fornecedores</option>
                       <option value="Insumos">Insumos</option>
@@ -506,34 +465,103 @@ export default function Despesas() {
                     </select>
                   </div>
                   
-                  {/* AJUSTE MANUAL DO VALOR PAGO (Apenas em Edição) */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-semibold uppercase text-emerald-600 tracking-widest ml-1">Valor Já Pago (R$)</label>
+                    <label className="text-[9px] font-semibold uppercase text-emerald-600 tracking-widest ml-1">Valor Já Pago (R$)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-sm">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-xs">R$</span>
                       <Input 
                         type="number" 
-                        value={editingExpense.valor_pago || 0} 
+                        value={editingExpense?.valor_pago || 0} 
                         onChange={e => setEditingExpense({...editingExpense, valor_pago: e.target.value})} 
-                        className="h-11 md:h-10 pl-9 border-emerald-200 bg-emerald-50 focus:bg-white rounded-md font-bold text-emerald-700 text-sm" 
+                        className="h-10 pl-8 border-emerald-200 bg-emerald-50/50 focus:bg-white rounded-md font-semibold text-emerald-700 text-sm" 
                       />
                     </div>
                   </div>
                 </div>
-
-                <Button 
-                  onClick={handleSave} 
-                  disabled={saveMutation.isPending}
-                  className="w-full h-12 md:h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold uppercase text-[11px] md:text-xs mt-2 shadow-sm transition-all"
-                >
-                  {saveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Despesa"}
-                </Button>
               </div>
-
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* TELA SOBREPOSTA: REGISTRAR PAGAMENTO (ESTILO PÁGINA) */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {isPayOpen && (
+          <motion.div 
+            initial={{ opacity: 0, x: '10%' }} 
+            animate={{ opacity: 1, x: 0 }} 
+            exit={{ opacity: 0, x: '10%' }} 
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+            className="fixed inset-0 z-[200] bg-[#f8fafc] overflow-y-auto flex flex-col"
+          >
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+              <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setIsPayOpen(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                     <CreditCard className="text-emerald-600 w-4 h-4" />
+                  </div>
+                  <h2 className="text-sm md:text-base font-semibold text-slate-800 uppercase tracking-tight">
+                    Pagamento
+                  </h2>
+                </div>
+                <Button 
+                  onClick={confirmPayment} 
+                  disabled={registerPaymentMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-5 rounded-md font-semibold uppercase text-[9px] tracking-widest shadow-sm transition-colors"
+                >
+                  {registerPaymentMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <CheckCircle2 size={14} className="mr-2"/>}
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-6">
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 mb-1">Registrando pagamento para</p>
+                  <p className="text-sm font-semibold text-slate-800 truncate">{payData.descricao}</p>
+                </div>
+
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Valor Total:</span>
+                  <span className="text-sm font-semibold text-slate-800">R$ {payData.valorTotal.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest">Já Pago:</span>
+                  <span className="text-sm font-semibold text-emerald-700">R$ {payData.valorJaPago.toFixed(2)}</span>
+                </div>
+
+                <div className="pt-5 border-t border-slate-100">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 ml-1 mb-2 block">
+                    Valor do Pagamento de Hoje (R$)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">R$</span>
+                    <Input 
+                      type="number" 
+                      value={payData.valorPagamentoAgora} 
+                      onChange={e => setPayData({...payData, valorPagamentoAgora: e.target.value})} 
+                      className="h-12 pl-10 border-blue-200 bg-blue-50/30 focus:bg-white rounded-lg font-semibold text-blue-700 text-lg shadow-inner transition-all" 
+                    />
+                  </div>
+                  <p className="text-[8px] font-medium text-slate-400 uppercase tracking-widest mt-2 ml-1">
+                    *Para estornar um pagamento, digite um valor com sinal negativo (ex: -50).
+                  </p>
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
