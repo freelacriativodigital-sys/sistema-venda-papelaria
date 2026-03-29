@@ -185,7 +185,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const pathNormalizado = location.pathname.toLowerCase();
   
   const isVitrine = pathNormalizado === '/' || pathNormalizado === '/vitrine';
-  const isBriefingClient = pathNormalizado.startsWith('/briefing/');
+  const isBriefingClient = pathNormalizado.startsWith('/form/');
   const isEntregaPortal = pathNormalizado.startsWith('/entrega/');
   const isBio = pathNormalizado === '/bio';
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
@@ -210,7 +210,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       <Route path="/" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
-      <Route path="/briefing/:slug" element={<BriefingPublico />} />
+      <Route path="/form/:slug" element={<BriefingPublico />} />
       
       {/* Aqui foi adicionada a prop isPublic={true} na EntregaPage para seguir o mesmo padrão das outras rotas públicas */}
       <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage isPublic={true} /> : <PageNotFound />} />
