@@ -7,80 +7,13 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// ============================================================================
-// FUNÇÕES DE INTELIGÊNCIA (Agora direto na Home para evitar erro de arquivo)
-// ============================================================================
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-};
-
-const getTaskValue = (task) => {
-  const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
-  if (checklistTotal > 0) return checklistTotal;
-  let baseValue = 0;
-  if (task.service_value !== undefined && task.service_value !== null && task.service_value !== "") {
-     baseValue = Number(task.service_value);
-  } else if (task.price) {
-     const priceStr = typeof task.price === 'string' ? task.price.replace(/[^0-9.,]/g, '').replace(',', '.') : String(task.price);
-     baseValue = (parseFloat(priceStr) || 0) * (Number(task.quantity) || 1);
-  }
-  return baseValue;
-};
-
-const processFinancialData = (tasks = []) => {
-  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
-  let pedidosGanhosReal = 0;
-  let pedidosPendentesValor = 0;
-
-  uniqueTasks.forEach(task => {
-    const totalValue = getTaskValue(task);
-    const isPaid = String(task.payment_status || '').toLowerCase().trim() === 'pago';
-    const isPartial = String(task.payment_status || '').toLowerCase().trim() === 'parcial';
-    const valorAdiantado = Number(task.valor_pago || 0);
-
-    if (isPaid) {
-      pedidosGanhosReal += totalValue;
-    } else if (isPartial || valorAdiantado > 0) {
-      pedidosGanhosReal += valorAdiantado;
-      pedidosPendentesValor += (totalValue - valorAdiantado);
-    } else {
-      pedidosPendentesValor += totalValue;
-    }
-  });
-
-  return { pedidosGanhosReal, pedidosPendentesValor };
-};
-
-const createCashAdjustment = async ({ difference, saldoBancario, caixaRealLimpo }) => {
-  if (difference === 0) return null;
-  const isPositive = difference > 0;
-  const absDiff = Math.abs(difference);
-  
-  const payload = {
-    title: `Ajuste de Caixa (${isPositive ? 'Entrada' : 'Saída'})`,
-    service_value: isPositive ? absDiff : -absDiff, 
-    priority: 'media',
-    status: 'concluida', 
-    payment_status: 'pago', 
-    description: `Ajuste automático para coincidir com saldo bancário de ${formatCurrency(Number(saldoBancario))}. Caixa sistema era ${formatCurrency(caixaRealLimpo)}.`
-  };
-
-  const { data, error } = await supabase.from('pedidos').insert([payload]).select().single();
-  if (error) throw error;
-  return data;
-};
-
-// ============================================================================
-// COMPONENTE PRINCIPAL
-// ============================================================================
-
 export default function Home() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [alertasDespesas, setAlertasDespesas] = useState([]);
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
 
+  // --- ESTADOS DO SALDO BANCÁRIO ---
   const [saldoBancario, setSaldoBancario] = useState(() => {
     const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
@@ -98,6 +31,7 @@ export default function Home() {
     despesas: { pagas: 0, pendentes: 0, count: 0 }
   });
 
+  // --- BUSCA OS PEDIDOS ---
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ["art-tasks"],
     queryFn: async () => {
@@ -107,9 +41,44 @@ export default function Home() {
     },
   });
 
-  // Mutação do Ajuste de Caixa
+  // --- FUNÇÕES DE CÁLCULO E FORMATAÇÃO (Protegidas dentro do componente) ---
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  };
+
+  const getTaskValue = (task) => {
+    const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
+    if (checklistTotal > 0) return checklistTotal;
+    let baseValue = 0;
+    if (task.service_value !== undefined && task.service_value !== null && task.service_value !== "") {
+       baseValue = Number(task.service_value);
+    } else if (task.price) {
+       const priceStr = typeof task.price === 'string' ? task.price.replace(/[^0-9.,]/g, '').replace(',', '.') : String(task.price);
+       baseValue = (parseFloat(priceStr) || 0) * (Number(task.quantity) || 1);
+    }
+    return baseValue;
+  };
+
+  // --- MUTAÇÃO DO AJUSTE DE CAIXA ---
   const adjustmentMutation = useMutation({
-    mutationFn: createCashAdjustment,
+    mutationFn: async ({ difference, saldo, caixa }) => {
+      if (difference === 0) return null;
+      const isPositive = difference > 0;
+      const absDiff = Math.abs(difference);
+      
+      const payload = {
+        title: `Ajuste de Caixa (${isPositive ? 'Entrada' : 'Saída'})`,
+        service_value: isPositive ? absDiff : -absDiff, 
+        priority: 'media',
+        status: 'concluida', 
+        payment_status: 'pago', 
+        description: `Ajuste automático para coincidir com saldo bancário de ${formatCurrency(Number(saldo))}. Caixa sistema era ${formatCurrency(caixa)}.`
+      };
+
+      const { data, error } = await supabase.from('pedidos').insert([payload]).select().single();
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["art-tasks"]);
       alert("Ajuste de caixa registrado com sucesso em Pedidos!");
@@ -119,6 +88,7 @@ export default function Home() {
     }
   });
 
+  // --- BUSCA OS DADOS GERAIS DO DASHBOARD ---
   useEffect(() => {
     async function fetchDashboardData() {
       try {
@@ -194,6 +164,7 @@ export default function Home() {
     if (!isLoadingTasks) fetchDashboardData();
   }, [isLoadingTasks, tasks]);
 
+
   if (loading || isLoadingTasks) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
@@ -203,7 +174,30 @@ export default function Home() {
     );
   }
 
-  const { pedidosGanhosReal, pedidosPendentesValor } = processFinancialData(tasks);
+  // --- PROCESSAMENTO FINANCEIRO ---
+  let pedidosGanhosReal = 0;
+  let pedidosPendentesValor = 0;
+
+  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
+  
+  uniqueTasks.forEach(task => {
+    const totalValue = getTaskValue(task);
+    const statusLower = String(task.status || '').toLowerCase().trim();
+    const paymentLower = String(task.payment_status || '').toLowerCase().trim();
+    
+    const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
+    const isPartial = paymentLower === 'parcial';
+    const valorAdiantado = Number(task.valor_pago || 0);
+
+    if (isPaid) {
+      pedidosGanhosReal += totalValue;
+    } else if (isPartial || valorAdiantado > 0) {
+      pedidosGanhosReal += valorAdiantado;
+      pedidosPendentesValor += (totalValue - valorAdiantado);
+    } else {
+      pedidosPendentesValor += totalValue;
+    }
+  });
 
   const faturamentoRealEntrado = data.clientes.pago + pedidosGanhosReal;
   const caixaRealLimpo = faturamentoRealEntrado - data.despesas.pagas;
@@ -221,7 +215,7 @@ export default function Home() {
       : `Deseja registrar uma SAÍDA (Valor Negativo) de ${formatCurrency(absDiff)} em Pedidos para igualar ao banco?`;
 
     if (window.confirm(msg)) {
-      adjustmentMutation.mutate({ difference: diferencaBanco, saldoBancario, caixaRealLimpo });
+      adjustmentMutation.mutate({ difference: diferencaBanco, saldo: saldoBancario, caixa: caixaRealLimpo });
     }
   };
 
@@ -254,6 +248,7 @@ export default function Home() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20 pt-4 md:pt-6 px-4 md:px-0">
       
+      {/* HEADER DA PÁGINA */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold md:font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2.5">
@@ -261,12 +256,13 @@ export default function Home() {
           </h1>
           <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">Resumo financeiro e métricas</p>
         </div>
-        <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
+        <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2 h-fit">
            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
            <span className="text-[9px] font-medium text-slate-500 uppercase tracking-widest">Sistema Online</span>
         </div>
       </div>
 
+      {/* NOTIFICAÇÕES DE CONTAS */}
       {alertasDespesas.length > 0 && (
         <div className="flex flex-wrap gap-2.5 mb-6">
           {alertasDespesas.map(alerta => {
@@ -281,7 +277,7 @@ export default function Home() {
               <Link 
                 key={alerta.id} 
                 to="/despesas" 
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border shadow-inner transition-all hover:scale-105 active:scale-95 ${
+                className={`tag-notificacao flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border shadow-inner transition-all hover:scale-105 active:scale-95 ${
                   isAtrasada 
                     ? 'bg-rose-50/70 border-rose-200 text-rose-700' 
                     : 'bg-amber-50/70 border-amber-200 text-amber-700'
@@ -300,7 +296,9 @@ export default function Home() {
         </div>
       )}
 
+      {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
+         {/* Cartão 1: Total Entrou - VERDE */}
          <div className="bg-emerald-600 rounded-2xl p-4 md:p-5 border border-emerald-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -308,11 +306,12 @@ export default function Home() {
              <TrendingUp size={16} className="text-emerald-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-black text-emerald-100/80 uppercase tracking-widest mb-1.5">Faturamento Real Entrado</p>
-             <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">{formatCurrency(faturamentoRealEntrado)}</h3>
+             <p className="text-[10px] font-semibold text-emerald-100/80 uppercase tracking-widest mb-1.5">Faturamento Real Entrado</p>
+             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(faturamentoRealEntrado)}</h3>
            </div>
          </div>
 
+         {/* Cartão 2: Total Saiu - VERMELHO */}
          <div className="bg-rose-600 rounded-2xl p-4 md:p-5 border border-rose-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -320,11 +319,12 @@ export default function Home() {
              <ArrowDownRight size={16} className="text-rose-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-black text-rose-100/80 uppercase tracking-widest mb-1.5">Total das Despesas Pagas</p>
-             <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">{formatCurrency(data.despesas.pagas)}</h3>
+             <p className="text-[10px] font-semibold text-rose-100/80 uppercase tracking-widest mb-1.5">Total das Despesas Pagas</p>
+             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(data.despesas.pagas)}</h3>
            </div>
          </div>
 
+         {/* Cartão 3: A Receber (Pedidos) - AZUL */}
          <Link to="/pedidos" className="bg-blue-600 rounded-2xl p-4 md:p-5 border border-blue-700 shadow-xl hover:shadow-2xl transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><Palette size={100}/></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -332,35 +332,37 @@ export default function Home() {
              <Users size={16} className="text-blue-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-black text-blue-100/80 uppercase tracking-widest mb-1.5">A Receber (Trabalhos)</p>
-             <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">{formatCurrency(pedidosPendentesValor)}</h3>
+             <p className="text-[10px] font-semibold text-blue-100/80 uppercase tracking-widest mb-1.5">A Receber (Trabalhos)</p>
+             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(pedidosPendentesValor)}</h3>
            </div>
          </Link>
       </div>
 
+      {/* CAMADA 2: ANÁLISE DE FLUXO DE CAIXA E PROJEÇÕES */}
       <div className="bg-slate-900 rounded-2xl p-6 md:p-8 shadow-lg relative overflow-hidden flex flex-col border border-slate-800">
         <div className="absolute top-0 right-0 p-8 opacity-[0.02]"><Target size={180} /></div>
         
         <div className="relative z-10 mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
            <div className="w-8 h-8 rounded-full bg-indigo-500/90 text-white flex items-center justify-center shadow-sm"><Sparkles size={16} /></div>
            <div>
-              <h2 className="text-sm md:text-base font-black text-white uppercase tracking-tight">Fluxo de Caixa</h2>
+              <h2 className="text-sm md:text-base font-semibold text-white uppercase tracking-tight">Fluxo de Caixa</h2>
               <p className="text-[9px] font-medium uppercase tracking-widest text-slate-400">Consultor financeiro automático</p>
            </div>
         </div>
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
            
+           {/* Saldo e Ajuste de Banco */}
            <div className={`p-5 md:p-6 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden transition-all ${caixaRealLimpo >= 0 ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-rose-950/20 border-rose-800/40'}`}>
               <div>
-                 <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Caixa Livre (Sistema)</h3>
-                 <p className={`text-3xl md:text-4xl font-black tracking-tight ${caixaRealLimpo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                 <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Caixa Livre (Sistema)</h3>
+                 <p className={`text-3xl md:text-4xl font-semibold tracking-tight ${caixaRealLimpo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                    {formatCurrency(caixaRealLimpo)}
                  </p>
                  
                  <div className="mt-6 pt-5 border-t border-slate-800/50 space-y-3">
                    <div className="flex items-center justify-between gap-3">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5 whitespace-nowrap"><Target size={12}/> Banco Real</label>
+                     <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-1.5 whitespace-nowrap"><Target size={12}/> Banco Real</label>
                      <div className="relative flex-1">
                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-[11px]">R$</span>
                        <input 
@@ -374,16 +376,16 @@ export default function Home() {
                    </div>
 
                    {saldoBancario !== '' && diferencaBanco !== 0 && (
-                      <div className="mt-3 flex items-center justify-between text-[11px] font-black uppercase tracking-widest bg-black/10 p-2 rounded-lg border border-slate-700">
+                      <div className="mt-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-widest bg-black/10 p-2 rounded-lg border border-slate-700">
                          <span className="text-slate-500">Diferença:</span>
                          <div className="flex items-center gap-3">
-                           <span className={`text-[11px] font-black ${diferencaBanco >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                           <span className={`text-[11px] font-semibold ${diferencaBanco >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                              {diferencaBanco >= 0 ? '+' : ''}{formatCurrency(diferencaBanco)}
                            </span>
                            <button 
                              onClick={handleRegistrarAjuste} 
                              disabled={adjustmentMutation.isPending}
-                             className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest text-white rounded transition-colors shadow-sm cursor-pointer disabled:opacity-50 ${
+                             className={`px-3 py-1 text-[8px] font-semibold uppercase tracking-widest text-white rounded transition-colors shadow-sm cursor-pointer disabled:opacity-50 ${
                                adjustmentMutation.isPending ? 'bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'
                              }`}
                             >
@@ -396,31 +398,33 @@ export default function Home() {
               </div>
            </div>
 
+           {/* Reserva e Ação */}
            <div className="flex flex-col gap-4">
              <div className="bg-slate-800/40 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-center">
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-amber-500/80 flex items-center gap-1.5"><Printer size={14}/> Fundo Reserva</h3>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest text-amber-500/80 flex items-center gap-1.5"><Printer size={14}/> Fundo Reserva</h3>
                 </div>
-                <p className="text-2xl font-black text-amber-400/90">{formatCurrency(depreciacaoTotal)}</p>
+                <p className="text-2xl font-semibold text-amber-400/90">{formatCurrency(depreciacaoTotal)}</p>
              </div>
 
              <div className="bg-slate-800/40 p-5 rounded-xl border border-slate-700/50 flex-1">
-               <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3.5 flex items-center gap-1.5"><ShieldCheck size={14} className="text-blue-400"/> Projeção Mês</h3>
+               <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3.5 flex items-center gap-1.5"><ShieldCheck size={14} className="text-blue-400"/> Projeção Mês</h3>
                <div className="flex flex-col gap-2.5">
                  <div className="flex justify-between items-center text-xs">
-                   <span className="text-emerald-400/90 font-black uppercase text-[10px] tracking-widest">+ A Receber:</span>
+                   <span className="text-emerald-400/90 font-semibold uppercase text-[10px] tracking-widest">+ A Receber:</span>
                    <span className="font-semibold text-slate-300">{formatCurrency(faturamentoPendenteTotal)}</span>
                  </div>
                  <div className="flex justify-between items-center text-xs">
-                   <span className="text-rose-400/90 font-black uppercase text-[10px] tracking-widest">- Contas:</span>
+                   <span className="text-rose-400/90 font-semibold uppercase text-[10px] tracking-widest">- Contas:</span>
                    <span className="font-semibold text-slate-300">{formatCurrency(contasAPagar)}</span>
                  </div>
                </div>
              </div>
            </div>
 
+           {/* Dica de Ação */}
            <div className={`md:col-span-2 text-xs font-medium leading-relaxed p-4 rounded-xl bg-slate-950/40 border border-slate-800/60 shadow-inner ${corDica}`}>
-             <span className="font-black uppercase tracking-widest opacity-70 block mb-1 text-[10px]">💡 Dica do Sistema:</span>
+             <span className="font-semibold uppercase tracking-widest opacity-70 block mb-1 text-[10px]">💡 Dica do Sistema:</span>
              {dicaAcao}
            </div>
 
