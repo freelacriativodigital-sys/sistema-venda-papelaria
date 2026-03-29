@@ -266,8 +266,8 @@ export default function ProdutoModal({
           </Button>
         </div>
 
-        {/* NAVEGAÇÃO DE ABAS FIXADA NO TOPO */}
-        <div className="max-w-6xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap pt-1">
+        {/* NAVEGAÇÃO DE ABAS FIXADA NO TOPO (Apenas Desktop) */}
+        <div className="hidden md:flex max-w-6xl mx-auto px-4 gap-2 overflow-x-auto no-scrollbar whitespace-nowrap pt-1">
            {[
              { id: 'dados', label: 'Dados Básicos' }, 
              { id: 'variacoes', label: 'Variações' }, 
@@ -282,7 +282,7 @@ export default function ProdutoModal({
       </div>
 
       {/* CORPO PRINCIPAL DA PÁGINA */}
-      <div className="flex-1 w-full max-w-6xl mx-auto p-4 pb-24">
+      <div className="flex-1 w-full max-w-6xl mx-auto p-4 pb-[80px] md:pb-24">
 
         {/* TAB 1: DADOS BÁSICOS */}
         {drawerTab === 'dados' && (
@@ -646,6 +646,25 @@ export default function ProdutoModal({
           </div>
         )}
 
+      </div>
+
+      {/* --- MENU INFERIOR FIXO PARA MOBILE --- */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 h-[64px] bg-white border-t border-slate-200 flex items-center justify-around z-[100] pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
+        {[
+          { id: 'dados', icon: ShoppingBag, label: 'Dados' },
+          { id: 'variacoes', icon: Layers, label: 'Variações' },
+          { id: 'atacado', icon: Box, label: 'Atacado' },
+          { id: 'personalizacao', icon: FileText, label: 'Campos' }
+        ].map(tab => (
+          <button 
+            key={tab.id} 
+            onClick={() => setDrawerTab(tab.id)} 
+            className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${drawerTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+             <tab.icon size={18} className={drawerTab === tab.id ? 'animate-pulse' : ''} />
+             <span className="text-[8px] font-semibold uppercase tracking-wider">{tab.label}</span>
+          </button>
+        ))}
       </div>
     </motion.div>
   );
