@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
-  ShoppingBag, Save, Trash2, Plus, X, Layers, Box, FileText, Image, GripVertical, Loader2, Star, Calculator, DollarSign, Clock
+  ShoppingBag, Save, Trash2, Plus, X, Layers, Box, FileText, Image, 
+  GripVertical, Loader2, Star, Calculator, DollarSign, Clock, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +176,7 @@ export default function ProdutoModal({
         </div>
       </div>
 
-      {/* VALORES REAIS NA LOJA (AGORA COM ALINHAMENTO MILIMÉTRICO) */}
+      {/* VALORES REAIS NA LOJA */}
       <div className="space-y-4 pt-2">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -247,408 +248,415 @@ export default function ProdutoModal({
   );
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full h-full md:h-auto md:max-w-5xl bg-[#f8fafc] md:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:max-h-[90vh]">
-        
-        {/* HEADER MODAL */}
-        <div className="bg-white border-b border-slate-200 p-4 md:p-5 flex items-center justify-between gap-4 shrink-0 shadow-sm z-10 relative">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100"><ShoppingBag className="text-blue-600 w-5 h-5" /></div>
+    <motion.div 
+      initial={{ opacity: 0, x: '10%' }} 
+      animate={{ opacity: 1, x: 0 }} 
+      exit={{ opacity: 0, x: '10%' }} 
+      transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+      className="fixed inset-0 z-[200] bg-[#f8fafc] overflow-y-auto flex flex-col"
+    >
+      
+      {/* HEADER FIXO ESTILO PÁGINA */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+              <ArrowLeft size={22} />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 hidden sm:flex items-center justify-center border border-blue-100">
+               <ShoppingBag className="text-blue-600 w-5 h-5" />
+            </div>
             <div>
-              <h2 className="text-base md:text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Produto</h2>
-              <p className="text-[10px] text-slate-500 font-semibold uppercase mt-1 line-clamp-1">{editingProduct?.nome || 'Novo Cadastro'}</p>
+              <h2 className="text-lg md:text-2xl font-black text-slate-800 uppercase tracking-tight leading-none">Produto</h2>
+              <p className="text-[10px] md:text-[11px] text-slate-500 font-bold uppercase mt-1 tracking-widest line-clamp-1">{editingProduct?.nome || 'Novo Cadastro'}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="rounded-lg font-bold text-[10px] md:text-xs uppercase text-slate-500 h-10 md:h-11 border border-slate-200 hover:bg-slate-50 hidden sm:flex">Cancelar</Button>
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white h-10 md:h-11 px-6 rounded-lg font-bold uppercase text-[10px] md:text-xs shadow-md transition-colors"><Save size={16} className="mr-1.5"/> Salvar</Button>
-          </div>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white h-11 px-6 md:px-8 rounded-lg font-bold uppercase text-[10px] md:text-xs shadow-md transition-colors">
+            <Save size={16} className="mr-2"/> Salvar
+          </Button>
         </div>
 
-        {/* NAVEGAÇÃO DE ABAS */}
-        <div className="bg-white border-b border-slate-200 px-4 py-3 shrink-0 relative z-0">
-           <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap snap-x">
-             {[
-               { id: 'dados', label: 'Dados Básicos' }, 
-               { id: 'variacoes', label: 'Variações' }, 
-               { id: 'atacado', label: 'Atacado' }, 
-               { id: 'personalizacao', label: 'Personalização' }
-             ].map((tab) => ( 
-               <button key={tab.id} onClick={() => setDrawerTab(tab.id)} className={`px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-[11px] font-bold uppercase tracking-widest transition-all snap-start shrink-0 ${drawerTab === tab.id ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200'}`}>
-                 {tab.label}
-               </button>
-             ))}
-           </div>
+        {/* NAVEGAÇÃO DE ABAS FIXADA NO TOPO */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap pt-2">
+           {[
+             { id: 'dados', label: 'Dados Básicos' }, 
+             { id: 'variacoes', label: 'Variações' }, 
+             { id: 'atacado', label: 'Atacado' }, 
+             { id: 'personalizacao', label: 'Personalização' }
+           ].map((tab) => ( 
+             <button key={tab.id} onClick={() => setDrawerTab(tab.id)} className={`px-5 py-3 rounded-t-xl text-[10px] md:text-[11px] font-bold uppercase tracking-widest transition-all shrink-0 border border-b-0 ${drawerTab === tab.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-transparent text-slate-500 border-transparent hover:text-slate-800 hover:bg-slate-100'}`}>
+               {tab.label}
+             </button>
+           ))}
         </div>
+      </div>
 
-        {/* CORPO DO MODAL */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+      {/* CORPO PRINCIPAL DA PÁGINA */}
+      <div className="flex-1 w-full max-w-6xl mx-auto p-4 md:p-6 pb-24">
 
-          {/* TAB 1: DADOS BÁSICOS (COM PRECIFICAÇÃO INTEGRADA) */}
-          {drawerTab === 'dados' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 animate-in fade-in duration-300">
-              
-              {/* LADO ESQUERDO: Dados Essenciais + Galeria + Organização */}
-              <div className="lg:col-span-7 flex flex-col gap-5 md:gap-6">
-                 
-                 <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                    <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">1. Informações Essenciais</h3>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 ml-0.5 tracking-widest">Nome do Produto *</label>
-                      <Input value={editingProduct?.nome || ''} onChange={(e) => setEditingProduct({...editingProduct, nome: e.target.value})} className="h-11 bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-800 text-sm focus:bg-white" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase text-slate-500 ml-0.5 tracking-widest">Descrição Detalhada</label>
-                      <textarea value={editingProduct?.descricao || ''} onChange={(e) => setEditingProduct({...editingProduct, descricao: e.target.value})} placeholder="Escreva os detalhes e diferenciais do seu produto..." className="w-full min-h-[140px] p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs md:text-sm font-medium text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-all resize-none leading-relaxed" />
-                    </div>
-                 </div>
+        {/* TAB 1: DADOS BÁSICOS (COM PRECIFICAÇÃO INTEGRADA) */}
+        {drawerTab === 'dados' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 animate-in fade-in duration-300">
+            
+            {/* LADO ESQUERDO: Dados Essenciais + Galeria + Organização */}
+            <div className="lg:col-span-7 flex flex-col gap-5 md:gap-6">
+               
+               <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">1. Informações Essenciais</h3>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-slate-500 ml-0.5 tracking-widest">Nome do Produto *</label>
+                    <Input value={editingProduct?.nome || ''} onChange={(e) => setEditingProduct({...editingProduct, nome: e.target.value})} className="h-11 bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-800 text-sm focus:bg-white" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-slate-500 ml-0.5 tracking-widest">Descrição Detalhada</label>
+                    <textarea value={editingProduct?.descricao || ''} onChange={(e) => setEditingProduct({...editingProduct, descricao: e.target.value})} placeholder="Escreva os detalhes e diferenciais do seu produto..." className="w-full min-h-[140px] p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs md:text-sm font-medium text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-all resize-none leading-relaxed" />
+                  </div>
+               </div>
 
-                 {/* No Mobile, a precificação aparece aqui no meio para fluidez lógica */}
-                 <div className="block lg:hidden">
-                    <BlocoPrecificacao />
-                 </div>
+               {/* No Mobile, a precificação aparece aqui no meio para fluidez lógica */}
+               <div className="block lg:hidden">
+                  <BlocoPrecificacao />
+               </div>
 
-                 <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                    <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">2. Galeria de Fotos</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                      {editingProduct?.imagens?.map((img, index) => (
-                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group shadow-sm">
-                          <img src={img} className="w-full h-full object-cover" />
-                          <button onClick={() => setEditingProduct(prev => ({...prev, imagens: prev.imagens.filter((_, i) => i !== index)}))} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-105"><X size={12} /></button>
-                        </div>
-                      ))}
-                      
-                      <input type="file" ref={fileInputRef} onChange={async (e) => {
-                        const files = Array.from(e.target.files);
-                        setIsUploadingImages(true);
-                        for (const file of files) {
-                          try {
-                            const blob = await compressImageToBlob(file); 
-                            const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-                            const { data, error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
-                            if (error) throw error;
-                            const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
-                            setEditingProduct(prev => ({ ...prev, imagens: [...(prev.imagens || []), publicUrlData.publicUrl] }));
-                          } catch (err) { alert("Erro ao subir imagem: " + err.message); }
-                        }
-                        setIsUploadingImages(false);
-                      }} className="hidden" multiple accept="image/*" />
-                      
-                      <button disabled={isUploadingImages} onClick={() => fileInputRef.current.click()} className="aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all bg-slate-50">
-                        {isUploadingImages ? (
-                          <><Loader2 size={20} className="animate-spin text-blue-500" /><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Enviando</span></>
-                        ) : (
-                          <><Plus size={24} /><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Add Foto</span></>
-                        )}
-                      </button>
-                    </div>
-                 </div>
-                 
-                 <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
-                    <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">3. Organização e Visibilidade</h3>
-                    <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      <div>
-                         <p className="text-[11px] font-bold uppercase text-slate-800 mb-0.5">Visível no Site</p>
-                         <p className="text-[9px] text-slate-500 font-medium uppercase tracking-widest">Exibir na vitrine pública</p>
+               <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">2. Galeria de Fotos</h3>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {editingProduct?.imagens?.map((img, index) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group shadow-sm">
+                        <img src={img} className="w-full h-full object-cover" />
+                        <button onClick={() => setEditingProduct(prev => ({...prev, imagens: prev.imagens.filter((_, i) => i !== index)}))} className="absolute top-1.5 right-1.5 bg-red-500 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-105"><X size={12} /></button>
                       </div>
-                      <button onClick={() => setEditingProduct({...editingProduct, statusOnline: !editingProduct.statusOnline})} className={`w-12 h-6 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.statusOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                        <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editingProduct?.statusOnline ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between bg-amber-50 p-4 rounded-xl border border-amber-100">
-                      <div>
-                         <p className="text-[11px] font-bold uppercase text-amber-900 mb-0.5 flex items-center gap-1.5"><Star size={12} className="text-amber-500" fill="currentColor"/> Destaque</p>
-                         <p className="text-[9px] text-amber-700/70 font-medium uppercase tracking-widest">Fixar no topo do catálogo</p>
-                      </div>
-                      <button onClick={() => setEditingProduct({...editingProduct, destaque: !editingProduct.destaque})} className={`w-12 h-6 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.destaque ? 'bg-amber-400' : 'bg-amber-200/50'}`}>
-                        <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editingProduct?.destaque ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5 text-left">
-                        <div className="flex justify-between items-end h-4 ml-0.5">
-                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Categoria</label>
-                          <button onClick={() => setIsCategoryModalOpen(true)} className="text-[9px] font-bold text-blue-600 hover:underline uppercase">Gerenciar</button>
-                        </div>
-                        <select value={editingProduct?.categoria || ''} onChange={(e) => setEditingProduct({...editingProduct, categoria: e.target.value})} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-3 text-[10px] font-bold uppercase outline-none focus:ring-1 focus:ring-blue-400 text-slate-700">
-                          {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-1.5 text-left">
-                        <div className="flex items-end h-4 ml-0.5">
-                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Código SKU</label>
-                        </div>
-                        <Input value={editingProduct?.sku || ''} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} placeholder="Ex: PROD-01" className="h-11 border-slate-200 bg-slate-50 rounded-lg font-bold uppercase text-xs" />
-                      </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* LADO DIREITO: Precificação (Desktop Fixo) */}
-              <div className="hidden lg:flex lg:col-span-5 flex-col">
-                 <div className="sticky top-0">
-                   <BlocoPrecificacao />
-                 </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* TAB 3: VARIAÇÕES */}
-          {drawerTab === 'variacoes' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <InfoReferencia />
-              <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm">
-                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-blue-50 p-2 rounded-lg"><Layers className="text-blue-600 w-5 h-5" /></div>
-                      <span className="font-black text-sm uppercase tracking-widest text-slate-800">Variações do Produto</span>
-                    </div>
-                    <button onClick={() => setEditingProduct({...editingProduct, variacoes: {...editingProduct.variacoes, ativa: !editingProduct.variacoes?.ativa}})} className={`w-14 h-7 rounded-full p-1 transition-all shadow-inner ${editingProduct?.variacoes?.ativa ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                      <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${editingProduct?.variacoes?.ativa ? 'translate-x-7' : 'translate-x-0'}`} />
+                    ))}
+                    
+                    <input type="file" ref={fileInputRef} onChange={async (e) => {
+                      const files = Array.from(e.target.files);
+                      setIsUploadingImages(true);
+                      for (const file of files) {
+                        try {
+                          const blob = await compressImageToBlob(file); 
+                          const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                          const { data, error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
+                          if (error) throw error;
+                          const { data: publicUrlData } = supabase.storage.from('produtos').getPublicUrl(fileName);
+                          setEditingProduct(prev => ({ ...prev, imagens: [...(prev.imagens || []), publicUrlData.publicUrl] }));
+                        } catch (err) { alert("Erro ao subir imagem: " + err.message); }
+                      }
+                      setIsUploadingImages(false);
+                    }} className="hidden" multiple accept="image/*" />
+                    
+                    <button disabled={isUploadingImages} onClick={() => fileInputRef.current.click()} className="aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all bg-slate-50">
+                      {isUploadingImages ? (
+                        <><Loader2 size={20} className="animate-spin text-blue-500" /><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Enviando</span></>
+                      ) : (
+                        <><Plus size={24} /><span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Add Foto</span></>
+                      )}
                     </button>
-                 </div>
-                 
-                 {editingProduct?.variacoes?.ativa && (
-                   <div className="space-y-6">
-                     <input type="file" ref={opcaoImgRef} className="hidden" accept="image/*" onChange={handleOpcaoImgChange} />
-                     {editingProduct.variacoes.atributos?.map((atrib) => (
-                       <div key={atrib.id} className="bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-200 space-y-4 md:space-y-5 shadow-sm">
-                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-                           <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
-                             <GripVertical size={16} className="text-slate-300 cursor-grab shrink-0 hidden sm:block" />
-                             <div className="w-full sm:max-w-sm">
-                               <p className="text-[10px] font-bold uppercase text-slate-500 mb-1.5 tracking-widest ml-0.5">Nome do Atributo</p>
-                               <Input 
-                                 value={atrib.nome} 
-                                 onChange={(e) => setEditingProduct(prev => ({
-                                   ...prev, 
-                                   variacoes: {
-                                     ...prev.variacoes, 
-                                    atributos: prev.variacoes.atributos.map(a => a.id === atrib.id ? {...a, nome: e.target.value} : a)
-                                   }
-                                 }))} 
-                                 className="h-11 bg-white border-slate-200 text-xs font-bold uppercase text-slate-800 rounded-lg w-full shadow-sm"
-                               />
-                             </div>
+                  </div>
+               </div>
+               
+               <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                  <h3 className="text-xs font-black uppercase text-slate-800 border-b border-slate-100 pb-3">3. Organização e Visibilidade</h3>
+                  <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                       <p className="text-[11px] font-bold uppercase text-slate-800 mb-0.5">Visível no Site</p>
+                       <p className="text-[9px] text-slate-500 font-medium uppercase tracking-widest">Exibir na vitrine pública</p>
+                    </div>
+                    <button onClick={() => setEditingProduct({...editingProduct, statusOnline: !editingProduct.statusOnline})} className={`w-12 h-6 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.statusOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editingProduct?.statusOnline ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <div>
+                       <p className="text-[11px] font-bold uppercase text-amber-900 mb-0.5 flex items-center gap-1.5"><Star size={12} className="text-amber-500" fill="currentColor"/> Destaque</p>
+                       <p className="text-[9px] text-amber-700/70 font-medium uppercase tracking-widest">Fixar no topo do catálogo</p>
+                    </div>
+                    <button onClick={() => setEditingProduct({...editingProduct, destaque: !editingProduct.destaque})} className={`w-12 h-6 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.destaque ? 'bg-amber-400' : 'bg-amber-200/50'}`}>
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${editingProduct?.destaque ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 text-left">
+                      <div className="flex justify-between items-end h-4 ml-0.5">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Categoria</label>
+                        <button onClick={() => setIsCategoryModalOpen(true)} className="text-[9px] font-bold text-blue-600 hover:underline uppercase">Gerenciar</button>
+                      </div>
+                      <select value={editingProduct?.categoria || ''} onChange={(e) => setEditingProduct({...editingProduct, categoria: e.target.value})} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-3 text-[10px] font-bold uppercase outline-none focus:ring-1 focus:ring-blue-400 text-slate-700">
+                        {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                      <div className="flex items-end h-4 ml-0.5">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Código SKU</label>
+                      </div>
+                      <Input value={editingProduct?.sku || ''} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} placeholder="Ex: PROD-01" className="h-11 border-slate-200 bg-slate-50 rounded-lg font-bold uppercase text-xs" />
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* LADO DIREITO: Precificação (Desktop Fixo) */}
+            <div className="hidden lg:flex lg:col-span-5 flex-col">
+               <div className="sticky top-28">
+                 <BlocoPrecificacao />
+               </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: VARIAÇÕES */}
+        {drawerTab === 'variacoes' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <InfoReferencia />
+            <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm">
+               <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-50 p-2 rounded-lg"><Layers className="text-blue-600 w-5 h-5" /></div>
+                    <span className="font-black text-sm uppercase tracking-widest text-slate-800">Variações do Produto</span>
+                  </div>
+                  <button onClick={() => setEditingProduct({...editingProduct, variacoes: {...editingProduct.variacoes, ativa: !editingProduct.variacoes?.ativa}})} className={`w-14 h-7 rounded-full p-1 transition-all shadow-inner ${editingProduct?.variacoes?.ativa ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${editingProduct?.variacoes?.ativa ? 'translate-x-7' : 'translate-x-0'}`} />
+                  </button>
+               </div>
+               
+               {editingProduct?.variacoes?.ativa && (
+                 <div className="space-y-6">
+                   <input type="file" ref={opcaoImgRef} className="hidden" accept="image/*" onChange={handleOpcaoImgChange} />
+                   {editingProduct.variacoes.atributos?.map((atrib) => (
+                     <div key={atrib.id} className="bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-200 space-y-4 md:space-y-5 shadow-sm">
+                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+                         <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+                           <GripVertical size={16} className="text-slate-300 cursor-grab shrink-0 hidden sm:block" />
+                           <div className="w-full sm:max-w-sm">
+                             <p className="text-[10px] font-bold uppercase text-slate-500 mb-1.5 tracking-widest ml-0.5">Nome do Atributo</p>
+                             <Input 
+                               value={atrib.nome} 
+                               onChange={(e) => setEditingProduct(prev => ({
+                                 ...prev, 
+                                 variacoes: {
+                                   ...prev.variacoes, 
+                                  atributos: prev.variacoes.atributos.map(a => a.id === atrib.id ? {...a, nome: e.target.value} : a)
+                                 }
+                               }))} 
+                               className="h-11 bg-white border-slate-200 text-xs font-bold uppercase text-slate-800 rounded-lg w-full shadow-sm"
+                             />
                            </div>
-                           <Button 
-                             variant="destructive"
-                             onClick={() => setEditingProduct(prev => ({
-                               ...prev, 
-                               variacoes: {
-                                 ...prev.variacoes, 
-                                 atributos: prev.variacoes.atributos.filter(a => a.id !== atrib.id)
-                               }
-                             }))} 
-                             className="h-11 rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold uppercase text-[10px] md:text-[11px] gap-1.5 shadow-none border border-red-100 w-full sm:w-auto transition-colors"
-                           >
-                             <Trash2 size={14} /> Excluir Atributo
-                           </Button>
                          </div>
+                         <Button 
+                           variant="destructive"
+                           onClick={() => setEditingProduct(prev => ({
+                             ...prev, 
+                             variacoes: {
+                               ...prev.variacoes, 
+                               atributos: prev.variacoes.atributos.filter(a => a.id !== atrib.id)
+                             }
+                           }))} 
+                           className="h-11 rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold uppercase text-[10px] md:text-[11px] gap-1.5 shadow-none border border-red-100 w-full sm:w-auto transition-colors"
+                         >
+                           <Trash2 size={14} /> Excluir Atributo
+                         </Button>
+                       </div>
 
-                         <div className="grid grid-cols-1 gap-4">
-                           {atrib.opcoes.map((opcao) => (
-                             <div key={opcao.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative flex flex-col sm:flex-row items-center gap-5 group hover:border-blue-300 transition-colors">
-                               <div 
-                                 onClick={() => triggerOpcaoUpload(atrib.id, opcao.id)} 
-                                 className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0"
-                               >
-                                 {opcao.imagem ? <img src={opcao.imagem} className="w-full h-full object-cover" /> : <><Image size={18} className="mb-0.5"/><span className="text-[8px] font-bold uppercase tracking-widest">Foto</span></>}
+                       <div className="grid grid-cols-1 gap-4">
+                         {atrib.opcoes.map((opcao) => (
+                           <div key={opcao.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative flex flex-col sm:flex-row items-center gap-5 group hover:border-blue-300 transition-colors">
+                             <div 
+                               onClick={() => triggerOpcaoUpload(atrib.id, opcao.id)} 
+                               className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0"
+                             >
+                               {opcao.imagem ? <img src={opcao.imagem} className="w-full h-full object-cover" /> : <><Image size={18} className="mb-0.5"/><span className="text-[8px] font-bold uppercase tracking-widest">Foto</span></>}
+                             </div>
+
+                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                               <div className="space-y-1.5">
+                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Nome da Opção</p>
+                                 <Input 
+                                   value={opcao.nome} 
+                                   onChange={(e) => updateOpcao(atrib.id, opcao.id, 'nome', e.target.value)} 
+                                   className="h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 focus:bg-white border-slate-200" 
+                                 />
                                </div>
-
-                               <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-                                 <div className="space-y-1.5">
-                                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Nome da Opção</p>
+                               <div className="space-y-1.5">
+                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Custo R$</p>
+                                 <div className="relative">
+                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-xs">R$</span>
                                    <Input 
-                                     value={opcao.nome} 
-                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'nome', e.target.value)} 
-                                     className="h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 focus:bg-white border-slate-200" 
+                                     type="number" 
+                                     value={opcao.custo} 
+                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', Number(e.target.value))} 
+                                     className="pl-8 h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 border-slate-200 focus:border-slate-300 focus:bg-white" 
                                    />
                                  </div>
-                                 <div className="space-y-1.5">
-                                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Custo R$</p>
-                                   <div className="relative">
-                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-xs">R$</span>
-                                     <Input 
-                                       type="number" 
-                                       value={opcao.custo} 
-                                       onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', Number(e.target.value))} 
-                                       className="pl-8 h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 border-slate-200 focus:border-slate-300 focus:bg-white" 
-                                     />
-                                   </div>
-                                 </div>
-                                 <div className="space-y-1.5">
-                                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5 flex justify-between">
-                                      <span>Preço Ajustado R$</span>
-                                      {opcao.preco > 0 && editingProduct?.preco > 0 && (
-                                        <span className="text-amber-500">-{calcularDescontoAtacado(opcao.preco, editingProduct.preco)}%</span>
-                                      )}
-                                   </p>
-                                   <div className="relative">
-                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 font-semibold text-xs">R$</span>
-                                     <Input 
-                                       type="number" 
-                                       value={opcao.preco} 
-                                       onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', Number(e.target.value))} 
-                                       className="pl-8 h-11 text-xs font-black text-blue-700 rounded-lg bg-blue-50/50 border-blue-100 focus:border-blue-300 focus:bg-white" 
-                                     />
-                                   </div>
+                               </div>
+                               <div className="space-y-1.5">
+                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5 flex justify-between">
+                                    <span>Preço Ajustado R$</span>
+                                    {opcao.preco > 0 && editingProduct?.preco > 0 && (
+                                      <span className="text-amber-500">-{calcularDescontoAtacado(opcao.preco, editingProduct.preco)}%</span>
+                                    )}
+                                 </p>
+                                 <div className="relative">
+                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 font-semibold text-xs">R$</span>
+                                   <Input 
+                                     type="number" 
+                                     value={opcao.preco} 
+                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', Number(e.target.value))} 
+                                     className="pl-8 h-11 text-xs font-black text-blue-700 rounded-lg bg-blue-50/50 border-blue-100 focus:border-blue-300 focus:bg-white" 
+                                   />
                                  </div>
                                </div>
-
-                               <button 
-                                 onClick={() => removerOpcao(atrib.id, opcao.id)} 
-                                 className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-lg shadow-sm transition-transform active:scale-90 hover:bg-red-600"
-                               >
-                                 <X size={12} />
-                               </button>
                              </div>
-                           ))}
-                           
-                           <Button 
-                             onClick={() => adicionarOpcao(atrib.id)} 
-                             variant="outline" 
-                             className="w-full h-11 border-dashed border-2 border-slate-200 rounded-xl flex items-center justify-center gap-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all font-bold text-[10px] uppercase mt-1 bg-white"
-                           >
-                             <Plus size={16} /> Adicionar Nova Opção
-                           </Button>
-                         </div>
-                       </div>
-                     ))}
 
-                     <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
-                       <p className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Criar Novo Grupo de Variação</p>
-                       <div className="flex flex-col sm:flex-row gap-3">
-                         <Input 
-                           placeholder="Ex: Tamanho da Camiseta" 
-                           value={novoAtributoNome} 
-                           onChange={(e) => setNovoAtributoNome(e.target.value)} 
-                           className="h-12 border-slate-200 bg-white rounded-lg font-bold w-full text-sm shadow-sm" 
-                         />
+                             <button 
+                               onClick={() => removerOpcao(atrib.id, opcao.id)} 
+                               className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-lg shadow-sm transition-transform active:scale-90 hover:bg-red-600"
+                             >
+                               <X size={12} />
+                             </button>
+                           </div>
+                         ))}
+                         
                          <Button 
-                           onClick={adicionarAtributo} 
-                           className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] md:text-xs px-8 gap-1.5 w-full sm:w-auto shadow-sm"
+                           onClick={() => adicionarOpcao(atrib.id)} 
+                           variant="outline" 
+                           className="w-full h-11 border-dashed border-2 border-slate-200 rounded-xl flex items-center justify-center gap-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all font-bold text-[10px] uppercase mt-1 bg-white"
                          >
-                           <Plus size={16} /> Adicionar Grupo
+                           <Plus size={16} /> Adicionar Nova Opção
                          </Button>
                        </div>
                      </div>
+                   ))}
+
+                   <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
+                     <p className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Criar Novo Grupo de Variação</p>
+                     <div className="flex flex-col sm:flex-row gap-3">
+                       <Input 
+                         placeholder="Ex: Tamanho da Camiseta" 
+                         value={novoAtributoNome} 
+                         onChange={(e) => setNovoAtributoNome(e.target.value)} 
+                         className="h-12 border-slate-200 bg-white rounded-lg font-bold w-full text-sm shadow-sm" 
+                       />
+                       <Button 
+                         onClick={adicionarAtributo} 
+                         className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] md:text-xs px-8 gap-1.5 w-full sm:w-auto shadow-sm"
+                       >
+                         <Plus size={16} /> Adicionar Grupo
+                       </Button>
+                     </div>
                    </div>
-                 )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: ATACADO */}
-          {drawerTab === 'atacado' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <InfoReferencia />
-              <div className="bg-white border border-slate-200 rounded-lg p-5 md:p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
-                  <div className="flex items-center gap-3 text-slate-800">
-                    <div className="bg-amber-50 p-2 rounded-lg"><Box size={20} className="text-amber-500" /></div>
-                    <div>
-                      <h3 className="font-black text-sm uppercase text-slate-800 tracking-widest">Preços de Atacado</h3>
-                      <p className="text-[9px] text-slate-500 font-medium uppercase tracking-widest mt-0.5">Descontos automáticos por quantidade</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setEditingProduct(prev => ({...prev, atacado: {...prev.atacado, ativa: !prev.atacado?.ativa}}))} className={`w-14 h-7 rounded-full p-1 transition-all shadow-inner ${editingProduct?.atacado?.ativa ? 'bg-amber-500' : 'bg-slate-200'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${editingProduct?.atacado?.ativa ? 'translate-x-7' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                {editingProduct?.atacado?.ativa && (
-                  <div className="space-y-4">
-                     {editingProduct.atacado.regras?.map((regra, idx) => (
-                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group hover:border-amber-300 transition-colors">
-                           <div className="flex items-center gap-3 w-full sm:w-auto bg-slate-50 p-2 rounded-lg border border-slate-100">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-8 text-center">De</span>
-                              <Input type="number" value={regra.min || ''} onChange={(e) => updateRegraAtacado(idx, 'min', Number(e.target.value))} className="w-20 text-center h-11 font-bold rounded-md bg-white border-slate-200 text-sm" />
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-8 text-center">Até</span>
-                              <Input type="number" placeholder="∞" value={regra.max || ''} onChange={(e) => updateRegraAtacado(idx, 'max', e.target.value ? Number(e.target.value) : null)} className="w-20 text-center h-11 font-bold rounded-md bg-white border-slate-200 text-sm" />
-                           </div>
-                           
-                           <div className="flex items-center gap-3 w-full sm:w-auto flex-1 mt-1 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:pl-4">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex flex-col">
-                                 <span>Preço Un.</span>
-                                 {regra.preco > 0 && editingProduct?.preco > 0 && (
-                                   <span className="text-amber-500 lowercase mt-0.5 font-black">(-{calcularDescontoAtacado(regra.preco, editingProduct.preco)}%)</span>
-                                 )}
-                              </span>
-                              <div className="relative w-full sm:max-w-[160px]">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-sm">R$</span>
-                                <Input type="number" value={regra.preco || ''} onChange={(e) => updateRegraAtacado(idx, 'preco', Number(e.target.value))} className="pl-9 h-11 font-black text-emerald-600 text-base rounded-md bg-emerald-50/50 border-emerald-200 focus:border-emerald-400" />
-                              </div>
-                           </div>
-                           <button onClick={() => removerRegraAtacado(idx)} className="absolute -top-3 -right-3 sm:relative sm:top-0 sm:right-0 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md sm:shadow-none"><Trash2 size={16}/></button>
-                        </div>
-                     ))}
-                     <Button onClick={adicionarRegraAtacado} variant="outline" className="w-full h-12 border-dashed border-2 border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 font-bold text-[10px] md:text-xs uppercase gap-2 rounded-xl mt-4 bg-white shadow-sm transition-all">
-                       <Plus size={18}/> Adicionar Regra de Desconto
-                     </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: PERSONALIZAÇÃO */}
-          {drawerTab === 'personalizacao' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm">
-                 <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-emerald-50 p-2 rounded-lg"><FileText className="text-emerald-600 w-5 h-5" /></div>
-                      <div>
-                        <h3 className="font-black text-sm uppercase tracking-widest text-slate-800">Campos Personalizados</h3>
-                        <p className="text-[9px] text-slate-500 font-medium uppercase mt-1 tracking-widest">O que o cliente deve preencher na compra?</p>
-                      </div>
-                    </div>
                  </div>
+               )}
+            </div>
+          </div>
+        )}
 
-                 <div className="space-y-5">
-                   {editingProduct?.campos_personalizados?.map((campo) => (
-                      <div key={campo.id} className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative group">
-                         <button onClick={() => removerCampoPersonalizado(campo.id)} className="absolute -top-3 -right-3 p-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-transform"><Trash2 size={14}/></button>
-                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
-                           <div className="md:col-span-6 space-y-1.5">
-                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Título da Pergunta/Campo</label>
-                             <Input value={campo.titulo} onChange={(e) => updateCampoPersonalizado(campo.id, 'titulo', e.target.value)} placeholder="Ex: Qual nome colocar na capa?" className="h-11 bg-white border-slate-200 text-xs font-bold text-slate-800 rounded-lg" />
-                           </div>
-                           <div className="md:col-span-4 space-y-1.5">
-                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Tipo de Resposta</label>
-                             <select value={campo.tipo} onChange={(e) => updateCampoPersonalizado(campo.id, 'tipo', e.target.value)} className="w-full h-11 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 px-3 bg-white outline-none focus:border-emerald-400">
-                                <option value="texto_curto">Texto Curto (Nome, etc)</option>
-                                <option value="texto_longo">Texto Longo (Mensagem)</option>
-                                <option value="upload">Upload de Arte/Foto</option>
-                                <option value="data">Data (Evento)</option>
-                                <option value="hora">Hora</option>
-                             </select>
-                           </div>
-                           <div className="md:col-span-2 space-y-1.5 flex flex-col justify-center items-start md:items-center pt-2 md:pt-6">
-                             <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest cursor-pointer flex items-center gap-2 hover:text-slate-900 transition-colors">
-                               <input type="checkbox" checked={campo.obrigatorio} onChange={(e) => updateCampoPersonalizado(campo.id, 'obrigatorio', e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
-                               Obrigatório
-                             </label>
-                           </div>
+        {/* TAB 3: ATACADO */}
+        {drawerTab === 'atacado' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <InfoReferencia />
+            <div className="bg-white border border-slate-200 rounded-lg p-5 md:p-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
+                <div className="flex items-center gap-3 text-slate-800">
+                  <div className="bg-amber-50 p-2 rounded-lg"><Box size={20} className="text-amber-500" /></div>
+                  <div>
+                    <h3 className="font-black text-sm uppercase text-slate-800 tracking-widest">Preços de Atacado</h3>
+                    <p className="text-[9px] text-slate-500 font-medium uppercase tracking-widest mt-0.5">Descontos automáticos por quantidade</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingProduct(prev => ({...prev, atacado: {...prev.atacado, ativa: !prev.atacado?.ativa}}))} className={`w-14 h-7 rounded-full p-1 transition-all shadow-inner ${editingProduct?.atacado?.ativa ? 'bg-amber-500' : 'bg-slate-200'}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${editingProduct?.atacado?.ativa ? 'translate-x-7' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {editingProduct?.atacado?.ativa && (
+                <div className="space-y-4">
+                   {editingProduct.atacado.regras?.map((regra, idx) => (
+                      <div key={idx} className="flex flex-col sm:flex-row items-center gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative group hover:border-amber-300 transition-colors">
+                         <div className="flex items-center gap-3 w-full sm:w-auto bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-8 text-center">De</span>
+                            <Input type="number" value={regra.min || ''} onChange={(e) => updateRegraAtacado(idx, 'min', Number(e.target.value))} className="w-20 text-center h-11 font-bold rounded-md bg-white border-slate-200 text-sm" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest w-8 text-center">Até</span>
+                            <Input type="number" placeholder="∞" value={regra.max || ''} onChange={(e) => updateRegraAtacado(idx, 'max', e.target.value ? Number(e.target.value) : null)} className="w-20 text-center h-11 font-bold rounded-md bg-white border-slate-200 text-sm" />
                          </div>
+                         
+                         <div className="flex items-center gap-3 w-full sm:w-auto flex-1 mt-1 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:pl-4">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex flex-col">
+                               <span>Preço Un.</span>
+                               {regra.preco > 0 && editingProduct?.preco > 0 && (
+                                 <span className="text-amber-500 lowercase mt-0.5 font-black">(-{calcularDescontoAtacado(regra.preco, editingProduct.preco)}%)</span>
+                               )}
+                            </span>
+                            <div className="relative w-full sm:max-w-[160px]">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-sm">R$</span>
+                              <Input type="number" value={regra.preco || ''} onChange={(e) => updateRegraAtacado(idx, 'preco', Number(e.target.value))} className="pl-9 h-11 font-black text-emerald-600 text-base rounded-md bg-emerald-50/50 border-emerald-200 focus:border-emerald-400" />
+                            </div>
+                         </div>
+                         <button onClick={() => removerRegraAtacado(idx)} className="absolute -top-3 -right-3 sm:relative sm:top-0 sm:right-0 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-md sm:shadow-none"><Trash2 size={16}/></button>
                       </div>
                    ))}
-                   {(!editingProduct?.campos_personalizados || editingProduct.campos_personalizados.length === 0) && (
-                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">Nenhum campo personalizado cadastrado.</p>
-                   )}
-                   <Button onClick={adicionarCampoPersonalizado} variant="outline" className="w-full h-12 border-dashed border-2 border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 font-bold text-[10px] md:text-xs uppercase tracking-widest gap-2 rounded-xl mt-4 bg-white shadow-sm transition-all">
-                     <Plus size={18}/> Adicionar Novo Campo
+                   <Button onClick={adicionarRegraAtacado} variant="outline" className="w-full h-12 border-dashed border-2 border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 font-bold text-[10px] md:text-xs uppercase gap-2 rounded-xl mt-4 bg-white shadow-sm transition-all">
+                     <Plus size={18}/> Adicionar Regra de Desconto
                    </Button>
-                 </div>
-              </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-        </div>
-      </motion.div>
-    </div>
+        {/* TAB 4: PERSONALIZAÇÃO */}
+        {drawerTab === 'personalizacao' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm">
+               <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-50 p-2 rounded-lg"><FileText className="text-emerald-600 w-5 h-5" /></div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase tracking-widest text-slate-800">Campos Personalizados</h3>
+                      <p className="text-[9px] text-slate-500 font-medium uppercase mt-1 tracking-widest">O que o cliente deve preencher na compra?</p>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="space-y-5">
+                 {editingProduct?.campos_personalizados?.map((campo) => (
+                    <div key={campo.id} className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative group">
+                       <button onClick={() => removerCampoPersonalizado(campo.id)} className="absolute -top-3 -right-3 p-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-transform"><Trash2 size={14}/></button>
+                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
+                         <div className="md:col-span-6 space-y-1.5">
+                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Título da Pergunta/Campo</label>
+                           <Input value={campo.titulo} onChange={(e) => updateCampoPersonalizado(campo.id, 'titulo', e.target.value)} placeholder="Ex: Qual nome colocar na capa?" className="h-11 bg-white border-slate-200 text-xs font-bold text-slate-800 rounded-lg" />
+                         </div>
+                         <div className="md:col-span-4 space-y-1.5">
+                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Tipo de Resposta</label>
+                           <select value={campo.tipo} onChange={(e) => updateCampoPersonalizado(campo.id, 'tipo', e.target.value)} className="w-full h-11 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 px-3 bg-white outline-none focus:border-emerald-400">
+                              <option value="texto_curto">Texto Curto (Nome, etc)</option>
+                              <option value="texto_longo">Texto Longo (Mensagem)</option>
+                              <option value="upload">Upload de Arte/Foto</option>
+                              <option value="data">Data (Evento)</option>
+                              <option value="hora">Hora</option>
+                           </select>
+                         </div>
+                         <div className="md:col-span-2 space-y-1.5 flex flex-col justify-center items-start md:items-center pt-2 md:pt-6">
+                           <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest cursor-pointer flex items-center gap-2 hover:text-slate-900 transition-colors">
+                             <input type="checkbox" checked={campo.obrigatorio} onChange={(e) => updateCampoPersonalizado(campo.id, 'obrigatorio', e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
+                             Obrigatório
+                           </label>
+                         </div>
+                       </div>
+                    </div>
+                 ))}
+                 {(!editingProduct?.campos_personalizados || editingProduct.campos_personalizados.length === 0) && (
+                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">Nenhum campo personalizado cadastrado.</p>
+                 )}
+                 <Button onClick={adicionarCampoPersonalizado} variant="outline" className="w-full h-12 border-dashed border-2 border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 font-bold text-[10px] md:text-xs uppercase tracking-widest gap-2 rounded-xl mt-4 bg-white shadow-sm transition-all">
+                   <Plus size={18}/> Adicionar Novo Campo
+                 </Button>
+               </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </motion.div>
   );
 }
