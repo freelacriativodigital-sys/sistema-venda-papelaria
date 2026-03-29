@@ -187,7 +187,7 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const isVitrine = pathNormalizado === '/' || pathNormalizado === '/vitrine';
   const isBriefingClient = pathNormalizado.startsWith('/briefing/');
   const isEntregaPortal = pathNormalizado.startsWith('/entrega/');
-  const isBio = pathNormalizado === '/bio' || pathNormalizado === '/minhabio'; 
+  const isBio = pathNormalizado === '/bio';
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
