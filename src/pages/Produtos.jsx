@@ -67,7 +67,7 @@ export default function Produtos() {
   // MUTAÇÕES DE BANCO DE DADOS
   const saveMutation = useMutation({
     mutationFn: async (prod) => {
-      const payload = {
+     const payload = {
         nome: prod.nome,
         preco: Number(prod.preco || 0),
         preco_promocional: Number(prod.preco_promocional || 0),
@@ -82,7 +82,8 @@ export default function Produtos() {
         destaque: prod.destaque ?? false,
         variacoes: prod.variacoes || { ativa: false, atributos: [] },
         atacado: prod.atacado || { ativa: false, regras: [] },
-        campos_personalizados: prod.campos_personalizados || [] 
+        campos_personalizados: prod.campos_personalizados || [],
+        receita: prod.receita || { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 }
       };
 
       if (prod.id && typeof prod.id === 'string' && prod.id.length > 20) {
