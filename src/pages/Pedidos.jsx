@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2 } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TaskItem from "@/components/tasks/TaskItem";
 import NewTaskForm from "@/components/tasks/NewTaskForm";
@@ -22,6 +22,10 @@ const COLUNAS_PERMITIDAS = [
 export default function Pedidos() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
+
+  // Estados da Nova Tela Sobreposta
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["art-tasks"],
@@ -79,9 +83,28 @@ export default function Pedidos() {
     else queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
   };
 
+  const handleSaveOrder = async (data) => {
+    if (data.id) {
+      await handleUpdate(data.id, data);
+    } else {
+      await handleCreate(data);
+    }
+    setIsFormOpen(false);
+  };
+
   const handleDelete = async (task) => {
     const { error } = await supabase.from("pedidos").delete().eq("id", task.id);
     if (!error) queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+  };
+
+  const handleNewOrder = () => {
+    setEditingOrder(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditOrder = (task) => {
+    setEditingOrder(task);
+    setIsFormOpen(true);
   };
 
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
@@ -130,7 +153,6 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
-  // --- SEPARAÇÃO DOS STATUS ---
   const solicitacoes = uniqueTasks.filter((t) => t.status === "solicitacao");
   const pendingTasks = uniqueTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
   const completedTasks = uniqueTasks.filter((t) => t.status === "concluida");
@@ -164,19 +186,23 @@ export default function Pedidos() {
   return (
     <div className="min-h-screen bg-background text-foreground w-full pb-20 relative">
       <div className="border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between transition-all">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between transition-all gap-3">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
-              <p className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS</p>
+              <h1 className="text-lg md:text-xl font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
+              <p className="text-[9px] md:text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="h-9 w-9 md:h-9 md:w-9 rounded-md border" onClick={handleExportData}>
-              <Download className="w-4 h-4 text-slate-600" />
+          <div className="flex items-center gap-2">
+            <Button onClick={handleNewOrder} className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase text-[10px] shadow-sm px-4">
+              <Plus size={14} className="mr-1.5"/> Novo Pedido
             </Button>
-            <label className="cursor-pointer h-9 w-9 md:h-9 md:w-9 flex items-center justify-center rounded-md border border-border bg-background hover:bg-secondary transition-colors shadow-sm">
-              <Upload className="w-4 h-4 text-slate-600" />
+            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-md border hover:bg-slate-50 text-slate-500" onClick={handleExportData}>
+              <Download className="w-4 h-4" />
+            </Button>
+            <label className="cursor-pointer h-9 w-9 flex items-center justify-center rounded-md border border-border bg-background hover:bg-secondary transition-colors shadow-sm text-slate-500">
+              <Upload className="w-4 h-4" />
               <input type="file" className="hidden" accept=".json" onChange={handleImportData} />
             </label>
           </div>
@@ -185,74 +211,68 @@ export default function Pedidos() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
         {!isLoading && (
-          <div className="mb-6 md:mb-8">
+          <div className="mb-6">
             <FinancialSummary tasks={uniqueTasks} />
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 md:mb-8">
-          <TabsList className="w-full bg-secondary/60 h-12 md:h-12 border border-border/40 p-1.5 rounded-lg flex">
-            {/* ABA SITE/CATÁLOGO */}
-            <TabsTrigger value="solicitacoes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm relative">
-              <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="w-full bg-secondary/60 h-11 border border-border/40 p-1 rounded-md flex">
+            <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm relative">
+              <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
               {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
             </TabsTrigger>
             
-            <TabsTrigger value="pendentes" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm">
-              <Palette className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
+            <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+              <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
             </TabsTrigger>
-            <TabsTrigger value="concluidas" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm">
-              <CheckCheck className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
+            <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+              <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
             </TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex-1 text-[10px] md:text-xs gap-1.5 md:gap-2 font-medium md:font-semibold uppercase tracking-tight rounded-md data-[state=active]:shadow-sm">
-              <Wallet className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
+            <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:shadow-sm">
+              <Wallet className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         {isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : (
           <>
-            {/* CONTEÚDO DA ABA SITE/CATÁLOGO */}
             {activeTab === "solicitacoes" && (
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-blue-800">
-                   <h2 className="font-bold uppercase tracking-widest text-xs flex items-center gap-2"><ShoppingBag size={16}/> Novas Solicitações</h2>
-                   <p className="text-[10px] mt-1">Pedidos iniciados pelos clientes através do seu Catálogo ou Link da Bio. Aceite para iniciar a produção ou exclua caso o cliente não tenha fechado no WhatsApp.</p>
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800">
+                   <h2 className="font-semibold uppercase tracking-widest text-[10px] flex items-center gap-1.5"><ShoppingBag size={14}/> Novas Solicitações</h2>
+                   <p className="text-[9px] mt-1 font-medium">Pedidos iniciados pelos clientes através do seu Catálogo ou Link da Bio. Aceite para iniciar a produção.</p>
                 </div>
                 
                 {solicitacoes.length === 0 ? (
-                   <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
-                     <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                     <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Nenhum pedido novo</p>
+                   <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+                     <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                     <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px]">Nenhum pedido novo</p>
                    </div>
                 ) : (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                      <AnimatePresence>
                        {solicitacoes.map(t => (
-                         <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white border border-blue-200 shadow-sm rounded-xl p-4 flex flex-col justify-between">
+                         <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white border border-blue-200 shadow-sm rounded-xl p-3 flex flex-col justify-between">
                             <div>
                               <div className="flex justify-between items-start gap-2 mb-2">
-                                 <h3 className="font-bold text-slate-800 text-sm leading-tight uppercase">{t.title}</h3>
-                                 <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs shrink-0 border border-emerald-100">
+                                 <h3 className="font-semibold text-slate-800 text-xs leading-tight uppercase">{t.title}</h3>
+                                 <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[9px] shrink-0 border border-emerald-100">
                                    {(t.service_value || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                                  </span>
                               </div>
-                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-[11px] text-slate-600 whitespace-pre-wrap mb-4">
+                              <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] text-slate-600 whitespace-pre-wrap mb-3 font-medium">
                                  {t.description}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 mt-auto">
-                               {/* BOTÃO ACEITAR DIRETO SEM ABRIR MODAL */}
-                               <Button 
-                                 onClick={() => handleUpdate(t.id, { status: 'pendente' })} 
-                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-10 text-[10px] uppercase font-bold tracking-widest"
-                               >
-                                 <CheckCheck size={14} className="mr-1.5"/> Aceitar Pedido
+                               <Button onClick={() => handleUpdate(t.id, { status: 'pendente' })} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-8 text-[9px] uppercase font-semibold tracking-widest rounded-md">
+                                 <CheckCheck size={12} className="mr-1.5"/> Aceitar Pedido
                                </Button>
-                               <Button onClick={() => handleDelete(t)} variant="outline" className="h-10 px-3 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600">
-                                 <Trash2 size={16} />
+                               <Button onClick={() => handleDelete(t)} variant="outline" className="h-8 px-2.5 rounded-md border-red-200 text-red-500 hover:bg-red-50">
+                                 <Trash2 size={14} />
                                </Button>
                             </div>
                          </motion.div>
@@ -264,22 +284,20 @@ export default function Pedidos() {
             )}
 
             {activeTab === "pendentes" && (
-              <div className="space-y-6 md:space-y-6">
-                <NewTaskForm onSubmit={handleCreate} />
-                
+              <div className="space-y-5">
                 {pendingTasks.length === 0 ? <EmptyState type="pending" /> : (
-                  <div className="flex flex-col gap-6 md:gap-8">
+                  <div className="flex flex-col gap-6">
                     <AnimatePresence mode="popLayout">
                       {gruposPendentes.hoje.length > 0 && (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           <div className="flex items-center gap-2 px-1">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">● Entregar Hoje / Atrasados</span>
-                            <div className="h-[1px] flex-1 bg-red-100"></div>
+                            <span className="text-[9px] font-semibold uppercase tracking-widest text-rose-500">● Entregar Hoje / Atrasados</span>
+                            <div className="h-px flex-1 bg-rose-100"></div>
                           </div>
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-2.5">
                             {gruposPendentes.hoje.map((t) => (
                               <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} />
+                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
                               </motion.div>
                             ))}
                           </div>
@@ -287,15 +305,15 @@ export default function Pedidos() {
                       )}
 
                       {gruposPendentes.amanha.length > 0 && (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           <div className="flex items-center gap-2 px-1">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">○ Para Amanhã</span>
-                            <div className="h-[1px] flex-1 bg-amber-100"></div>
+                            <span className="text-[9px] font-semibold uppercase tracking-widest text-amber-500">○ Para Amanhã</span>
+                            <div className="h-px flex-1 bg-amber-100"></div>
                           </div>
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-2.5">
                             {gruposPendentes.amanha.map((t) => (
                               <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} />
+                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
                               </motion.div>
                             ))}
                           </div>
@@ -303,15 +321,15 @@ export default function Pedidos() {
                       )}
 
                       {gruposPendentes.proximos.length > 0 && (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           <div className="flex items-center gap-2 px-1">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#33BEE8]">📅 Próximas Entregas</span>
-                            <div className="h-[1px] flex-1 bg-[#33BEE8]/20"></div>
+                            <span className="text-[9px] font-semibold uppercase tracking-widest text-blue-400">📅 Próximas Entregas</span>
+                            <div className="h-px flex-1 bg-blue-100/50"></div>
                           </div>
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-2.5">
                             {gruposPendentes.proximos.map((t) => (
                               <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} />
+                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
                               </motion.div>
                             ))}
                           </div>
@@ -324,9 +342,9 @@ export default function Pedidos() {
             )}
 
             {activeTab === "concluidas" && (
-              <div className="space-y-3 md:space-y-3">
+              <div className="space-y-2.5">
                 {completedTasks.map((t) => (
-                  <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} showUndo />
+                  <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} showUndo />
                 ))}
               </div>
             )}
@@ -337,6 +355,19 @@ export default function Pedidos() {
           </>
         )}
       </div>
+
+      {/* OVERLAY TELA CHEIA PARA NOVO/EDITAR PEDIDO */}
+      <AnimatePresence>
+         {isFormOpen && (
+            <NewTaskForm 
+              isOpen={isFormOpen} 
+              onClose={() => setIsFormOpen(false)} 
+              taskToEdit={editingOrder} 
+              onSubmit={handleSaveOrder} 
+            />
+         )}
+      </AnimatePresence>
+
     </div>
   );
 }

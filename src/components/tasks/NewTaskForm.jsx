@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { base44 as db } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, ChevronDown, ChevronUp, UserSquare2, Loader2, CalendarDays, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { 
+  X, Save, DollarSign, TrendingUp, PercentCircle, CalendarDays, 
+  ChevronLeft, ChevronRight, UserSquare2, Loader2, UserPlus, ArrowLeft, Palette 
+} from "lucide-react";
+import { supabase } from "../../lib/supabase"; 
+
 import ChecklistEditor from "./ChecklistEditor";
-import { supabase } from "../../lib/supabase";
 
 const DEFAULT_CATEGORIES = [
   { name: "Ilustração", slug: "ilustracao" },
@@ -27,325 +28,256 @@ const DEFAULT_CATEGORIES = [
   { name: "Outro", slug: "outro" },
 ];
 
-export default function NewTaskForm({ onSubmit }) {
-  const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const { data: customCats = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => db.get("Category"),
+export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
+  const [form, setForm] = useState({ 
+    title: "", description: "", priority: "media", category: "ilustracao", 
+    service_value: "", delivery_date: "", checklist: [], payment_status: "em_aberto", valor_pago: 0 
   });
-  const allCategories = [
-    ...DEFAULT_CATEGORIES,
-    ...customCats.map((c) => ({ name: c.name, slug: c.slug })),
-  ];
-  const [showDetails, setShowDetails] = useState(false);
   
+  const [selectedDate, setSelectedDate] = useState(undefined);
+  
+  // Estados de Cliente
   const [clientes, setClientes] = useState([]);
   const [mostrarDropdownCliente, setMostrarDropdownCliente] = useState(false);
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [clienteId, setClienteId] = useState(null);
 
-  const [selectedDate, setSelectedDate] = useState(undefined);
-
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [newClientData, setNewClientData] = useState({ nome: '', whatsapp: '', aniversario: '', pendente: 0, pago: 0 });
-
-  const [task, setTask] = useState({
-    title: "", 
-    description: "",
-    priority: "media",
-    category: "ilustracao",
-    service_value: "",
-    delivery_date: "", 
-    checklist: [],
-  });
-
   useEffect(() => {
     if (isOpen) {
+      // Carrega clientes
       async function buscarClientes() {
         setCarregandoClientes(true);
-        try {
-          const { data, error } = await supabase.from('clientes').select('id, nome, whatsapp').order('nome');
-          if (data) setClientes(data);
-        } catch (err) {
-          console.error("Erro ao buscar clientes:", err);
-        } finally {
-          setCarregandoClientes(false);
-        }
+        const { data } = await supabase.from('clientes').select('id, nome, whatsapp').order('nome');
+        if (data) setClientes(data);
+        setCarregandoClientes(false);
       }
       buscarClientes();
-    }
-  }, [isOpen]);
 
-  const saveClientMutation = useMutation({
-    mutationFn: async (clientData) => {
-      const { data, error } = await supabase.from("clientes").insert([clientData]).select();
-      if (error) throw error;
-      return data[0]; 
-    },
-    onSuccess: (newClient) => {
-      queryClient.invalidateQueries({ queryKey: ["sistema-clientes"] });
-      setIsClientModalOpen(false);
-      setClienteId(newClient.id);
-      setTask({ ...task, title: String(newClient.nome || '') });
-      // Usar String() no localeCompare para evitar erro com números
-      setClientes(prev => [...prev, newClient].sort((a,b) => String(a.nome || '').localeCompare(String(b.nome || ''))));
-    },
-  });
+      // Preenche dados se for edição
+      if (taskToEdit) {
+        setForm({ ...taskToEdit, checklist: taskToEdit.checklist || [], valor_pago: taskToEdit.valor_pago || 0 });
+        setSelectedDate(taskToEdit.delivery_date ? parseISO(taskToEdit.delivery_date) : undefined);
+        setClienteId(taskToEdit.cliente_id || null);
+      } else {
+        setForm({ title: "", description: "", priority: "media", category: "ilustracao", service_value: "", delivery_date: "", checklist: [], payment_status: "em_aberto", valor_pago: 0 });
+        setSelectedDate(undefined);
+        setClienteId(null);
+      }
+    }
+  }, [isOpen, taskToEdit]);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
-    if (date) {
-      setTask({ ...task, delivery_date: format(date, 'yyyy-MM-dd') });
-    } else {
-      setTask({ ...task, delivery_date: '' });
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!String(task.title || '').trim()) return;
-    
-    const clienteSelecionado = clientes.find(c => c.id === clienteId);
-
-    onSubmit({
-      ...task,
-      status: "pendente",
-      payment_status: "em_aberto",
-      service_value: task.service_value ? parseFloat(task.service_value) : undefined,
-      cliente_id: clienteId, 
-      cliente_nome: clienteSelecionado ? clienteSelecionado.nome : task.title 
-    });
-    
-    setTask({ title: "", description: "", priority: "media", category: "ilustracao", service_value: "", delivery_date: "", checklist: [] });
-    setSelectedDate(undefined);
-    setClienteId(null);
-    setShowDetails(false);
-    setIsOpen(false);
+    setForm(prev => ({ ...prev, delivery_date: date ? format(date, 'yyyy-MM-dd') : '' }));
   };
 
   const selecionarCliente = (cli) => {
-    setTask({ ...task, title: String(cli.nome || '') });
+    setForm({ ...form, title: cli.nome });
     setClienteId(cli.id);
     setMostrarDropdownCliente(false);
   };
 
-  // --- BLINDAGEM DA BUSCA AQUI TAMBÉM ---
-  const searchStr = String(task.title || '').toLowerCase().trim();
-  const filteredClientes = clientes.filter(c => {
-    const nomeMatch = String(c.nome || '').toLowerCase().includes(searchStr);
-    const zapMatch = String(c.whatsapp || '').toLowerCase().includes(searchStr);
-    return nomeMatch || zapMatch;
-  });
-  
-  const isExactMatch = filteredClientes.some(c => String(c.nome || '').toLowerCase().trim() === searchStr);
+  const handleSave = () => {
+    if (!form.title.trim()) return alert("O título/cliente é obrigatório.");
+
+    const checklistTotal = (form.checklist || []).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    const hasChecklist = form.checklist && form.checklist.length > 0;
+    const displayValue = hasChecklist ? checklistTotal : (parseFloat(form.service_value) || 0);
+
+    let finalStatus = form.payment_status || "em_aberto";
+    let finalValorPago = Number(form.valor_pago) || 0;
+
+    if (finalStatus === 'pago') finalValorPago = displayValue;
+    if (finalStatus === 'em_aberto') finalValorPago = 0;
+    if (finalStatus === 'parcial' && finalValorPago >= displayValue && displayValue > 0) finalStatus = 'pago';
+
+    const clienteSelecionado = clientes.find(c => c.id === clienteId);
+
+    onSubmit({
+      ...form,
+      service_value: hasChecklist ? undefined : (parseFloat(form.service_value) || 0),
+      payment_status: finalStatus,
+      valor_pago: finalValorPago,
+      cliente_id: clienteId,
+      cliente_nome: clienteSelecionado ? clienteSelecionado.nome : form.title
+    });
+  };
+
+  const searchStr = String(form.title || '').toLowerCase().trim();
+  const filteredClientes = clientes.filter(c => String(c.nome || '').toLowerCase().includes(searchStr));
+
+  if (!isOpen) return null;
+
+  const hasChecklist = form.checklist && form.checklist.length > 0;
+  const displayValue = hasChecklist ? (form.checklist || []).reduce((s, i) => s + (parseFloat(i.value) || 0), 0) : (parseFloat(form.service_value) || 0);
 
   return (
-    <div>
-      <AnimatePresence>
-        {!isOpen ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <Button
-              onClick={() => setIsOpen(true)}
-              className="w-full h-12 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all"
-              variant="ghost"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nova pendência
-            </Button>
-          </motion.div>
-        ) : (
-          <motion.form
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            onSubmit={handleSubmit}
-            className="bg-card border border-border rounded-xl p-4 space-y-3 shadow-sm overflow-visible relative"
-          >
-            <div className="relative z-50">
-               <UserSquare2 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 w-4 h-4" />
+    <motion.div 
+      initial={{ opacity: 0, x: '10%' }} 
+      animate={{ opacity: 1, x: 0 }} 
+      exit={{ opacity: 0, x: '10%' }} 
+      transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+      className="fixed inset-0 z-[200] bg-[#f8fafc] overflow-y-auto flex flex-col"
+    >
+      {/* HEADER DA PÁGINA */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 hidden sm:flex items-center justify-center border border-blue-100">
+               <Palette className="text-blue-600 w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm md:text-base font-semibold text-slate-800 uppercase tracking-tight leading-none">
+                {taskToEdit ? 'Editar Pedido' : 'Novo Pedido'}
+              </h2>
+            </div>
+          </div>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-6 rounded-md font-semibold uppercase text-[10px] tracking-widest shadow-sm transition-colors">
+            <Save size={14} className="mr-2"/> Salvar
+          </Button>
+        </div>
+      </div>
+
+      {/* CORPO DO FORMULÁRIO */}
+      <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 pb-24">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          
+          <div className="space-y-1.5 relative">
+            <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Cliente / Título</label>
+            <div className="relative z-40">
+               <UserSquare2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                <Input
-                 placeholder="Busque o cliente ou digite o que precisa..."
-                 value={task.title}
-                 onChange={(e) => {
-                   setTask({ ...task, title: String(e.target.value) });
-                   setClienteId(null);
-                   setMostrarDropdownCliente(true);
-                 }}
+                 placeholder="Busque o cliente ou digite o título do pedido..."
+                 value={form.title}
+                 onChange={(e) => { setForm({ ...form, title: e.target.value }); setClienteId(null); setMostrarDropdownCliente(true); }}
                  onFocus={() => setMostrarDropdownCliente(true)}
                  onBlur={() => setTimeout(() => setMostrarDropdownCliente(false), 250)}
-                 className="border-0 bg-secondary/50 h-11 text-sm pl-9 placeholder:text-muted-foreground/60"
-                 autoFocus
+                 className="bg-slate-50 border-slate-200 h-11 text-sm font-medium pl-9 focus:bg-white"
+                 autoFocus={!taskToEdit}
                />
-               {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 w-4 h-4 animate-spin" />}
+               {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 animate-spin" />}
                
                {mostrarDropdownCliente && searchStr.length > 0 && !clienteId && (
-                 <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-lg shadow-lg max-h-56 overflow-y-auto p-1.5 space-y-0.5 z-[100]">
+                 <div className="absolute top-12 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto p-1.5 space-y-0.5 z-50">
                    {filteredClientes.map(cli => (
-                     <div 
-                       key={cli.id} 
-                       onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} 
-                       className="flex flex-col p-2.5 hover:bg-secondary/80 rounded-md cursor-pointer transition-colors"
-                     >
-                       <span className="text-xs font-semibold text-foreground uppercase">{cli.nome}</span>
+                     <div key={cli.id} onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} className="flex flex-col p-2.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors">
+                       <span className="text-xs font-semibold text-slate-800 uppercase">{cli.nome}</span>
                      </div>
                    ))}
-                   
-                   {!isExactMatch && (
-                     <div className="pt-1 mt-1 border-t border-border">
-                       <button 
-                         type="button"
-                         className="w-full text-left px-2 py-2.5 text-xs text-emerald-600 hover:bg-emerald-50 bg-emerald-50/50 font-bold flex items-center gap-2 transition-colors rounded-md"
-                         onMouseDown={(e) => {
-                           e.preventDefault(); 
-                           setNewClientData({ nome: task.title, whatsapp: '', aniversario: '', pendente: 0, pago: 0 });
-                           setIsClientModalOpen(true);
-                           setMostrarDropdownCliente(false);
-                         }}
-                       >
-                         <UserPlus size={14} /> Cadastrar "{task.title}"
-                       </button>
-                     </div>
-                   )}
+                   {filteredClientes.length === 0 && <div className="p-3 text-xs text-slate-500 text-center">Nenhum cliente encontrado.</div>}
                  </div>
                )}
             </div>
-
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-              <Input
-                type="number"
-                placeholder="Valor do serviço (opcional)"
-                value={task.service_value}
-                onChange={(e) => setTask({ ...task, service_value: e.target.value })}
-                className="border-0 bg-secondary/50 h-9 text-sm pl-9 placeholder:text-muted-foreground/60"
-              />
-            </div>
-
-            <ChecklistEditor checklist={task.checklist} onChange={(c) => setTask({ ...task, checklist: c })} />
-
-            <button type="button" onClick={() => setShowDetails(!showDetails)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-              {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {showDetails ? "Menos detalhes" : "Mais detalhes"}
-            </button>
-
-            <AnimatePresence>
-              {showDetails && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-3">
-                  <Textarea placeholder="Descrição (opcional)" value={task.description} onChange={(e) => setTask({ ...task, description: e.target.value })} className="border-0 bg-secondary/50 text-sm min-h-[70px] placeholder:text-muted-foreground/60" />
-                  
-                  <div className="flex flex-wrap gap-2 md:gap-3">
-                    <div className="flex-1 min-w-[130px] relative">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant={"outline"} type="button" className={`h-10 w-full justify-between rounded-md border border-slate-200 bg-white px-3 text-xs font-bold uppercase transition-colors hover:bg-slate-50 focus:ring-2 focus:ring-slate-400 focus:border-transparent ${!selectedDate ? "text-slate-400" : "text-slate-600"}`}>
-                            {selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) : <span className="opacity-0">Data</span>}
-                            <CalendarDays className="h-4 w-4 text-slate-400" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 rounded-lg border border-slate-200 shadow-xl z-[100]" align="start">
-                          <Calendar
-                            mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-3 bg-white"
-                            classNames={{
-                              head_cell: "text-slate-500 rounded-md w-9 font-normal text-[11px] uppercase tracking-wider",
-                              cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-slate-100",
-                              day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-slate-100 rounded-md text-slate-900",
-                              day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white rounded-md",
-                              day_today: "bg-slate-100 text-slate-900 rounded-md font-bold",
-                              day_outside: "day-outside text-slate-400 opacity-50",
-                              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-slate-200 rounded-md text-slate-600",
-                              nav_button_previous: "absolute left-1",
-                              nav_button_next: "absolute right-1",
-                              caption: "flex justify-center pt-1 relative items-center text-sm font-semibold text-slate-800 uppercase tracking-tight",
-                            }}
-                            components={{ IconLeft: () => <ChevronLeft className="h-4 w-4" />, IconRight: () => <ChevronRight className="h-4 w-4" /> }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="flex-1 min-w-[100px]">
-                      <Select value={task.priority} onValueChange={(v) => setTask({ ...task, priority: v })}>
-                        <SelectTrigger className="h-10 text-xs font-bold uppercase tracking-widest bg-white border border-slate-200 text-slate-600 rounded-md data-[placeholder]:text-slate-400">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex-1 min-w-[100px]">
-                      <Select value={task.category} onValueChange={(v) => setTask({ ...task, category: v })}>
-                        <SelectTrigger className="h-10 text-xs font-bold uppercase tracking-widest bg-white border border-slate-200 text-slate-600 rounded-md data-[placeholder]:text-slate-400">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allCategories.map((cat) => (
-                            <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="ghost" size="sm" onClick={() => { setIsOpen(false); setShowDetails(false); setClienteId(null); setSelectedDate(undefined); }} className="text-xs h-8">
-                <X className="w-3 h-3 mr-1" /> Cancelar
-              </Button>
-              <Button type="submit" size="sm" disabled={!String(task.title || '').trim()} className="text-xs h-8 bg-primary hover:bg-primary/90">
-                <Plus className="w-3 h-3 mr-1" /> Adicionar
-              </Button>
-            </div>
-          </motion.form>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isClientModalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsClientModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-md rounded-2xl md:rounded-xl p-6 shadow-2xl relative z-[210] overflow-hidden border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                    <UserPlus className="text-blue-500" size={20} /> Novo Cliente
-                  </h2>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Cadastro Rápido</p>
-                </div>
-                <button type="button" onClick={() => setIsClientModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">Nome Completo</label>
-                  <Input value={newClientData.nome} onChange={e => setNewClientData({...newClientData, nome: String(e.target.value)})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" autoFocus />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">WhatsApp</label>
-                    <Input value={newClientData.whatsapp} onChange={e => setNewClientData({...newClientData, whatsapp: String(e.target.value)})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-bold uppercase text-slate-600 tracking-widest ml-1">Aniversário</label>
-                    <Input type="date" value={newClientData.aniversario || ''} onChange={e => setNewClientData({...newClientData, aniversario: e.target.value})} className="h-11 md:h-12 border-slate-300 bg-white rounded-lg font-semibold text-sm text-slate-600" />
-                  </div>
-                </div>
-
-                <Button type="button" onClick={() => {
-                  if (!newClientData.nome) return alert("O nome é obrigatório!");
-                  saveClientMutation.mutate(newClientData);
-                }} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold uppercase tracking-widest text-xs mt-4 shadow-md transition-transform active:scale-95">
-                  {saveClientMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Cliente"}
-                </Button>
-              </div>
-            </motion.div>
           </div>
-        )}
-      </AnimatePresence>
-    </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+            <Textarea placeholder="Detalhes do pedido, referências, tamanhos..." value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-slate-50 border-slate-200 text-sm font-medium text-slate-700 min-h-[90px] focus:bg-white" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Data de Entrega</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={`h-11 w-full justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-semibold uppercase transition-colors hover:bg-white ${!selectedDate ? "text-slate-400" : "text-slate-700"}`}>
+                    {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
+                    <CalendarDays className="h-4 w-4 text-slate-400" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" align="start">
+                  <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-3 bg-white" />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
+              <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
+                <SelectTrigger className="h-11 text-xs font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                <SelectTrigger className="h-11 text-xs font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEFAULT_CATEGORIES.map((cat) => (
+                     <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor do Serviço (R$)</label>
+              <div className="relative max-w-sm">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">R$</span>
+                <Input type="number" value={form.service_value || ""} onChange={(e) => setForm({ ...form, service_value: e.target.value })} className="bg-slate-50 border-slate-200 text-sm font-semibold text-slate-800 pl-9 h-11 focus:bg-white" disabled={hasChecklist} />
+              </div>
+              {hasChecklist && <p className="text-[9px] text-slate-400 mt-1 font-medium uppercase tracking-widest px-1">Valor automático pelo Checklist abaixo.</p>}
+            </div>
+
+            <div>
+              <ChecklistEditor checklist={form.checklist} onChange={(c) => setForm({ ...form, checklist: c })} />
+            </div>
+          </div>
+
+          {/* STATUS FINANCEIRO */}
+          {displayValue > 0 && (
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4">
+              <label className="text-[10px] font-semibold text-slate-500 mb-3 block uppercase tracking-widest text-center">Status do Pagamento</label>
+              
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "em_aberto" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "em_aberto" || !form.payment_status ? "border-rose-500 bg-rose-50 text-rose-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-rose-200"}`}>
+                  <TrendingUp className="w-4 h-4" /> Pendente
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "parcial" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "parcial" ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-blue-200"}`}>
+                  <PercentCircle className="w-4 h-4" /> Sinal
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, payment_status: "pago" })} className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border-2 text-[9px] font-semibold uppercase tracking-widest transition-all ${form.payment_status === "pago" ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-200"}`}>
+                  <DollarSign className="w-4 h-4" /> Pago
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {form.payment_status === "parcial" && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 pt-4 border-t border-slate-200">
+                     <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                           <label className="text-[9px] font-semibold text-blue-600 mb-1 block uppercase tracking-widest">Valor do Sinal Pago (R$)</label>
+                           <div className="relative">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-400">R$</span>
+                             <Input type="number" value={form.valor_pago || ""} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} className="bg-white border-blue-200 text-sm font-semibold text-blue-700 pl-8 h-10 focus:border-blue-400 shadow-sm" />
+                           </div>
+                        </div>
+                        <div className="w-24 text-right">
+                           <span className="text-[9px] font-semibold text-slate-400 block uppercase tracking-widest mb-1">Falta Pagar</span>
+                           <span className="text-sm font-semibold text-rose-500">
+                             {(displayValue - (Number(form.valor_pago) || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                           </span>
+                        </div>
+                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
