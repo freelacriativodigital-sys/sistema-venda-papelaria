@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, Search, Plus, MessageCircle, Trash2, Edit3, 
-  CheckCircle2, AlertCircle, X, Loader2, Palette, Gift
+  CheckCircle2, AlertCircle, X, Loader2, Palette, Gift, Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
