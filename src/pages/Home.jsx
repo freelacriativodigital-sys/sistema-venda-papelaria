@@ -3,8 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; 
 import { 
   Users, ArrowUpRight, ArrowDownRight, Activity, Loader2,
-  Printer, Target, Sparkles, AlertCircle, ShoppingCart, 
-  CheckCircle, TrendingUp, Palette, ShieldCheck 
+  Printer, Target, Sparkles, AlertCircle, ShoppingCart, CheckCircle, TrendingUp, Palette
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -140,27 +139,14 @@ export default function Home() {
 
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
-        const mesAtual = hoje.getMonth();
-        const anoAtual = hoje.getFullYear();
 
         despData?.forEach(d => {
-           let isMesFuturo = false;
+           const jaPago = Number(d.valor_pago) || 0;
+           const valorTotal = Number(d.valor) || 0;
 
-           if (d.vencimento) {
-               const vencimento = new Date(`${d.vencimento}T00:00:00`);
-               if (!isNaN(vencimento.getTime())) {
-                   const mesVencimento = vencimento.getMonth();
-                   const anoVencimento = vencimento.getFullYear();
-                   if (anoVencimento > anoAtual || (anoVencimento === anoAtual && mesVencimento > mesAtual)) {
-                       isMesFuturo = true;
-                   }
-               }
-           }
+           despPagasTotal += jaPago; 
 
-           if (!isMesFuturo) {
-               const jaPago = Number(d.valor_pago) || 0;
-               const valorTotal = Number(d.valor) || 0;
-               despPagasTotal += jaPago; 
+           if (d.status !== 'pago') {
                despPendentesTotal += (valorTotal - jaPago); 
            }
 
@@ -197,7 +183,6 @@ export default function Home() {
     if (!isLoadingTasks) fetchDashboardData();
   }, [isLoadingTasks, tasks]);
 
-  // Executamos a matemática ANTES de renderizar a tela
   const { pedidosGanhosReal, pedidosPendentesValor } = processFinancialData(tasks);
   const faturamentoRealEntrado = data.clientes.pago + pedidosGanhosReal;
   const caixaRealLimpo = faturamentoRealEntrado - data.despesas.pagas;
@@ -223,22 +208,22 @@ export default function Home() {
   if (contasAPagar > 0) {
     if (faturamentoPendenteTotal >= contasAPagar) {
       const sobra = faturamentoPendenteTotal - contasAPagar;
-      dicaAcao = `Você tem ${formatCurrency(faturamentoPendenteTotal)} a receber. Direcione ${formatCurrency(contasAPagar)} para quitar as contas pendentes, e sobrarão ${formatCurrency(sobra)} limpos!`;
+      dicaAcao = `A receber: ${formatCurrency(faturamentoPendenteTotal)} | Contas: ${formatCurrency(contasAPagar)} | Sobra Prevista: ${formatCurrency(sobra)}`;
       corDica = "text-emerald-200";
     } else if (faturamentoPendenteTotal > 0) {
       const falta = contasAPagar - faturamentoPendenteTotal;
-      dicaAcao = `Você tem ${formatCurrency(faturamentoPendenteTotal)} a receber, mas as contas somam ${formatCurrency(contasAPagar)}. Mesmo recebendo tudo, faltarão ${formatCurrency(falta)}. Foco em vendas!`;
+      dicaAcao = `A receber: ${formatCurrency(faturamentoPendenteTotal)} | Contas: ${formatCurrency(contasAPagar)} | Déficit Previsto: ${formatCurrency(falta)}`;
       corDica = "text-amber-200";
     } else {
-      dicaAcao = `Atenção: Você tem ${formatCurrency(contasAPagar)} em contas para pagar este mês, mas nada a receber. Hora de focar em prospecção!`;
+      dicaAcao = `Alerta: ${formatCurrency(contasAPagar)} em contas pendentes e nenhum recebimento projetado.`;
       corDica = "text-rose-200";
     }
   } else {
     if (faturamentoPendenteTotal > 0) {
-      dicaAcao = `Excelente! Contas em dia. Os ${formatCurrency(faturamentoPendenteTotal)} a receber entrarão 100% como caixa livre.`;
+      dicaAcao = `Contas quitadas. ${formatCurrency(faturamentoPendenteTotal)} de recebimentos projetados como lucro livre.`;
       corDica = "text-emerald-200";
     } else {
-      dicaAcao = `Tudo tranquilo! Sem contas pendentes este mês. Que tal criar uma promoção para aquecer as vendas?`;
+      dicaAcao = `Sem contas e sem recebimentos projetados no momento.`;
       corDica = "text-blue-200";
     }
   }
@@ -246,55 +231,43 @@ export default function Home() {
   if (loading || isLoadingTasks) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Carregando Dashboard...</p>
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Carregando...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20 pt-4 md:pt-6 px-4 md:px-0">
+    <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-20 pt-4 md:pt-5 px-4 md:px-0">
       
       {/* HEADER DA PÁGINA */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold md:font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2.5">
-            <Activity className="text-blue-600" size={24} /> Visão Geral
+          <h1 className="text-lg md:text-xl font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2">
+            <Activity className="text-blue-600" size={20} /> Visão Geral
           </h1>
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">Resumo financeiro e métricas</p>
+          <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Resumo financeiro e métricas</p>
         </div>
-        <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2 h-fit">
+        <div className="bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-1.5 h-fit">
            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-           <span className="text-[9px] font-medium text-slate-500 uppercase tracking-widest">Sistema Online</span>
+           <span className="text-[8px] font-medium text-slate-500 uppercase tracking-widest">Sistema Online</span>
         </div>
       </div>
 
       {/* NOTIFICAÇÕES DE CONTAS */}
       {alertasDespesas.length > 0 && (
-        <div className="flex flex-wrap gap-2.5 mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
           {alertasDespesas.map(alerta => {
             const isAtrasada = alerta.diffDias < 0;
-            const msg = isAtrasada 
-              ? `Atrasada ${Math.abs(alerta.diffDias)} d` 
-              : alerta.diffDias === 0 
-                ? 'Vence Hoje' 
-                : `Vence em ${alerta.diffDias} d`;
+            const msg = isAtrasada ? `Atrasada ${Math.abs(alerta.diffDias)}d` : alerta.diffDias === 0 ? 'Vence Hoje' : `Vence em ${alerta.diffDias}d`;
 
             return (
-              <Link 
-                key={alerta.id} 
-                to="/despesas" 
-                className={`tag-notificacao flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border shadow-inner transition-all hover:scale-105 active:scale-95 ${
-                  isAtrasada 
-                    ? 'bg-rose-50/70 border-rose-200 text-rose-700' 
-                    : 'bg-amber-50/70 border-amber-200 text-amber-700'
-                }`}
-              >
-                <AlertCircle size={14} className={isAtrasada ? "text-rose-500" : "text-amber-500"} />
-                <span className="text-[11px] font-bold uppercase tracking-tight truncate max-w-[200px] md:max-w-[250px]">
+              <Link key={alerta.id} to="/despesas" className={`tag-notificacao flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-inner transition-all hover:scale-105 active:scale-95 ${isAtrasada ? 'bg-rose-50/70 border-rose-200 text-rose-700' : 'bg-amber-50/70 border-amber-200 text-amber-700'}`}>
+                <AlertCircle size={12} className={isAtrasada ? "text-rose-500" : "text-amber-500"} />
+                <span className="text-[10px] font-semibold uppercase tracking-tight truncate max-w-[180px] md:max-w-[200px]">
                   {alerta.descricao}
                 </span>
-                <span className="text-[9px] font-semibold opacity-70 ml-0.5 whitespace-nowrap">
+                <span className="text-[8px] font-medium opacity-70 ml-0.5 whitespace-nowrap">
                    • {msg} • {formatCurrency(Number(alerta.valor) - Number(alerta.valor_pago || 0))}
                 </span>
               </Link>
@@ -303,93 +276,93 @@ export default function Home() {
         </div>
       )}
 
-      {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
-         <div className="bg-emerald-600 rounded-2xl p-4 md:p-5 border border-emerald-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
-           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={100}/></div>
-           <div className="flex items-center justify-between mb-3 relative z-10">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-100/90">Dinheiro Real</span>
-             <TrendingUp size={16} className="text-emerald-100" />
+      {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS COMPACTOS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+         <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={70}/></div>
+           <div className="flex items-center justify-between mb-1.5 relative z-10">
+             <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-100/90">Dinheiro Real</span>
+             <TrendingUp size={14} className="text-emerald-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-semibold text-emerald-100/80 uppercase tracking-widest mb-1.5">Faturamento Real Entrado</p>
-             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(faturamentoRealEntrado)}</h3>
+             <p className="text-[8px] font-medium text-emerald-100/80 uppercase tracking-widest mb-0.5">Faturamento Real Entrado</p>
+             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(faturamentoRealEntrado)}</h3>
            </div>
          </div>
 
-         <div className="bg-rose-600 rounded-2xl p-4 md:p-5 border border-rose-700 shadow-xl flex flex-col justify-between group overflow-hidden relative">
-           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={100}/></div>
-           <div className="flex items-center justify-between mb-3 relative z-10">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-rose-100/90">Contas Pagas</span>
-             <ArrowDownRight size={16} className="text-rose-100" />
+         <div className="bg-rose-600 rounded-xl p-3 md:p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={70}/></div>
+           <div className="flex items-center justify-between mb-1.5 relative z-10">
+             <span className="text-[9px] font-bold uppercase tracking-widest text-rose-100/90">Contas Pagas</span>
+             <ArrowDownRight size={14} className="text-rose-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-semibold text-rose-100/80 uppercase tracking-widest mb-1.5">Total das Despesas Pagas</p>
-             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(data.despesas.pagas)}</h3>
+             <p className="text-[8px] font-medium text-rose-100/80 uppercase tracking-widest mb-0.5">Total das Despesas Pagas</p>
+             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(data.despesas.pagas)}</h3>
            </div>
          </div>
 
-         <Link to="/pedidos" className="bg-blue-600 rounded-2xl p-4 md:p-5 border border-blue-700 shadow-xl hover:shadow-2xl transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer">
-           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform"><Palette size={100}/></div>
-           <div className="flex items-center justify-between mb-3 relative z-10">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-blue-100/90">Pedidos Pendentes</span>
-             <Users size={16} className="text-blue-100" />
+         <Link to="/pedidos" className="bg-blue-600 rounded-xl p-3 md:p-4 border border-blue-700 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Palette size={70}/></div>
+           <div className="flex items-center justify-between mb-1.5 relative z-10">
+             <span className="text-[9px] font-bold uppercase tracking-widest text-blue-100/90">Pedidos Pendentes</span>
+             <Users size={14} className="text-blue-100" />
            </div>
            <div className="relative z-10">
-             <p className="text-[10px] font-semibold text-blue-100/80 uppercase tracking-widest mb-1.5">A Receber (Trabalhos)</p>
-             <h3 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">{formatCurrency(pedidosPendentesValor)}</h3>
+             <p className="text-[8px] font-medium text-blue-100/80 uppercase tracking-widest mb-0.5">A Receber (Trabalhos)</p>
+             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(pedidosPendentesValor)}</h3>
            </div>
          </Link>
       </div>
 
-      {/* CAMADA 2: ANÁLISE DE FLUXO DE CAIXA E PROJEÇÕES */}
-      <div className="bg-slate-900 rounded-2xl p-6 md:p-8 shadow-lg relative overflow-hidden flex flex-col border border-slate-800">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.02]"><Target size={180} /></div>
+      {/* CAMADA 2: ANÁLISE DE FLUXO DE CAIXA E PROJEÇÕES COMPACTAS */}
+      <div className="bg-slate-900 rounded-xl p-4 md:p-5 shadow-lg relative overflow-hidden flex flex-col border border-slate-800">
+        <div className="absolute top-0 right-0 p-4 opacity-[0.02]"><Target size={120} /></div>
         
-        <div className="relative z-10 mb-6 flex items-center gap-3 border-b border-slate-800 pb-4">
-           <div className="w-8 h-8 rounded-full bg-indigo-500/90 text-white flex items-center justify-center shadow-sm"><Sparkles size={16} /></div>
+        <div className="relative z-10 mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
+           <div className="w-6 h-6 rounded-full bg-indigo-500/90 text-white flex items-center justify-center shadow-sm"><Sparkles size={12} /></div>
            <div>
-              <h2 className="text-sm md:text-base font-semibold text-white uppercase tracking-tight">Fluxo de Caixa</h2>
-              <p className="text-[9px] font-medium uppercase tracking-widest text-slate-400">Consultor financeiro automático</p>
+              <h2 className="text-xs md:text-sm font-semibold text-white uppercase tracking-tight">Fluxo de Caixa</h2>
+              <p className="text-[8px] font-medium uppercase tracking-widest text-slate-400">Consultor automático</p>
            </div>
         </div>
 
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
            
            {/* Saldo e Ajuste de Banco */}
-           <div className={`p-5 md:p-6 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden transition-all ${caixaRealLimpo >= 0 ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-rose-950/20 border-rose-800/40'}`}>
+           <div className={`p-4 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden transition-all ${caixaRealLimpo >= 0 ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-rose-950/20 border-rose-800/40'}`}>
               <div>
-                 <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Caixa Livre (Sistema)</h3>
-                 <p className={`text-3xl md:text-4xl font-semibold tracking-tight ${caixaRealLimpo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                 <h3 className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Caixa Livre (Sistema)</h3>
+                 <p className={`text-2xl md:text-3xl font-semibold tracking-tight ${caixaRealLimpo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                    {formatCurrency(caixaRealLimpo)}
                  </p>
                  
-                 <div className="mt-6 pt-5 border-t border-slate-800/50 space-y-3">
-                   <div className="flex items-center justify-between gap-3">
-                     <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-1.5 whitespace-nowrap"><Target size={12}/> Banco Real</label>
-                     <div className="relative flex-1">
-                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-[11px]">R$</span>
+                 <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-2.5">
+                   <div className="flex items-center justify-between gap-2">
+                     <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-1 whitespace-nowrap"><Target size={10}/> Banco Real</label>
+                     <div className="relative flex-1 max-w-[140px]">
+                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-[10px]">R$</span>
                        <input 
                          type="number" 
                          placeholder="0.00" 
                          value={saldoBancario} 
                          onChange={handleSaldoChange}
-                         className="w-full h-9 pl-9 pr-3 text-sm font-bold text-white bg-slate-900 border border-slate-700 rounded-lg outline-none focus:border-indigo-500 transition-all shadow-inner placeholder:text-slate-600"
+                         className="w-full h-8 pl-8 pr-2 text-xs font-semibold text-white bg-slate-900 border border-slate-700 rounded-md outline-none focus:border-indigo-500 transition-all shadow-inner placeholder:text-slate-600"
                        />
                      </div>
                    </div>
 
                    {saldoBancario !== '' && diferencaBanco !== 0 && (
-                      <div className="mt-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-widest bg-black/10 p-2 rounded-lg border border-slate-700">
+                      <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-widest bg-black/10 p-1.5 rounded-md border border-slate-700/50">
                          <span className="text-slate-500">Diferença:</span>
-                         <div className="flex items-center gap-3">
-                           <span className={`text-[11px] font-semibold ${diferencaBanco >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                         <div className="flex items-center gap-2">
+                           <span className={`text-[10px] font-semibold ${diferencaBanco >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                              {diferencaBanco >= 0 ? '+' : ''}{formatCurrency(diferencaBanco)}
                            </span>
                            <button 
                              onClick={handleRegistrarAjuste} 
                              disabled={adjustmentMutation.isPending}
-                             className={`px-3 py-1 text-[8px] font-semibold uppercase tracking-widest text-white rounded transition-colors shadow-sm cursor-pointer disabled:opacity-50 ${
+                             className={`px-2 py-1 text-[8px] font-semibold uppercase tracking-widest text-white rounded transition-colors shadow-sm cursor-pointer disabled:opacity-50 ${
                                adjustmentMutation.isPending ? 'bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'
                              }`}
                             >
@@ -403,32 +376,32 @@ export default function Home() {
            </div>
 
            {/* Reserva e Ação */}
-           <div className="flex flex-col gap-4">
-             <div className="bg-slate-800/40 p-5 rounded-xl border border-slate-700/50 flex flex-col justify-center">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-widest text-amber-500/80 flex items-center gap-1.5"><Printer size={14}/> Fundo Reserva</h3>
+           <div className="flex flex-col gap-3">
+             <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 flex flex-col justify-center">
+                <div className="flex items-center justify-between mb-0.5">
+                  <h3 className="text-[9px] font-semibold uppercase tracking-widest text-amber-500/80 flex items-center gap-1.5"><Printer size={12}/> Fundo Reserva</h3>
                 </div>
-                <p className="text-2xl font-semibold text-amber-400/90">{formatCurrency(depreciacaoTotal)}</p>
+                <p className="text-xl font-semibold text-amber-400/90">{formatCurrency(depreciacaoTotal)}</p>
              </div>
 
-             <div className="bg-slate-800/40 p-5 rounded-xl border border-slate-700/50 flex-1">
-               <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3.5 flex items-center gap-1.5"><ShieldCheck size={14} className="text-blue-400"/> Projeção Mês</h3>
-               <div className="flex flex-col gap-2.5">
-                 <div className="flex justify-between items-center text-xs">
-                   <span className="text-emerald-400/90 font-semibold uppercase text-[10px] tracking-widest">+ A Receber:</span>
-                   <span className="font-semibold text-slate-300">{formatCurrency(faturamentoPendenteTotal)}</span>
+             <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 flex-1">
+               <h3 className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-2.5 flex items-center gap-1.5"><ShieldCheck size={12} className="text-blue-400"/> Projeção Geral</h3>
+               <div className="flex flex-col gap-1.5">
+                 <div className="flex justify-between items-center text-[10px]">
+                   <span className="text-emerald-400/90 font-semibold uppercase text-[9px] tracking-widest">+ A Receber:</span>
+                   <span className="font-medium text-slate-300">{formatCurrency(faturamentoPendenteTotal)}</span>
                  </div>
-                 <div className="flex justify-between items-center text-xs">
-                   <span className="text-rose-400/90 font-semibold uppercase text-[10px] tracking-widest">- Contas:</span>
-                   <span className="font-semibold text-slate-300">{formatCurrency(contasAPagar)}</span>
+                 <div className="flex justify-between items-center text-[10px]">
+                   <span className="text-rose-400/90 font-semibold uppercase text-[9px] tracking-widest">- Contas:</span>
+                   <span className="font-medium text-slate-300">{formatCurrency(contasAPagar)}</span>
                  </div>
                </div>
              </div>
            </div>
 
-           {/* Dica de Ação */}
-           <div className={`md:col-span-2 text-xs font-medium leading-relaxed p-4 rounded-xl bg-slate-950/40 border border-slate-800/60 shadow-inner ${corDica}`}>
-             <span className="font-semibold uppercase tracking-widest opacity-70 block mb-1 text-[10px]">💡 Dica do Sistema:</span>
+           {/* Dica de Ação Compacta */}
+           <div className={`md:col-span-2 text-[10px] font-medium leading-relaxed p-3 rounded-lg bg-slate-950/40 border border-slate-800/60 shadow-inner ${corDica}`}>
+             <span className="font-semibold uppercase tracking-widest opacity-70 block mb-0.5 text-[8px]">💡 Resumo:</span>
              {dicaAcao}
            </div>
 
