@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; 
 import { 
   Users, ArrowUpRight, ArrowDownRight, Activity, Loader2,
-  Printer, Target, Sparkles, AlertCircle, ShoppingCart, CheckCircle, TrendingUp, Palette
+  Printer, Target, Sparkles, AlertCircle, ShoppingCart, 
+  CheckCircle, TrendingUp, Palette, ShieldCheck 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -242,7 +243,6 @@ export default function Home() {
     }
   }
 
-  // Se estiver carregando, mostra o Loader (agora protegido)
   if (loading || isLoadingTasks) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
