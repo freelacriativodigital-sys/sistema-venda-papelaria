@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Trash2, Clock, CheckCircle2, CheckSquare, Square, Pencil, MessageCircle, FileText, DollarSign, Coins, AlertCircle, Calendar } from "lucide-react";
 import { supabase } from "../../lib/supabase"; 
@@ -138,7 +138,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
     window.open(url, '_blank');
   };
 
-  // --- GERADOR DE PDF (CORRIGIDO E OTIMIZADO) ---
   const handleGeneratePDF = (e) => {
     e.stopPropagation();
     const nomeClienteRaw = task.cliente_nome || "Cliente";
@@ -194,12 +193,8 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
       </div>
     `;
 
-    // Cria o elemento e anexa escondido no DOM para que a biblioteca consiga ler
-    const element = document.createElement('div');
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.top = '-9999px';
-    element.innerHTML = `
+    // Geramos o código HTML como uma string pura, sem manipular o DOM
+    const htmlContent = `
       <div style="font-family: 'Inter', sans-serif; padding: 15mm; width: 210mm; box-sizing: border-box; background: white;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${corBase}; padding-bottom: 20px; margin-bottom: 30px;">
           <div style="display: flex; align-items: center; gap: 15px;">
@@ -278,8 +273,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
       </div>
     `;
 
-    document.body.appendChild(element);
-
     const opt = {
       margin:       0,
       filename:     `Detalhamento - ${nomeClienteRaw}.pdf`,
@@ -289,9 +282,8 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
       pagebreak:    { mode: 'avoid-all' }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
-      document.body.removeChild(element); // Destrói o "papel" após gerar
-    });
+    // Agora passamos a string HTML diretamente para a biblioteca
+    html2pdf().set(opt).from(htmlContent).save();
   };
 
   const toggleChecklistItem = (idx) => {
@@ -302,7 +294,7 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   };
 
   return (
-    <div className={`bg-white border ${isDone ? 'border-slate-100 opacity-80' : 'border-slate-200'} rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all`}>
+    <div className={`bg-white border ${isDone ? 'border-slate-100 opacity-80' : 'border-slate-200'} rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-md transition-all`}>
       
       <div className="flex items-start justify-between p-3 border-b border-slate-50">
         <div className="flex items-start gap-3 w-full">
