@@ -70,8 +70,8 @@ export default function FooterSite({ st }) {
 
         </div>
         <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600 text-center md:text-left">
-            {st?.copyright || `© ${new Date().getFullYear()} ${st?.nome_loja || 'Minha Loja'}`}
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600 text-center md:text-left w-full">
+            © {new Date().getFullYear()} {st?.nome_loja || 'Minha Loja'} • Desenvolvido por Leo Soeiro
           </p>
         </div>
       </div>
