@@ -29,13 +29,11 @@ export default function ProdutoModal({
   const fileInputRef = useRef(null);
   const opcaoImgRef = useRef(null);
 
-  // --- BUSCAS DE DADOS PARA A CALCULADORA ---
   const { data: insumos = [] } = useQuery({ queryKey: ["insumos"], queryFn: async () => { const { data } = await supabase.from("insumos").select("*").order("nome"); return data || []; }});
   const { data: custos = [] } = useQuery({ queryKey: ["custos_fixos"], queryFn: async () => { const { data } = await supabase.from("custos_fixos").select("*"); return data || []; }});
   const { data: equipamentos = [] } = useQuery({ queryKey: ["equipamentos"], queryFn: async () => { const { data } = await supabase.from("equipamentos").select("*"); return data || []; }});
   const { data: configJornada = {} } = useQuery({ queryKey: ["configuracoes_jornada"], queryFn: async () => { const { data } = await supabase.from("configuracoes").select("horas_por_dia, dias_por_semana").eq("id", 1).single(); return data || {}; }});
 
-  // --- MATEMÁTICA DO VALOR DA HORA ---
   const valorMinuto = useMemo(() => {
     const horasMensais = (configJornada.horas_por_dia || 8) * (configJornada.dias_por_semana || 5) * 4;
     const somaFixos = custos.reduce((acc, curr) => acc + Number(curr.valor_considerado || 0), 0);
@@ -43,7 +41,6 @@ export default function ProdutoModal({
     return horasMensais > 0 ? ((somaFixos + somaEquip) / horasMensais) / 60 : 0;
   }, [custos, equipamentos, configJornada]);
 
-  // --- CONTROLE DA CALCULADORA (RECEITA) ---
   const [receita, setReceita] = useState(editingProduct?.receita || { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 });
   const [insumoSelecionado, setInsumoSelecionado] = useState('');
   const [qtdInsumo, setQtdInsumo] = useState(1);
@@ -63,7 +60,6 @@ export default function ProdutoModal({
 
   const removeInsumoReceita = (id) => setReceita(prev => ({ ...prev, insumos: prev.insumos.filter(i => i.id !== id) }));
 
-  // --- CÁLCULOS DO PREÇO SUGERIDO ---
   const custoMateriais = receita.insumos.reduce((acc, curr) => acc + (curr.custo_unitario * curr.quantidade), 0);
   const custoMaoDeObra = receita.tempo_minutos * valorMinuto;
   const custoTotalCalculado = custoMateriais + custoMaoDeObra;
@@ -72,16 +68,13 @@ export default function ProdutoModal({
   const divisor = somaPorcentagens >= 1 ? 0.01 : (1 - somaPorcentagens);
   const precoSugerido = custoTotalCalculado > 0 ? custoTotalCalculado / divisor : 0;
 
-  // --- AÇÕES RÁPIDAS ---
   const aplicarCustoCalculado = () => setEditingProduct(prev => ({ ...prev, custo: Number(custoTotalCalculado.toFixed(2)) }));
   const aplicarPrecoSugerido = () => setEditingProduct(prev => ({ ...prev, preco: Number(precoSugerido.toFixed(2)) }));
 
-  // Cálculos de Lucro Real na Loja
   const precoBaseCalculo = editingProduct?.preco_promocional > 0 ? editingProduct.preco_promocional : (editingProduct?.preco || 0);
   const lucroReal = precoBaseCalculo - (editingProduct?.custo || 0);
   const margemReal = precoBaseCalculo > 0 ? ((lucroReal / precoBaseCalculo) * 100).toFixed(1) : 0;
 
-  // Funções de Gerenciamento de Variacoes e Atacado
   const adicionarAtributo = () => { if (!novoAtributoNome) return; const novoAtributo = { id: Date.now(), nome: novoAtributoNome, obrigatorio: true, opcoes: [{ id: Date.now() + 1, nome: 'Opção 1', preco: 0, custo: 0, imagem: null }] }; setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: [...(prev.variacoes.atributos || []), novoAtributo] } })); setNovoAtributoNome(''); };
   const adicionarOpcao = (atribId) => { setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: prev.variacoes.atributos.map(atrib => atrib.id === atribId ? { ...atrib, opcoes: [...atrib.opcoes, { id: Date.now(), nome: `Nova Opção`, preco: 0, custo: 0, imagem: null }] } : atrib) } })); };
   const removerOpcao = (atribId, opcaoId) => { setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: prev.variacoes.atributos.map(atrib => atrib.id === atribId ? { ...atrib, opcoes: atrib.opcoes.filter(o => o.id !== opcaoId) } : atrib) } })); };
@@ -119,7 +112,6 @@ export default function ProdutoModal({
         <p className="text-[9px] font-medium text-slate-500 uppercase tracking-widest mt-1">Calcule o custo e defina o preço final</p>
       </div>
 
-      {/* CALCULADORA COMPACTA E INTELIGENTE */}
       <div className="bg-indigo-50/40 border border-indigo-100 p-4 md:p-5 rounded-xl space-y-4 shadow-inner">
         <div className="flex justify-between items-center mb-1">
           <h4 className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest flex items-center gap-1.5"><Calculator size={14}/> Simulador de Custo</h4>
@@ -151,15 +143,21 @@ export default function ProdutoModal({
 
         <div className="grid grid-cols-3 gap-2 md:gap-3">
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold uppercase text-indigo-600">Tempo (Min)</label>
+            <div className="flex items-end h-4 ml-0.5">
+              <label className="text-[9px] font-bold uppercase text-indigo-600 tracking-widest">Tempo (Min)</label>
+            </div>
             <Input type="number" value={receita.tempo_minutos} onChange={e => setReceita({...receita, tempo_minutos: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-bold text-center text-xs text-indigo-900" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold uppercase text-emerald-600">Margem %</label>
+            <div className="flex items-end h-4 ml-0.5">
+              <label className="text-[9px] font-bold uppercase text-emerald-600 tracking-widest">Margem %</label>
+            </div>
             <Input type="number" value={receita.margem} onChange={e => setReceita({...receita, margem: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-bold text-center text-xs text-emerald-600" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold uppercase text-rose-500">Taxas %</label>
+            <div className="flex items-end h-4 ml-0.5">
+              <label className="text-[9px] font-bold uppercase text-rose-500 tracking-widest">Taxas %</label>
+            </div>
             <Input type="number" value={receita.taxa} onChange={e => setReceita({...receita, taxa: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-bold text-center text-xs text-rose-600" />
           </div>
         </div>
@@ -177,21 +175,32 @@ export default function ProdutoModal({
         </div>
       </div>
 
-      {/* VALORES REAIS NA LOJA */}
+      {/* VALORES REAIS NA LOJA (AGORA COM ALINHAMENTO MILIMÉTRICO) */}
       <div className="space-y-4 pt-2">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Custo Real Un.</label>
+            <div className="flex justify-between items-end h-5 ml-0.5 w-full">
+              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Custo Real Un.</label>
+              {custoTotalCalculado > 0 && (
+                <button onClick={aplicarCustoCalculado} className="text-[8px] font-bold text-rose-500 uppercase bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 hover:bg-rose-100 transition-colors shrink-0">
+                  Usar {fmt(custoTotalCalculado)}
+                </button>
+              )}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">R$</span>
               <Input type="number" value={editingProduct?.custo || ''} onChange={(e) => setEditingProduct({...editingProduct, custo: Number(e.target.value)})} className="h-11 pl-9 bg-slate-50 border-slate-200 font-bold text-sm" />
             </div>
           </div>
+          
           <div className="space-y-1.5">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-bold uppercase text-slate-800 tracking-widest ml-0.5">Venda (Site)</label>
+            <div className="flex justify-between items-end h-5 ml-0.5 w-full">
+              <label className="text-[10px] font-bold uppercase text-slate-800 tracking-widest">Venda (Site)</label>
+              {precoSugerido > 0 && (
+                <button onClick={aplicarPrecoSugerido} className="text-[8px] font-bold text-emerald-600 uppercase bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 hover:bg-emerald-100 transition-colors shrink-0">
+                  Usar {fmt(precoSugerido)}
+                </button>
+              )}
             </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-sm">R$</span>
@@ -202,17 +211,22 @@ export default function ProdutoModal({
         
         <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold uppercase text-purple-600 tracking-widest flex items-center justify-between ml-0.5">
-              <span>Promoção</span>
-              <select value={promoType} onChange={(e) => { setPromoType(e.target.value); setPromoPercent(''); }} className="bg-transparent outline-none cursor-pointer border border-purple-200 rounded px-1">
-                <option value="value">R$</option>
-                <option value="percent">%</option>
-              </select>
-            </label>
-            <Input type="number" placeholder="Opcional" value={promoType === 'percent' ? promoPercent : (editingProduct?.preco_promocional || '')} onChange={(e) => { if (promoType === 'percent') { setPromoPercent(e.target.value); } else { setEditingProduct({...editingProduct, preco_promocional: Number(e.target.value)}); } }} className="h-11 bg-purple-50/50 border-purple-200 font-bold text-purple-700 text-sm focus:border-purple-400" />
+            <div className="flex items-end h-4 ml-0.5">
+              <label className="text-[10px] font-bold uppercase text-purple-600 tracking-widest">Promoção</label>
+            </div>
+            <div className="flex h-11">
+               <select value={promoType} onChange={(e) => { setPromoType(e.target.value); setPromoPercent(''); }} className="bg-purple-100/50 border border-purple-200 border-r-0 text-purple-700 font-bold text-[10px] rounded-l-lg px-2 outline-none cursor-pointer">
+                 <option value="value">R$</option>
+                 <option value="percent">%</option>
+               </select>
+               <input type="number" placeholder="Opcional" value={promoType === 'percent' ? promoPercent : (editingProduct?.preco_promocional || '')} onChange={(e) => { if (promoType === 'percent') { setPromoPercent(e.target.value); } else { setEditingProduct({...editingProduct, preco_promocional: Number(e.target.value)}); } }} className="w-full bg-purple-50/50 border border-purple-200 rounded-r-lg outline-none font-bold text-sm text-purple-700 focus:border-purple-400 pl-3 transition-all" />
+            </div>
           </div>
+          
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Qtd Mínima</label>
+            <div className="flex items-end h-4 ml-0.5">
+              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Qtd Mínima</label>
+            </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[10px] uppercase">Un</span>
               <Input type="number" min="1" value={editingProduct?.qtd_minima || 1} onChange={(e) => setEditingProduct({...editingProduct, qtd_minima: Number(e.target.value)})} className="h-11 pl-9 bg-slate-50 border-slate-200 font-bold text-slate-800 text-sm" />
@@ -353,13 +367,18 @@ export default function ProdutoModal({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest flex justify-between ml-0.5">Categoria <button onClick={() => setIsCategoryModalOpen(true)} className="text-blue-600 hover:underline">Gerenciar</button></label>
+                        <div className="flex justify-between items-end h-4 ml-0.5">
+                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Categoria</label>
+                          <button onClick={() => setIsCategoryModalOpen(true)} className="text-[9px] font-bold text-blue-600 hover:underline uppercase">Gerenciar</button>
+                        </div>
                         <select value={editingProduct?.categoria || ''} onChange={(e) => setEditingProduct({...editingProduct, categoria: e.target.value})} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-3 text-[10px] font-bold uppercase outline-none focus:ring-1 focus:ring-blue-400 text-slate-700">
                           {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                       </div>
                       <div className="space-y-1.5 text-left">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Código SKU</label>
+                        <div className="flex items-end h-4 ml-0.5">
+                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Código SKU</label>
+                        </div>
                         <Input value={editingProduct?.sku || ''} onChange={(e) => setEditingProduct({...editingProduct, sku: e.target.value})} placeholder="Ex: PROD-01" className="h-11 border-slate-200 bg-slate-50 rounded-lg font-bold uppercase text-xs" />
                       </div>
                     </div>
@@ -401,10 +420,30 @@ export default function ProdutoModal({
                              <GripVertical size={16} className="text-slate-300 cursor-grab shrink-0 hidden sm:block" />
                              <div className="w-full sm:max-w-sm">
                                <p className="text-[10px] font-bold uppercase text-slate-500 mb-1.5 tracking-widest ml-0.5">Nome do Atributo</p>
-                               <Input value={atrib.nome} onChange={(e) => setEditingProduct(prev => ({...prev, variacoes: {...prev.variacoes, atributos: prev.variacoes.atributos.map(a => a.id === atrib.id ? {...a, nome: e.target.value} : a)}}))} className="h-11 bg-white border-slate-200 text-xs font-bold uppercase text-slate-800 rounded-lg w-full shadow-sm" />
+                               <Input 
+                                 value={atrib.nome} 
+                                 onChange={(e) => setEditingProduct(prev => ({
+                                   ...prev, 
+                                   variacoes: {
+                                     ...prev.variacoes, 
+                                    atributos: prev.variacoes.atributos.map(a => a.id === atrib.id ? {...a, nome: e.target.value} : a)
+                                   }
+                                 }))} 
+                                 className="h-11 bg-white border-slate-200 text-xs font-bold uppercase text-slate-800 rounded-lg w-full shadow-sm"
+                               />
                              </div>
                            </div>
-                           <Button variant="destructive" onClick={() => setEditingProduct(prev => ({...prev, variacoes: {...prev.variacoes, atributos: prev.variacoes.atributos.filter(a => a.id !== atrib.id)}}))} className="h-11 rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold uppercase text-[10px] gap-1.5 shadow-none border border-red-100 w-full sm:w-auto transition-colors">
+                           <Button 
+                             variant="destructive"
+                             onClick={() => setEditingProduct(prev => ({
+                               ...prev, 
+                               variacoes: {
+                                 ...prev.variacoes, 
+                                 atributos: prev.variacoes.atributos.filter(a => a.id !== atrib.id)
+                               }
+                             }))} 
+                             className="h-11 rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold uppercase text-[10px] md:text-[11px] gap-1.5 shadow-none border border-red-100 w-full sm:w-auto transition-colors"
+                           >
                              <Trash2 size={14} /> Excluir Atributo
                            </Button>
                          </div>
@@ -412,20 +451,32 @@ export default function ProdutoModal({
                          <div className="grid grid-cols-1 gap-4">
                            {atrib.opcoes.map((opcao) => (
                              <div key={opcao.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm relative flex flex-col sm:flex-row items-center gap-5 group hover:border-blue-300 transition-colors">
-                               <div onClick={() => triggerOpcaoUpload(atrib.id, opcao.id)} className="w-20 h-20 rounded-lg bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0">
+                               <div 
+                                 onClick={() => triggerOpcaoUpload(atrib.id, opcao.id)} 
+                                 className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0"
+                               >
                                  {opcao.imagem ? <img src={opcao.imagem} className="w-full h-full object-cover" /> : <><Image size={18} className="mb-0.5"/><span className="text-[8px] font-bold uppercase tracking-widest">Foto</span></>}
                                </div>
 
                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
                                  <div className="space-y-1.5">
                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Nome da Opção</p>
-                                   <Input value={opcao.nome} onChange={(e) => updateOpcao(atrib.id, opcao.id, 'nome', e.target.value)} className="h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 focus:bg-white border-slate-200" />
+                                   <Input 
+                                     value={opcao.nome} 
+                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'nome', e.target.value)} 
+                                     className="h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 focus:bg-white border-slate-200" 
+                                   />
                                  </div>
                                  <div className="space-y-1.5">
                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-0.5">Custo R$</p>
                                    <div className="relative">
                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-xs">R$</span>
-                                     <Input type="number" value={opcao.custo || ''} onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', Number(e.target.value))} className="pl-8 h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 border-slate-200 focus:bg-white" />
+                                     <Input 
+                                       type="number" 
+                                       value={opcao.custo} 
+                                       onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', Number(e.target.value))} 
+                                       className="pl-8 h-11 text-xs font-bold text-slate-800 rounded-lg bg-slate-50 border-slate-200 focus:border-slate-300 focus:bg-white" 
+                                     />
                                    </div>
                                  </div>
                                  <div className="space-y-1.5">
@@ -437,24 +488,49 @@ export default function ProdutoModal({
                                    </p>
                                    <div className="relative">
                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 font-semibold text-xs">R$</span>
-                                     <Input type="number" value={opcao.preco || ''} onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', Number(e.target.value))} className="pl-8 h-11 text-xs font-black text-blue-700 rounded-lg bg-blue-50/50 border-blue-100 focus:border-blue-300 focus:bg-white" />
+                                     <Input 
+                                       type="number" 
+                                       value={opcao.preco} 
+                                       onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', Number(e.target.value))} 
+                                       className="pl-8 h-11 text-xs font-black text-blue-700 rounded-lg bg-blue-50/50 border-blue-100 focus:border-blue-300 focus:bg-white" 
+                                     />
                                    </div>
                                  </div>
                                </div>
-                               <button onClick={() => removerOpcao(atrib.id, opcao.id)} className="absolute -top-2.5 -right-2.5 p-2 bg-red-500 text-white rounded-lg shadow-sm transition-transform active:scale-90 hover:bg-red-600"><X size={14} /></button>
+
+                               <button 
+                                 onClick={() => removerOpcao(atrib.id, opcao.id)} 
+                                 className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-lg shadow-sm transition-transform active:scale-90 hover:bg-red-600"
+                               >
+                                 <X size={12} />
+                               </button>
                              </div>
                            ))}
-                           <Button onClick={() => adicionarOpcao(atrib.id)} variant="outline" className="w-full h-12 border-dashed border-2 border-slate-200 rounded-xl flex items-center justify-center gap-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all font-bold text-[10px] uppercase mt-2 bg-white">
+                           
+                           <Button 
+                             onClick={() => adicionarOpcao(atrib.id)} 
+                             variant="outline" 
+                             className="w-full h-11 border-dashed border-2 border-slate-200 rounded-xl flex items-center justify-center gap-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all font-bold text-[10px] uppercase mt-1 bg-white"
+                           >
                              <Plus size={16} /> Adicionar Nova Opção
                            </Button>
                          </div>
                        </div>
                      ))}
+
                      <div className="flex flex-col gap-3 pt-6 border-t border-slate-200">
                        <p className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-0.5">Criar Novo Grupo de Variação</p>
                        <div className="flex flex-col sm:flex-row gap-3">
-                         <Input placeholder="Ex: Tamanho da Camiseta" value={novoAtributoNome} onChange={(e) => setNovoAtributoNome(e.target.value)} className="h-12 border-slate-200 bg-white rounded-lg font-bold w-full text-sm shadow-sm" />
-                         <Button onClick={adicionarAtributo} className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] md:text-xs px-8 gap-1.5 w-full sm:w-auto shadow-sm">
+                         <Input 
+                           placeholder="Ex: Tamanho da Camiseta" 
+                           value={novoAtributoNome} 
+                           onChange={(e) => setNovoAtributoNome(e.target.value)} 
+                           className="h-12 border-slate-200 bg-white rounded-lg font-bold w-full text-sm shadow-sm" 
+                         />
+                         <Button 
+                           onClick={adicionarAtributo} 
+                           className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] md:text-xs px-8 gap-1.5 w-full sm:w-auto shadow-sm"
+                         >
                            <Plus size={16} /> Adicionar Grupo
                          </Button>
                        </div>
@@ -469,7 +545,7 @@ export default function ProdutoModal({
           {drawerTab === 'atacado' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <InfoReferencia />
-              <div className="bg-white border border-slate-200 rounded-xl p-5 md:p-6 shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-lg p-5 md:p-6 shadow-sm">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                   <div className="flex items-center gap-3 text-slate-800">
                     <div className="bg-amber-50 p-2 rounded-lg"><Box size={20} className="text-amber-500" /></div>

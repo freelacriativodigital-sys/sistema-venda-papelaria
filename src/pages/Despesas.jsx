@@ -1,78 +1,66 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Search, Plus, Trash2, Edit3, CheckCircle2, 
-  AlertCircle, X, Calendar, Loader2, ArrowUpCircle, 
-  ArrowDownCircle, MoreVertical, CreditCard, Filter
+  AlertCircle, X, Save, TrendingDown, Calendar, 
+  Tag, Loader2, Wallet, Clock, CreditCard, PieChart,
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function Despesas() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('pendentes'); // 'todas', 'pendentes', 'pagas'
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  
+  // Modal de Pagamento Rápido
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [payData, setPayData] = useState({ id: null, descricao: '', valorTotal: 0, valorJaPago: 0, valorPagamentoAgora: 0 });
+
   const queryClient = useQueryClient();
 
-  // --- ESTADOS DE FILTROS ---
-  const [searchTerm, setSearchTerm] = useState('');
-  const [contaFilter, setContaFilter] = useState('Todas');
-  const [tabAtual, setTabAtual] = useState('Todos'); // 'Todos', 'Receber', 'Pagar'
-  
-  // Datas para filtro (Padrão: Mês atual)
-  const hoje = new Date();
-  const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-  const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-  const [dataInicio, setDataInicio] = useState(primeiroDiaMes);
-  const [dataFim, setDataFim] = useState(ultimoDiaMes);
-
-  // --- ESTADOS DE MODAIS ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLancamento, setEditingLancamento] = useState(null);
-  
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
-  const [payData, setPayData] = useState({ id: null, descricao: '', valorTotal: 0, valorJaPago: 0, valorPagamentoAgora: 0, tipo: 'saida' });
-
-  const [menuAbertoId, setMenuAbertoId] = useState(null);
-
-  // --- 1. LER LANÇAMENTOS (Antiga Despesas) ---
-  const { data: lancamentos = [], isLoading } = useQuery({
-    queryKey: ["sistema-lancamentos", dataInicio, dataFim],
+  // --- 1. LER DESPESAS DA NUVEM ---
+  const { data: despesas = [], isLoading } = useQuery({
+    queryKey: ["sistema-despesas"],
     queryFn: async () => {
-      let query = supabase.from("despesas").select("*").order("vencimento", { ascending: true });
-      if (dataInicio) query = query.gte('vencimento', dataInicio);
-      if (dataFim) query = query.lte('vencimento', dataFim);
+      const { data, error } = await supabase
+        .from("despesas")
+        .select("*")
+        .order("vencimento", { ascending: true });
       
-      const { data, error } = await query;
       if (error && error.code === '42P01') return []; 
       if (error) throw error;
       return data || [];
     },
   });
 
-  // --- 2. CRIAR/EDITAR LANÇAMENTO ---
+  // --- 2. CRIAR/EDITAR DESPESA ---
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const valor = Number(data.valor || 0);
-      const valorPago = Number(data.valor_pago || 0);
+    mutationFn: async (expenseData) => {
+      const valor = Number(expenseData.valor || 0);
+      const valorPago = Number(expenseData.valor_pago || 0);
       
+      // Auto-calcula o status baseado no valor pago
       let status = 'pendente';
       if (valorPago >= valor) status = 'pago';
       else if (valorPago > 0) status = 'parcial';
 
       const payload = {
-        tipo: data.tipo || 'saida',
-        descricao: data.descricao,
-        pessoa: data.pessoa || '',
-        conta_bancaria: data.conta_bancaria || 'Principal',
+        descricao: expenseData.descricao,
         valor: valor,
         valor_pago: valorPago,
-        vencimento: data.vencimento,
-        categoria: data.categoria || 'Geral',
+        vencimento: expenseData.vencimento,
+        categoria: expenseData.categoria || 'Geral',
         status: status
       };
 
-      if (data.id) {
-        const { error } = await supabase.from("despesas").update(payload).eq("id", data.id);
+      if (expenseData.id) {
+        const { error } = await supabase.from("despesas").update(payload).eq("id", expenseData.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("despesas").insert([payload]);
@@ -80,22 +68,22 @@ export default function Despesas() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sistema-lancamentos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
       setIsModalOpen(false);
-      setEditingLancamento(null);
+      setEditingExpense(null);
     },
   });
 
-  // --- 3. APAGAR ---
+  // --- 3. APAGAR DESPESA ---
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from("despesas").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sistema-lancamentos"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] }),
   });
 
-  // --- 4. REGISTRAR PAGAMENTO/RECEBIMENTO ---
+  // --- 4. REGISTRAR PAGAMENTO (PARCIAL OU TOTAL) ---
   const registerPaymentMutation = useMutation({
     mutationFn: async ({ id, valorJaPago, valorPagamentoAgora, valorTotal }) => {
       const novoValorPago = Number(valorJaPago) + Number(valorPagamentoAgora);
@@ -104,383 +92,290 @@ export default function Despesas() {
       if (novoValorPago >= valorTotal) novoStatus = 'pago';
       else if (novoValorPago > 0) novoStatus = 'parcial';
 
-      const { error } = await supabase.from("despesas").update({ valor_pago: novoValorPago, status: novoStatus }).eq("id", id);
+      const { error } = await supabase.from("despesas").update({ 
+        valor_pago: novoValorPago, 
+        status: novoStatus 
+      }).eq("id", id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sistema-lancamentos"] });
+      queryClient.invalidateQueries({ queryKey: ["sistema-despesas"] });
       setIsPayModalOpen(false);
-      setMenuAbertoId(null);
     },
   });
 
   const handleSave = () => {
-    if (!editingLancamento.descricao || !editingLancamento.valor || !editingLancamento.vencimento) {
+    if (!editingExpense.descricao || !editingExpense.valor || !editingExpense.vencimento) {
       return alert("Preencha descrição, valor e vencimento.");
     }
-    saveMutation.mutate(editingLancamento);
+    saveMutation.mutate(editingExpense);
   };
 
-  const handleNew = (tipoPadrao = 'entrada') => {
-    setEditingLancamento({
-      tipo: tipoPadrao,
+  const handleNew = () => {
+    setEditingExpense({
       descricao: '',
-      pessoa: '',
-      conta_bancaria: 'Principal',
       valor: '',
       valor_pago: 0,
       vencimento: new Date().toISOString().split('T')[0],
-      categoria: 'Geral',
+      categoria: 'Insumos',
       status: 'pendente'
     });
     setIsModalOpen(true);
   };
 
-  const openPayModal = (lancamento) => {
-    const restante = Number(lancamento.valor) - Number(lancamento.valor_pago || 0);
+  const handleDelete = (id) => {
+    if (window.confirm("Deseja realmente excluir esta despesa?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const openPayModal = (despesa) => {
+    const restante = Number(despesa.valor) - Number(despesa.valor_pago || 0);
     setPayData({
-      id: lancamento.id,
-      descricao: lancamento.descricao,
-      tipo: lancamento.tipo || 'saida',
-      valorTotal: Number(lancamento.valor),
-      valorJaPago: Number(lancamento.valor_pago || 0),
+      id: despesa.id,
+      descricao: despesa.descricao,
+      valorTotal: Number(despesa.valor),
+      valorJaPago: Number(despesa.valor_pago || 0),
       valorPagamentoAgora: restante > 0 ? restante : 0
     });
     setIsPayModalOpen(true);
-    setMenuAbertoId(null);
   };
 
-  // --- LÓGICA DE FILTROS E RESUMO ---
-  const filtrados = useMemo(() => {
-    return lancamentos.filter(l => {
-      const matchSearch = l.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (l.pessoa && l.pessoa.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchConta = contaFilter === 'Todas' || l.conta_bancaria === contaFilter;
-      const matchTab = tabAtual === 'Todos' || 
-                       (tabAtual === 'Receber' && l.tipo === 'entrada') || 
-                       (tabAtual === 'Pagar' && (!l.tipo || l.tipo === 'saida'));
-      return matchSearch && matchConta && matchTab;
-    });
-  }, [lancamentos, searchTerm, contaFilter, tabAtual]);
+  const confirmPayment = () => {
+    if (payData.valorPagamentoAgora <= 0) return alert("Informe um valor maior que zero.");
+    registerPaymentMutation.mutate(payData);
+  };
 
-  const entradas = filtrados.filter(l => l.tipo === 'entrada');
-  const saidas = filtrados.filter(l => !l.tipo || l.tipo === 'saida');
+  // --- CÁLCULOS DO RESUMO ---
+  const totalGeral = despesas.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalPago = despesas.reduce((acc, d) => acc + Number(d.valor_pago || 0), 0);
+  const totalRestante = despesas.filter(d => d.status !== 'pago').reduce((acc, d) => acc + (Number(d.valor) - Number(d.valor_pago || 0)), 0);
 
-  // Cálculos do Resumo (Soma os valores esperados no período)
-  const totalRecebido = entradas.reduce((acc, l) => acc + Number(l.valor), 0);
-  const totalSaidas = saidas.reduce((acc, l) => acc + Number(l.valor), 0);
-  const resultado = totalRecebido - totalSaidas;
-
-  const contasDisponiveis = ['Todas', ...new Set(lancamentos.map(l => l.conta_bancaria || 'Principal'))];
+  // --- FILTROS ---
+  const filteredDespesas = despesas.filter(d => {
+    const matchSearch = d.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || d.categoria.toLowerCase().includes(searchTerm.toLowerCase());
+    let matchStatus = true;
+    if (statusFilter === 'pendentes') matchStatus = d.status === 'pendente' || d.status === 'parcial';
+    if (statusFilter === 'pagas') matchStatus = d.status === 'pago';
+    return matchSearch && matchStatus;
+  });
 
   // --- LÓGICA DE DATAS E AVISOS ---
   const formatarData = (dataString) => {
     if (!dataString) return '--';
     const [ano, mes, dia] = dataString.split('-');
-    return `${dia}/${mes}/${ano.substring(2)}`;
+    return `${dia}/${mes}/${ano}`;
   };
 
-  const analisarStatus = (vencimentoStr, status) => {
-    if (status === 'pago') return { tag: 'Liquidado', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', info: '' };
+  const analisarVencimento = (dataString, status) => {
+    if (status === 'pago') return { texto: 'Pago', cor: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' };
     
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const vencimento = new Date(`${vencimentoStr}T00:00:00`);
+    const vencimento = new Date(`${dataString}T00:00:00`);
     const diffTime = vencimento.getTime() - hoje.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDias < 0) return { tag: 'Atrasado', color: 'text-red-600 bg-red-50 border-red-200', info: `${diffDias}d` };
-    if (diffDias === 0) return { tag: 'Pendente', color: 'text-amber-600 bg-amber-50 border-amber-200', info: 'Hoje' };
-    return { tag: 'Pendente', color: 'text-slate-500 bg-slate-50 border-slate-200', info: `em ${diffDias}d` };
-  };
-
-  // --- COMPONENTE DE LINHA (Item da Lista) ---
-  const LancamentoItem = ({ item }) => {
-    const isEntrada = item.tipo === 'entrada';
-    const { tag, color, info } = analisarStatus(item.vencimento, item.status);
-    const isMenuOpen = menuAbertoId === item.id;
-
-    return (
-      <div className="flex items-center justify-between p-3.5 hover:bg-slate-50/50 border-b border-slate-100 last:border-0 transition-colors group relative">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-           
-           {/* Bloco 1: Data e Status */}
-           <div className="flex flex-col items-center justify-center w-[85px] shrink-0">
-             <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm border uppercase flex items-center gap-1 mb-1 ${color}`}>
-               {tag === 'Atrasado' && <AlertCircle size={8}/>} {tag}
-             </div>
-             <div className="text-[10px] font-semibold text-slate-600 flex items-center gap-1">
-               {formatarData(item.vencimento)}
-               {info && <span className={`text-[9px] font-bold ${tag === 'Atrasado' ? 'text-red-500' : tag === 'Pendente' && info==='Hoje' ? 'text-amber-500' : 'text-slate-400'}`}>{info}</span>}
-             </div>
-           </div>
-
-           {/* Bloco 2: Descrição e Pessoa */}
-           <div className="flex flex-col flex-1 min-w-0 px-2">
-             <p className={`text-sm font-semibold truncate ${item.status === 'pago' ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'}`}>
-               {item.descricao}
-             </p>
-             {item.pessoa && <p className="text-[10px] font-medium text-slate-400 truncate mt-0.5 flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-slate-100 flex items-center justify-center"><Calendar size={8}/></span> {item.pessoa}</p>}
-           </div>
-        </div>
-
-        {/* Bloco 3: Valores e Ações */}
-        <div className="flex items-center gap-4 shrink-0">
-           <div className="flex flex-col items-end">
-             <p className={`text-sm font-bold ${isEntrada ? 'text-emerald-600' : 'text-red-600'}`}>
-               {isEntrada ? '+ ' : '- '}R$ {Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-             </p>
-             <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">{item.conta_bancaria || 'Principal'}</p>
-           </div>
-           
-           <div className="relative">
-             <button onClick={() => setMenuAbertoId(isMenuOpen ? null : item.id)} className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-md transition-colors">
-               <MoreVertical size={16} />
-             </button>
-             
-             {isMenuOpen && (
-               <>
-                 <div className="fixed inset-0 z-40" onClick={() => setMenuAbertoId(null)}></div>
-                 <div className="absolute right-0 top-8 w-36 bg-white border border-slate-200 shadow-xl rounded-lg py-1 z-50 flex flex-col">
-                   <button onClick={() => openPayModal(item)} className="px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 text-left flex items-center gap-2"><CheckCircle2 size={14}/> Baixar (Pagar)</button>
-                   <button onClick={() => { setEditingLancamento(item); setIsModalOpen(true); setMenuAbertoId(null); }} className="px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-amber-600 text-left flex items-center gap-2"><Edit3 size={14}/> Editar</button>
-                   <button onClick={() => { if(window.confirm('Excluir lançamento?')) deleteMutation.mutate(item.id); setMenuAbertoId(null); }} className="px-4 py-2 text-[11px] font-semibold text-red-600 hover:bg-red-50 text-left flex items-center gap-2 border-t border-slate-50"><Trash2 size={14}/> Excluir</button>
-                 </div>
-               </>
-             )}
-           </div>
-        </div>
-      </div>
-    );
+    if (diffDias < 0) return { texto: `Atrasada há ${Math.abs(diffDias)} dias`, cor: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', iconCor: 'text-red-500' };
+    if (diffDias === 0) return { texto: 'Vence HOJE!', cor: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
+    if (diffDias <= 3) return { texto: `Vence em ${diffDias} dias`, cor: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', iconCor: 'text-amber-500' };
+    
+    return { texto: `Vence em ${diffDias} dias`, cor: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', iconCor: 'text-slate-400' };
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 text-slate-900 font-sans">
+    <div className="min-h-screen bg-slate-50 pb-20 text-slate-900">
       
-      {/* HEADER TIPO DASHBOARD */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 flex flex-col md:flex-row justify-between gap-6">
-          
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md">
-              <ArrowUpCircle size={20} className="absolute -translate-x-1.5 -translate-y-1.5 text-emerald-400" />
-              <ArrowDownCircle size={20} className="absolute translate-x-1.5 translate-y-1.5 text-red-400" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Lançamentos Financeiros</h1>
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">Contas a Pagar e Contas a Receber</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <Button onClick={() => handleNew('saida')} variant="outline" className="h-10 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 font-bold uppercase text-[10px] md:text-xs shadow-sm">
-              + Nova Saída
-            </Button>
-            <Button onClick={() => handleNew('entrada')} className="h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase text-[10px] md:text-xs shadow-sm">
-              + Nova Entrada
-            </Button>
-          </div>
-
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8 space-y-8">
-        
-        {/* SESSÃO 1: RESUMO DO PERÍODO */}
-        <div className="flex flex-col lg:flex-row gap-6">
-           <div className="w-full lg:w-1/3 space-y-4">
-             <h3 className="text-[10px] font-bold uppercase text-slate-400 tracking-widest ml-1">Resumo do Período</h3>
-             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-xs font-semibold text-slate-600">Total Recebido</span></div>
-                  <span className="font-bold text-emerald-600 text-sm">+ R$ {totalRecebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5"><div className="w-2 h-2 rounded-full bg-red-500"></div><span className="text-xs font-semibold text-slate-600">Total Saídas</span></div>
-                  <span className="font-bold text-red-600 text-sm">- R$ {totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className={`p-4 flex items-center justify-between ${resultado >= 0 ? 'bg-emerald-50/50' : 'bg-amber-50/50'}`}>
-                  <div className="flex items-center gap-2.5"><div className={`w-2 h-2 rounded-full ${resultado >= 0 ? 'bg-emerald-600' : 'bg-amber-500'}`}></div><span className="text-xs font-bold text-slate-800">Resultado</span></div>
-                  <span className={`font-black text-base ${resultado >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {resultado >= 0 ? '+' : '-'} R$ {Math.abs(resultado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-             </div>
-           </div>
-
-           {/* FILTROS AVANÇADOS */}
-           <div className="w-full lg:w-2/3 flex flex-col justify-end space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                 <div className="md:col-span-2 space-y-1.5">
-                   <label className="text-[10px] font-semibold uppercase text-slate-500 ml-1">Buscar</label>
-                   <div className="relative">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                     <input type="text" placeholder="Descrição ou cliente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full h-10 pl-8 pr-3 bg-white outline-none text-xs font-medium border border-slate-200 rounded-lg focus:border-blue-400 transition-colors shadow-sm" />
-                   </div>
-                 </div>
-                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-semibold uppercase text-slate-500 ml-1">Data Início</label>
-                   <div className="relative">
-                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                     <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="w-full h-10 pl-8 pr-2 bg-white outline-none text-[11px] font-semibold text-slate-700 border border-slate-200 rounded-lg focus:border-blue-400 transition-colors shadow-sm" />
-                   </div>
-                 </div>
-                 <div className="space-y-1.5">
-                   <label className="text-[10px] font-semibold uppercase text-slate-500 ml-1">Data Fim</label>
-                   <div className="relative">
-                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                     <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="w-full h-10 pl-8 pr-2 bg-white outline-none text-[11px] font-semibold text-slate-700 border border-slate-200 rounded-lg focus:border-blue-400 transition-colors shadow-sm" />
-                   </div>
-                 </div>
-              </div>
-              <div className="flex items-center gap-4 border-b border-slate-200 pb-0">
-                 <div className="flex gap-6">
-                   {[
-                     { id: 'Todos', label: 'Todos', count: filtrados.length },
-                     { id: 'Receber', label: 'A Receber', count: entradas.length },
-                     { id: 'Pagar', label: 'A Pagar', count: saidas.length }
-                   ].map(tab => (
-                     <button key={tab.id} onClick={() => setTabAtual(tab.id)} className={`pb-3 text-xs font-bold uppercase tracking-widest relative transition-colors flex items-center gap-1.5 ${tabAtual === tab.id ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>
-                       {tab.label} <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${tabAtual === tab.id ? 'bg-slate-200 text-slate-700' : 'bg-slate-100 text-slate-400'}`}>{tab.count}</span>
-                       {tabAtual === tab.id && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 rounded-t-full" />}
-                     </button>
-                   ))}
-                 </div>
-                 <div className="ml-auto pb-3 flex items-center gap-2">
-                    <Filter size={12} className="text-slate-400"/>
-                    <select value={contaFilter} onChange={(e) => setContaFilter(e.target.value)} className="text-[10px] font-bold text-slate-600 uppercase bg-transparent outline-none cursor-pointer">
-                      {contasDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* SESSÃO 2: COLUNAS DE LISTAGEM */}
-        {isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
+      {/* HEADER FIXO */}
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
-            {/* COLUNA: ENTRADAS */}
-            {(tabAtual === 'Todos' || tabAtual === 'Receber') && (
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-fit">
-                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
-                   <div className="flex items-center gap-2">
-                     <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                     <h3 className="font-bold text-xs uppercase tracking-widest text-slate-800">Entradas</h3>
-                     <span className="text-[10px] font-medium text-slate-400">{entradas.length} itens</span>
-                   </div>
-                   <button onClick={() => handleNew('entrada')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm">
-                     <Plus size={12}/> Entrada
-                   </button>
-                 </div>
-                 <div className="flex flex-col max-h-[600px] overflow-y-auto no-scrollbar">
-                   {entradas.length === 0 ? (
-                     <div className="p-10 text-center text-[10px] font-bold uppercase text-slate-400 tracking-widest">Nenhuma entrada no período</div>
-                   ) : (
-                     entradas.map(item => <LancamentoItem key={item.id} item={item} />)
-                   )}
-                 </div>
-              </div>
-            )}
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold md:font-semibold text-slate-800 flex items-center gap-2 uppercase tracking-tight">
+                <TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-rose-500" /> Despesas
+              </h1>
+              <p className="text-[10px] md:text-xs font-medium text-slate-500 uppercase tracking-widest mt-1">Controle Financeiro de Contas</p>
+            </div>
 
-            {/* COLUNA: SAÍDAS */}
-            {(tabAtual === 'Todos' || tabAtual === 'Pagar') && (
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-fit">
-                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl">
-                   <div className="flex items-center gap-2">
-                     <div className="w-1 h-4 bg-red-500 rounded-full"></div>
-                     <h3 className="font-bold text-xs uppercase tracking-widest text-slate-800">Saídas</h3>
-                     <span className="text-[10px] font-medium text-slate-400">{saidas.length} itens</span>
-                   </div>
-                   <button onClick={() => handleNew('saida')} className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm border border-red-200">
-                     <Plus size={12}/> Saída
-                   </button>
-                 </div>
-                 <div className="flex flex-col max-h-[600px] overflow-y-auto no-scrollbar">
-                   {saidas.length === 0 ? (
-                     <div className="p-10 text-center text-[10px] font-bold uppercase text-slate-400 tracking-widest">Nenhuma saída no período</div>
-                   ) : (
-                     saidas.map(item => <LancamentoItem key={item.id} item={item} />)
-                   )}
-                 </div>
-              </div>
-            )}
+            <Button 
+              onClick={handleNew}
+              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-md h-11 md:h-10 px-6 shadow-sm flex gap-2 font-semibold text-xs uppercase transition-all"
+            >
+              <Plus className="w-4 h-4" /> Nova Despesa
+            </Button>
 
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 md:mt-8 space-y-6 md:space-y-8 animate-in fade-in">
+        
+        {/* CARDS DE RESUMO */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
+           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0"><Wallet size={24}/></div>
+              <div>
+                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Total das Contas</p>
+                 <p className="text-xl font-bold text-slate-800 tracking-tight">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </div>
+           </div>
+           <div className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-2 h-full bg-emerald-500" />
+              <div className="w-12 h-12 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0"><CheckCircle2 size={24}/></div>
+              <div>
+                 <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mb-0.5">Total Já Pago</p>
+                 <p className="text-xl font-bold text-emerald-700 tracking-tight">R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </div>
+           </div>
+           <div className="bg-white p-5 rounded-xl border border-red-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-2 h-full bg-red-500" />
+              <div className="w-12 h-12 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-red-500 shrink-0"><AlertCircle size={24}/></div>
+              <div>
+                 <p className="text-[10px] font-semibold text-red-500 uppercase tracking-widest mb-0.5">Falta Pagar (Restante)</p>
+                 <p className="text-xl font-bold text-red-600 tracking-tight">R$ {totalRestante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </div>
+           </div>
+        </div>
+
+        {/* BARRA DE FILTROS E ABAS */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+          
+          <div className="flex w-full md:w-auto bg-slate-50 p-1 rounded-lg border border-slate-100">
+            <button onClick={() => setStatusFilter('pendentes')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'pendentes' ? 'bg-white shadow-sm text-blue-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+              Pendentes
+            </button>
+            <button onClick={() => setStatusFilter('pagas')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'pagas' ? 'bg-white shadow-sm text-emerald-600 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+              Pagas
+            </button>
+            <button onClick={() => setStatusFilter('todas')} className={`flex-1 md:px-6 py-2 md:py-2.5 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all ${statusFilter === 'todas' ? 'bg-white shadow-sm text-slate-800 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
+              Todas
+            </button>
+          </div>
+
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Buscar despesa..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full h-10 pl-9 pr-4 bg-slate-50 outline-none text-xs font-medium border border-slate-200 rounded-lg focus:border-blue-300 focus:bg-white transition-all" 
+            />
+          </div>
+        </div>
+
+        {/* LISTAGEM DE DESPESAS */}
+        {isLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+        ) : filteredDespesas.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <CheckCircle2 size={48} className="mx-auto text-emerald-400 mb-4" />
+            <h3 className="text-base font-semibold text-slate-800 uppercase mb-1.5">Tudo limpo por aqui!</h3>
+            <p className="text-[10px] font-medium uppercase text-slate-400 tracking-widest">Nenhuma despesa encontrada para este filtro.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+            <AnimatePresence mode="popLayout">
+              {filteredDespesas.map((despesa) => {
+                const isPago = despesa.status === 'pago';
+                const isParcial = despesa.status === 'parcial';
+                const alerta = analisarVencimento(despesa.vencimento, despesa.status);
+                
+                const valorTotal = Number(despesa.valor);
+                const valorPagoItem = Number(despesa.valor_pago || 0);
+                const valorRestanteItem = valorTotal - valorPagoItem;
+                const percentualPago = Math.min(100, Math.round((valorPagoItem / valorTotal) * 100)) || 0;
+
+                return (
+                  <motion.div
+                    key={despesa.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className={`bg-white p-4 md:p-5 rounded-xl border shadow-sm flex flex-col relative transition-all duration-300 ${isPago ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200 hover:border-blue-300'}`}
+                  >
+                    
+                    {/* AÇÕES TOPO */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Tag size={10}/> {despesa.categoria}</p>
+                        <h3 className={`font-semibold text-sm leading-tight line-clamp-2 ${isPago ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-800'}`}>{despesa.descricao}</h3>
+                      </div>
+                      <div className="flex gap-1 bg-slate-50 rounded-md shadow-sm border border-slate-100 shrink-0">
+                        <button onClick={() => { setEditingExpense(despesa); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 transition-colors rounded-l-md"><Edit3 size={14} /></button>
+                        <div className="w-px bg-slate-200"></div>
+                        <button onClick={() => handleDelete(despesa.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-100 transition-colors rounded-r-md"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+
+                    {/* AVISO DE VENCIMENTO */}
+                    {!isPago && (
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${alerta.bg} ${alerta.border} mb-4`}>
+                        <Clock size={12} className={alerta.iconCor}/>
+                        <span className={`text-[10px] font-bold uppercase tracking-wide ${alerta.cor}`}>
+                          {alerta.texto} ({formatarData(despesa.vencimento)})
+                        </span>
+                      </div>
+                    )}
+
+                    {/* PROGRESSO DE PAGAMENTO */}
+                    <div className="space-y-1.5 mb-4">
+                      <div className="flex justify-between text-[9px] font-semibold uppercase text-slate-500">
+                        <span>Progresso</span>
+                        <span className={percentualPago === 100 ? 'text-emerald-600' : 'text-blue-600'}>{percentualPago}% Pago</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${isPago ? 'bg-emerald-500' : isParcial ? 'bg-blue-500' : 'bg-slate-300'}`} style={{ width: `${percentualPago}%` }} />
+                      </div>
+                    </div>
+
+                    {/* VALORES E BOTÃO DE PAGAR */}
+                    <div className="mt-auto pt-4 border-t border-slate-100">
+                      
+                      <div className="flex justify-between items-end mb-4">
+                        <div>
+                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total</p>
+                           <p className="text-xs font-semibold text-slate-600">R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="text-right">
+                           <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${isPago ? 'text-emerald-500' : 'text-red-400'}`}>
+                             {isPago ? 'Pago' : 'Falta Pagar'}
+                           </p>
+                           <p className={`text-lg font-black tracking-tight leading-none ${isPago ? 'text-emerald-600' : 'text-red-600'}`}>
+                             R$ {(isPago ? valorTotal : valorRestanteItem).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                           </p>
+                        </div>
+                      </div>
+                      
+                      {!isPago ? (
+                        <button 
+                          onClick={() => openPayModal(despesa)}
+                          className="w-full h-10 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all shadow-sm border bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-1.5"
+                        >
+                          <CreditCard size={16}/> Registrar Pagamento
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => openPayModal(despesa)} // Abre o mesmo modal para poder estornar
+                          className="w-full h-10 rounded-md text-[10px] md:text-xs font-bold uppercase transition-all border bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 flex items-center justify-center gap-1.5"
+                        >
+                          <Edit3 size={16}/> Ajustar Pagamento
+                        </button>
+                      )}
+                    </div>
+
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
-      {/* --- MODAIS MANTIDOS E ATUALIZADOS PARA O NOVO VISUAL --- */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative z-10 overflow-hidden">
-              
-              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">
-                  {editingLancamento?.id ? 'Editar Lançamento' : 'Novo Lançamento'}
-                </h2>
-                <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                  <button onClick={() => setEditingLancamento({...editingLancamento, tipo: 'entrada'})} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-colors ${editingLancamento.tipo === 'entrada' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Entrada (Receita)</button>
-                  <button onClick={() => setEditingLancamento({...editingLancamento, tipo: 'saida'})} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-colors ${editingLancamento.tipo === 'saida' ? 'bg-red-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Saída (Despesa)</button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
-                    <Input placeholder="Ex: Venda Pedido #20, Conta de Luz..." value={editingLancamento.descricao} onChange={e => setEditingLancamento({...editingLancamento, descricao: e.target.value})} className="h-10 border-slate-200 bg-slate-50 font-semibold text-sm" />
-                  </div>
-                  
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-1">{editingLancamento.tipo === 'entrada' ? 'Cliente' : 'Fornecedor'} (Opcional)</label>
-                    <Input placeholder="Ex: Ana Maria" value={editingLancamento.pessoa || ''} onChange={e => setEditingLancamento({...editingLancamento, pessoa: e.target.value})} className="h-10 border-slate-200 bg-slate-50 font-semibold text-sm" />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-1">Conta Bancária</label>
-                    <Input placeholder="Ex: Inter, Caixa, Espécie..." value={editingLancamento.conta_bancaria || ''} onChange={e => setEditingLancamento({...editingLancamento, conta_bancaria: e.target.value})} className="h-10 border-slate-200 bg-slate-50 font-semibold text-sm" />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-1">Valor Total (R$)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">R$</span>
-                      <Input type="number" value={editingLancamento.valor} onChange={e => setEditingLancamento({...editingLancamento, valor: e.target.value})} className="h-10 pl-9 border-slate-200 bg-slate-50 font-bold text-slate-800 text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest ml-1">Vencimento / Data</label>
-                    <Input type="date" value={editingLancamento.vencimento} onChange={e => setEditingLancamento({...editingLancamento, vencimento: e.target.value})} className="h-10 border-slate-200 bg-slate-50 font-semibold text-slate-800 text-sm" />
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-2 border-t border-slate-100">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-blue-500 tracking-widest ml-1">Valor Já Recebido/Pago (R$)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-semibold text-sm">R$</span>
-                      <Input type="number" value={editingLancamento.valor_pago || 0} onChange={e => setEditingLancamento({...editingLancamento, valor_pago: e.target.value})} className="h-10 pl-9 border-blue-200 bg-blue-50 font-bold text-blue-700 text-sm" />
-                    </div>
-                  </div>
-                </div>
-
-                <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-md font-bold uppercase text-xs mt-4 shadow-sm">
-                  {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar Lançamento"}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      {/* --- MODAL PARA REGISTRAR PAGAMENTO --- */}
       <AnimatePresence>
         {isPayModalOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
@@ -489,15 +384,15 @@ export default function Despesas() {
               
               <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-md flex items-center justify-center border ${payData.tipo === 'entrada' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'}`}><CreditCard size={16}/></div>
-                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">{payData.tipo === 'entrada' ? 'Receber' : 'Pagar'}</h2>
+                  <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100"><CreditCard size={16}/></div>
+                  <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight leading-none">Pagamento</h2>
                 </div>
-                <button onClick={() => setIsPayModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md"><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsPayModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="space-y-4">
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
-                  <p className="text-[10px] font-semibold uppercase text-slate-500 mb-1">{payData.tipo === 'entrada' ? 'Recebendo' : 'Pagando'}</p>
+                  <p className="text-[10px] font-semibold uppercase text-slate-500 mb-1">Pagando</p>
                   <p className="text-sm font-bold text-slate-800 line-clamp-1">{payData.descricao}</p>
                 </div>
 
@@ -507,29 +402,131 @@ export default function Despesas() {
                 </div>
                 
                 <div className="flex justify-between items-center text-xs font-semibold px-1">
-                  <span className={`${payData.tipo === 'entrada' ? 'text-emerald-600' : 'text-blue-600'} uppercase`}>Já Baixado:</span>
-                  <span className={`${payData.tipo === 'entrada' ? 'text-emerald-700' : 'text-blue-700'}`}>R$ {payData.valorJaPago.toFixed(2)}</span>
+                  <span className="text-emerald-600 uppercase">Já Pago:</span>
+                  <span className="text-emerald-700">R$ {payData.valorJaPago.toFixed(2)}</span>
                 </div>
 
                 <div className="space-y-1.5 pt-3 border-t border-slate-100">
-                  <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Valor do Lançamento de Hoje</label>
+                  <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Valor do Pagamento de Hoje</label>
                   <div className="relative">
-                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-lg ${payData.tipo === 'entrada' ? 'text-emerald-400' : 'text-blue-400'}`}>R$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-lg">R$</span>
                     <Input 
                       type="number" 
                       value={payData.valorPagamentoAgora} 
                       onChange={e => setPayData({...payData, valorPagamentoAgora: e.target.value})} 
-                      className={`h-14 pl-10 focus:bg-white rounded-lg font-black text-lg text-right pr-4 ${payData.tipo === 'entrada' ? 'border-emerald-200 bg-emerald-50/50 text-emerald-700' : 'border-blue-200 bg-blue-50/50 text-blue-700'}`} 
+                      className="h-14 pl-10 border-blue-200 bg-blue-50/50 focus:bg-white rounded-lg font-black text-blue-700 text-lg text-right pr-4" 
+                    />
+                  </div>
+                  <p className="text-[9px] font-medium text-slate-400 uppercase text-right pt-1">
+                    *Dica: Pode ser o valor total ou parcial. Use números negativos para estornar.
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={confirmPayment} 
+                  disabled={registerPaymentMutation.isPending}
+                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold uppercase text-xs mt-4 shadow-sm transition-all"
+                >
+                  {registerPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pagamento"}
+                </Button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL PARA CRIAR/EDITAR DESPESA (COMPLETO) --- */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-md rounded-2xl md:rounded-xl p-6 shadow-xl relative z-10 overflow-hidden">
+              
+              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><TrendingDown size={16}/></div>
+                  <h2 className="text-lg md:text-xl font-bold text-slate-800 uppercase tracking-tight leading-none">
+                    {editingExpense?.id ? 'Editar Despesa' : 'Nova Despesa'}
+                  </h2>
+                </div>
+                <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-md transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+                  <Input 
+                    placeholder="Ex: Conta de Luz, Fornecedor X..."
+                    value={editingExpense.descricao} 
+                    onChange={e => setEditingExpense({...editingExpense, descricao: e.target.value})} 
+                    className="h-11 md:h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-sm text-slate-800" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor Total (R$)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">R$</span>
+                      <Input 
+                        type="number" 
+                        value={editingExpense.valor} 
+                        onChange={e => setEditingExpense({...editingExpense, valor: e.target.value})} 
+                        className="h-11 md:h-10 pl-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-bold text-slate-800 text-sm" 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Vencimento</label>
+                    <Input 
+                      type="date" 
+                      value={editingExpense.vencimento} 
+                      onChange={e => setEditingExpense({...editingExpense, vencimento: e.target.value})} 
+                      className="h-11 md:h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-semibold text-slate-800 text-sm" 
                     />
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3 pt-1 border-b border-slate-100 pb-5">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] md:text-xs font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
+                    <select 
+                      value={editingExpense.categoria} 
+                      onChange={e => setEditingExpense({...editingExpense, categoria: e.target.value})}
+                      className="w-full h-11 md:h-10 border border-slate-200 rounded-md px-3 text-[11px] md:text-xs font-semibold uppercase outline-none bg-slate-50 focus:bg-white text-slate-700"
+                    >
+                      <option value="Fornecedores">Fornecedores</option>
+                      <option value="Insumos">Insumos</option>
+                      <option value="Aluguel">Aluguel / Fixo</option>
+                      <option value="Impostos">Impostos</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Ferramentas">Sistemas / Ferramentas</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+                  
+                  {/* AJUSTE MANUAL DO VALOR PAGO (Apenas em Edição) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] md:text-xs font-semibold uppercase text-emerald-600 tracking-widest ml-1">Valor Já Pago (R$)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-sm">R$</span>
+                      <Input 
+                        type="number" 
+                        value={editingExpense.valor_pago || 0} 
+                        onChange={e => setEditingExpense({...editingExpense, valor_pago: e.target.value})} 
+                        className="h-11 md:h-10 pl-9 border-emerald-200 bg-emerald-50 focus:bg-white rounded-md font-bold text-emerald-700 text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <Button 
-                  onClick={() => registerPaymentMutation.mutate(payData)} 
-                  disabled={registerPaymentMutation.isPending}
-                  className={`w-full h-12 text-white rounded-md font-bold uppercase text-xs mt-4 shadow-sm ${payData.tipo === 'entrada' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-900 hover:bg-slate-800'}`}
+                  onClick={handleSave} 
+                  disabled={saveMutation.isPending}
+                  className="w-full h-12 md:h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold uppercase text-[11px] md:text-xs mt-2 shadow-sm transition-all"
                 >
-                  {registerPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Baixa"}
+                  {saveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Despesa"}
                 </Button>
               </div>
 

@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// IMPORTAÇÃO DOS NOSSOS NOVOS MÓDULOS
 import { deletarImagensDoProduto } from '../components/Produtos/produtosUtils';
 import CategoriaModal from '../components/Produtos/CategoriaModal';
 import ProdutoModal from '../components/Produtos/ProdutoModal';
@@ -20,12 +19,10 @@ const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL
 export default function Produtos() {
   const queryClient = useQueryClient();
   
-  // Estados de Controle de Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
 
-  // Estados de Dados
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -33,26 +30,18 @@ export default function Produtos() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [bulkCategory, setBulkCategory] = useState('');
   
-  // Estados de Promoção
   const [promoType, setPromoType] = useState('value');
   const [promoPercent, setPromoPercent] = useState('');
 
+  // ESTADO DE CATEGORIAS (LIMPO DE FÁBRICA)
   const [categorias, setCategorias] = useState(() => {
     const saved = localStorage.getItem("sistema_categorias");
-    return saved ? JSON.parse(saved) : ['Sem Categoria', 'Papelaria', 'Brindes', 'Festas'];
+    return saved ? JSON.parse(saved) : ['Sem Categoria'];
   });
 
   useEffect(() => {
     localStorage.setItem("sistema_categorias", JSON.stringify(categorias));
   }, [categorias]);
-
-  // Efeito para calcular a porcentagem de promoção no Modal
-  useEffect(() => {
-    if (promoType === 'percent' && editingProduct?.preco > 0 && promoPercent !== '') {
-      const novoPreco = editingProduct.preco * (1 - Number(promoPercent) / 100);
-      setEditingProduct(prev => ({ ...prev, preco_promocional: Number(novoPreco.toFixed(2)) }));
-    }
-  }, [promoPercent, promoType, editingProduct?.preco]);
 
   // BUSCA OS PRODUTOS
   const { data: produtos = [], isLoading } = useQuery({
@@ -64,10 +53,28 @@ export default function Produtos() {
     },
   });
 
-  // MUTAÇÕES DE BANCO DE DADOS
+  // SINCRONIZA AS CATEGORIAS DO BANCO DE DADOS (RECUPERA AS ANTIGAS)
+  useEffect(() => {
+    if (produtos && produtos.length > 0) {
+      const catBanco = produtos.map(p => p.categoria).filter(c => c && c !== 'Sem Categoria');
+      setCategorias(prev => {
+        const combinadas = [...new Set([...prev, ...catBanco])];
+        if (combinadas.length !== prev.length) return combinadas;
+        return prev;
+      });
+    }
+  }, [produtos]);
+
+  useEffect(() => {
+    if (promoType === 'percent' && editingProduct?.preco > 0 && promoPercent !== '') {
+      const novoPreco = editingProduct.preco * (1 - Number(promoPercent) / 100);
+      setEditingProduct(prev => ({ ...prev, preco_promocional: Number(novoPreco.toFixed(2)) }));
+    }
+  }, [promoPercent, promoType, editingProduct?.preco]);
+
   const saveMutation = useMutation({
     mutationFn: async (prod) => {
-     const payload = {
+      const payload = {
         nome: prod.nome,
         preco: Number(prod.preco || 0),
         preco_promocional: Number(prod.preco_promocional || 0),
@@ -102,11 +109,10 @@ export default function Produtos() {
     onError: (err) => alert("Erro ao salvar: " + err.message)
   });
 
-  // HARD DELETE (Deleta o produto E as fotos)
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       const prod = produtos.find(p => p.id === id);
-      if (prod) await deletarImagensDoProduto(prod); // Limpa o Storage
+      if (prod) await deletarImagensDoProduto(prod); 
       
       const { error } = await supabase.from("produtos").delete().eq("id", id);
       if (error) throw error;
@@ -117,12 +123,11 @@ export default function Produtos() {
     }
   });
 
-  // HARD DELETE EM MASSA
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
       const prodsToDelete = produtos.filter(p => selectedIds.includes(p.id));
       for (const prod of prodsToDelete) {
-        await deletarImagensDoProduto(prod); // Limpa o Storage de todos os selecionados
+        await deletarImagensDoProduto(prod); 
       }
       const { error } = await supabase.from('produtos').delete().in('id', selectedIds);
       if (error) throw error;
@@ -156,7 +161,6 @@ export default function Produtos() {
     }
   });
 
-  // FUNÇÕES DE AÇÃO NA TELA
   const toggleSelection = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   
   const selectAll = () => {
@@ -201,7 +205,8 @@ export default function Produtos() {
     setEditingProduct({
       nome: '', preco: 0, preco_promocional: 0, custo: 0, qtd_minima: 1, sku: '',
       imagens: [], categoria: 'Sem Categoria', statusOnline: true, destaque: false, 
-      variacoes: { ativa: false, atributos: [] }, atacado: { ativa: false, regras: [] }, campos_personalizados: [] 
+      variacoes: { ativa: false, atributos: [] }, atacado: { ativa: false, regras: [] }, campos_personalizados: [],
+      receita: { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 }
     });
     setPromoType('value'); setPromoPercent(''); setIsModalOpen(true);
   };
@@ -211,7 +216,8 @@ export default function Produtos() {
       ...prod, statusOnline: prod.status_online ?? true, destaque: prod.destaque ?? false,
       preco_promocional: prod.preco_promocional || 0, qtd_minima: prod.qtd_minima || 1, 
       variacoes: prod.variacoes || { ativa: false, atributos: [] }, atacado: prod.atacado || { ativa: false, regras: [] },
-      campos_personalizados: prod.campos_personalizados || [] 
+      campos_personalizados: prod.campos_personalizados || [],
+      receita: prod.receita || { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 }
     });
     setPromoType('value'); setPromoPercent(''); setIsModalOpen(true);
   };
@@ -248,7 +254,6 @@ export default function Produtos() {
           </Button>
         </div>
 
-        {/* BARRA DE PESQUISA E FILTROS */}
         <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="relative w-full md:flex-1">
@@ -274,7 +279,6 @@ export default function Produtos() {
           </button>
         </div>
 
-        {/* GRADE DE PRODUTOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
           {filteredProducts.map((prod) => {
              const precoAtivo = prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco;
@@ -334,7 +338,6 @@ export default function Produtos() {
         </div>
       </div>
 
-      {/* BARRA DE AÇÕES EM MASSA FLUTUANTE */}
       <AnimatePresence>
         {selectedIds.length > 0 && (
           <motion.div initial={{ y: 150, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 150, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-slate-800 border border-slate-700 text-white p-3 md:p-4 rounded-xl shadow-2xl z-50 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
@@ -354,7 +357,6 @@ export default function Produtos() {
         )}
       </AnimatePresence>
 
-      {/* RENDERIZAÇÃO DOS MODAIS MODULARIZADOS */}
       <AnimatePresence>
         {isBulkCategoryModalOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
