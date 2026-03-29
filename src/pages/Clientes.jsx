@@ -28,7 +28,7 @@ export default function Clientes() {
         .select("*")
         .order("nome", { ascending: true });
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -63,7 +63,7 @@ export default function Clientes() {
   const getClientTier = (cliente, clientTasks) => {
     const totalPedidos = clientTasks.length;
     const valorPedidos = clientTasks.reduce((acc, t) => acc + getTaskValue(t), 0);
-    const gastoTotal = Number(cliente.pago || 0) + valorPedidos;
+    const gastoTotal = Number(cliente?.pago || 0) + valorPedidos;
 
     if (gastoTotal >= 1000 || totalPedidos >= 10) {
       return { nome: 'Cliente Ouro', text: 'text-yellow-600', icon: '👑' };
@@ -95,7 +95,8 @@ export default function Clientes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sistema-clientes"] });
       setIsModalOpen(false);
-      setEditingClient(null);
+      // Evita o erro apagando os dados com delay após a animação fechar
+      setTimeout(() => setEditingClient(null), 300);
     },
   });
 
@@ -108,13 +109,14 @@ export default function Clientes() {
   });
 
   const handleSave = () => {
-    if (!editingClient.nome) return;
+    if (!editingClient?.nome) return alert("O nome do cliente é obrigatório.");
     saveMutation.mutate(editingClient);
   };
 
+  // Blindagem contra nomes nulos no filtro
   const filteredClientes = clientes.filter(c => 
-    c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.whatsapp.includes(searchTerm)
+    (c.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.whatsapp || '').includes(searchTerm)
   );
 
   const formatCurrency = (value) => {
@@ -174,7 +176,7 @@ export default function Clientes() {
               {filteredClientes.map((cliente) => {
                 const clientTasks = tasks.filter(t => 
                   t.cliente_id === cliente.id || 
-                  (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === cliente.nome.trim().toLowerCase())
+                  (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === (cliente.nome || '').trim().toLowerCase())
                 );
                 
                 let pedidosPago = 0;
@@ -213,10 +215,11 @@ export default function Clientes() {
                   {/* Avatar e Nome */}
                   <div className="flex items-center gap-3 w-full md:w-1/3 min-w-[220px]">
                     <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center font-semibold text-blue-600 text-sm shrink-0 shadow-sm">
-                      {cliente.nome.charAt(0).toUpperCase()}
+                      {/* Blindado contra nomes vazios */}
+                      {(cliente.nome || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div className="overflow-hidden">
-                      <h3 className="font-semibold text-slate-800 text-xs uppercase truncate leading-tight">{cliente.nome}</h3>
+                      <h3 className="font-semibold text-slate-800 text-xs uppercase truncate leading-tight">{cliente.nome || 'Sem Nome'}</h3>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={`text-[8px] font-semibold uppercase tracking-widest flex items-center gap-1 ${tier.text}`}>{tier.icon} {tier.nome}</span>
                       </div>
@@ -237,7 +240,7 @@ export default function Clientes() {
                     )}
                   </div>
 
-                  {/* Valores Financeiros (Estilo do Print) */}
+                  {/* Valores Financeiros */}
                   <div className="flex items-center justify-between sm:justify-start gap-2 w-full md:w-auto shrink-0">
                     <div className="flex flex-col bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 items-center justify-center min-w-[80px]">
                       <span className="text-[8px] font-semibold uppercase text-rose-400 flex items-center gap-1 tracking-widest"><AlertCircle className="w-2.5 h-2.5"/> Pendente</span>
@@ -255,12 +258,21 @@ export default function Clientes() {
                       <Palette size={14} />
                       {clientTasks.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-purple-600 text-[8px] font-semibold text-white shadow-sm">{clientTasks.length}</span>}
                     </Button>
-                    <a href={`https://wa.me/55${cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" className="h-8 w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
-                      <MessageCircle size={14} />
-                    </a>
+                    
+                    {/* Blindado contra whatsapp nulo na formatação do Link */}
+                    {cliente.whatsapp ? (
+                      <a href={`https://wa.me/55${(cliente.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="h-8 w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                        <MessageCircle size={14} />
+                      </a>
+                    ) : (
+                      <div className="h-8 w-8 flex items-center justify-center rounded-md text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <MessageCircle size={14} />
+                      </div>
+                    )}
+
                     <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block"></div>
                     <button onClick={() => { setEditingClient(cliente); setIsModalOpen(true); }} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-blue-600 rounded-md transition-colors"><Edit3 size={14} /></button>
-                    <button onClick={() => deleteMutation.mutate(cliente.id)} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-500 rounded-md transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => { if(window.confirm("Deseja mesmo excluir o cliente?")) deleteMutation.mutate(cliente.id); }} className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-500 rounded-md transition-colors"><Trash2 size={14} /></button>
                   </div>
                   
                 </motion.div>
@@ -277,7 +289,7 @@ export default function Clientes() {
         )}
       </div>
 
-      {/* MODAL: CRIAR / EDITAR CLIENTE (Estilo Lipoaspiração) */}
+      {/* MODAL: CRIAR / EDITAR CLIENTE (Blindado) */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -294,28 +306,28 @@ export default function Clientes() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Nome Completo</label>
-                  <Input value={editingClient.nome} onChange={e => setEditingClient({...editingClient, nome: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
+                  <Input value={editingClient?.nome || ''} onChange={e => setEditingClient(prev => ({...prev, nome: e.target.value}))} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
-                    <Input value={editingClient.whatsapp} onChange={e => setEditingClient({...editingClient, whatsapp: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
+                    <Input value={editingClient?.whatsapp || ''} onChange={e => setEditingClient(prev => ({...prev, whatsapp: e.target.value}))} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
-                    <Input type="date" value={editingClient.aniversario || ''} onChange={e => setEditingClient({...editingClient, aniversario: e.target.value})} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600" />
+                    <Input type="date" value={editingClient?.aniversario || ''} onChange={e => setEditingClient(prev => ({...prev, aniversario: e.target.value}))} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-rose-500 tracking-widest ml-1">Acrescer Pendência</label>
-                    <Input type="number" value={editingClient.pendente} onChange={e => setEditingClient({...editingClient, pendente: Number(e.target.value)})} className="h-9 border-rose-100 bg-rose-50 focus:bg-white rounded-md font-semibold text-rose-600 text-xs" />
+                    <Input type="number" value={editingClient?.pendente ?? ''} onChange={e => setEditingClient(prev => ({...prev, pendente: Number(e.target.value)}))} className="h-9 border-rose-100 bg-rose-50 focus:bg-white rounded-md font-semibold text-rose-600 text-xs" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-emerald-500 tracking-widest ml-1">Acrescer Pago</label>
-                    <Input type="number" value={editingClient.pago} onChange={e => setEditingClient({...editingClient, pago: Number(e.target.value)})} className="h-9 border-emerald-100 bg-emerald-50 focus:bg-white rounded-md font-semibold text-emerald-600 text-xs" />
+                    <Input type="number" value={editingClient?.pago ?? ''} onChange={e => setEditingClient(prev => ({...prev, pago: Number(e.target.value)}))} className="h-9 border-emerald-100 bg-emerald-50 focus:bg-white rounded-md font-semibold text-emerald-600 text-xs" />
                   </div>
                 </div>
                 <p className="text-[8px] text-slate-400 font-medium px-1 uppercase tracking-widest">Os valores acima somam com os pedidos do sistema.</p>
@@ -347,7 +359,7 @@ export default function Clientes() {
               </div>
 
               {(() => {
-                const modalTasks = tasks.filter(t => t.cliente_id === selectedClientForPedidos.id || (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === selectedClientForPedidos.nome.trim().toLowerCase()));
+                const modalTasks = tasks.filter(t => t.cliente_id === selectedClientForPedidos.id || (t.cliente_nome && t.cliente_nome.trim().toLowerCase() === (selectedClientForPedidos.nome || '').trim().toLowerCase()));
                 return (
                   <>
                     <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-3 flex justify-between items-center shadow-sm">
