@@ -619,7 +619,7 @@ export default function Orcamentos() {
                     className="bg-white shadow-md flex flex-col shrink-0 relative mx-auto"
                     style={{ 
                       width: '200mm', 
-                      minHeight: '285mm', 
+                      minHeight: '295mm', 
                       padding: '22mm', 
                       boxSizing: 'border-box' 
                     }}
