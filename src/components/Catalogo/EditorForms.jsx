@@ -35,16 +35,41 @@ export default function EditorForms({ section, st, setSt, handleImageUpload, rem
 
   if (section === 'identidade') return (
     <div className="space-y-6">
+      
+      {/* COR PRINCIPAL (BOTÕES) */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-bold text-slate-500 uppercase">Cor Principal da Loja</label>
+        <label className="text-[10px] font-bold text-slate-500 uppercase">Cor Principal (Botões e Destaques)</label>
         <div className="flex gap-2 items-center">
-          <div className="w-8 h-8 rounded border border-slate-700 relative overflow-hidden shrink-0" style={{backgroundColor: st?.cor_principal || '#000'}}>
-            <input type="color" value={st?.cor_principal || '#000'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          <div className="w-8 h-8 rounded border border-slate-700 relative overflow-hidden shrink-0" style={{backgroundColor: st?.cor_principal || '#f472b6'}}>
+            <input type="color" value={st?.cor_principal || '#f472b6'} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
           </div>
-          <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white uppercase" />
+          <Input value={st?.cor_principal || ''} onChange={(e) => setSt({...st, cor_principal: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white uppercase font-mono" />
         </div>
-        {/* Aqui entra a mágica da sugestão de cor */}
         <PaletaSugestoes field="cor_principal" />
+      </div>
+
+      {/* COR DO FUNDO DO TOPO */}
+      <div className="space-y-1.5 pt-4 border-t border-slate-700/50">
+        <label className="text-[10px] font-bold text-slate-500 uppercase">Cor de Fundo do Topo (Header)</label>
+        <div className="flex gap-2 items-center">
+          <div className="w-8 h-8 rounded border border-slate-700 relative overflow-hidden shrink-0" style={{backgroundColor: st?.cor_fundo_topo || '#ffffff'}}>
+            <input type="color" value={st?.cor_fundo_topo || '#ffffff'} onChange={(e) => setSt({...st, cor_fundo_topo: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          </div>
+          <Input value={st?.cor_fundo_topo || ''} placeholder="#ffffff" onChange={(e) => setSt({...st, cor_fundo_topo: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white uppercase font-mono" />
+        </div>
+        <PaletaSugestoes field="cor_fundo_topo" />
+      </div>
+
+      {/* COR DO TEXTO DO TOPO */}
+      <div className="space-y-1.5 pt-4 border-t border-slate-700/50">
+        <label className="text-[10px] font-bold text-slate-500 uppercase">Cor do Texto e Ícones do Topo</label>
+        <div className="flex gap-2 items-center">
+          <div className="w-8 h-8 rounded border border-slate-700 relative overflow-hidden shrink-0" style={{backgroundColor: st?.cor_texto_topo || '#0f172a'}}>
+            <input type="color" value={st?.cor_texto_topo || '#0f172a'} onChange={(e) => setSt({...st, cor_texto_topo: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          </div>
+          <Input value={st?.cor_texto_topo || ''} placeholder="#0f172a" onChange={(e) => setSt({...st, cor_texto_topo: e.target.value})} className="h-8 text-[10px] bg-slate-800 border-slate-700 text-white uppercase font-mono" />
+        </div>
+        <PaletaSugestoes field="cor_texto_topo" />
       </div>
 
       <div className="pt-4 border-t border-slate-700/50 space-y-1.5">
