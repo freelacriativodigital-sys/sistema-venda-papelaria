@@ -5,7 +5,7 @@ import Whatsapp from './pages/Whatsapp';
 import Clientes from './pages/Clientes';
 import Catalogo from './pages/Catalogo';
 import Orcamentos from './pages/Orcamentos';
-import Despesas from './pages/Despesas';
+import Despesas from './pages/Financeiro';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
@@ -28,7 +28,7 @@ export const pagesConfig = {
     "whatsapp": Whatsapp,
     "clientes": Clientes,
     "orcamentos": Orcamentos,
-    "despesas": Despesas,
+    "Financeiro": Financeiro,
     "catalogo": Catalogo,
     "minhabio": LinkBio, 
     "briefings": Briefings, 
@@ -56,7 +56,7 @@ export const pagesConfig = {
       titulo: "Financeiro & Vendas",
       items: [
         { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
-        { id: "despesas", label: "Despesas", roles: ['admin'] }, 
+        { id: "Financeiro", label: "Despesas", roles: ['admin'] }, 
         { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
       ]
     },
