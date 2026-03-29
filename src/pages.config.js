@@ -5,11 +5,11 @@ import Whatsapp from './pages/Whatsapp';
 import Clientes from './pages/Clientes';
 import Catalogo from './pages/Catalogo';
 import Orcamentos from './pages/Orcamentos';
-import Despesas from './pages/Financeiro';
+import Despesas from './pages/Despesas';
 import LinkBio from './pages/LinkBio'; 
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
-import Configuracoes from './pages/Configuracoes';
+import Seguranca from './pages/Seguranca';
 
 // Importação da página de Entrega para o Cliente
 import EntregaCliente from './pages/EntregaCliente';
@@ -28,12 +28,12 @@ export const pagesConfig = {
     "whatsapp": Whatsapp,
     "clientes": Clientes,
     "orcamentos": Orcamentos,
-    "Financeiro": Financeiro,
+    "despesas": Despesas,
     "catalogo": Catalogo,
     "minhabio": LinkBio, 
     "briefings": Briefings, 
     "precificacao": Precificacao,
-    "configuracoes": Configuracoes,
+    "seguranca": Seguranca,
     // Rota pública de entrega (não precisa de isMaster)
     "entrega/:driveFolderId": EntregaCliente,
     // Rotas master só entram no objeto se for a sua Vercel
@@ -56,7 +56,7 @@ export const pagesConfig = {
       titulo: "Financeiro & Vendas",
       items: [
         { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
-        { id: "Financeiro", label: "Despesas", roles: ['admin'] }, 
+        { id: "despesas", label: "Despesas", roles: ['admin'] }, 
         { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
       ]
     },
@@ -78,7 +78,7 @@ export const pagesConfig = {
     {
       titulo: "Sistema",
       items: [
-        { id: "configuracoes", label: "Configurações Gerais", roles: ['admin'] }, 
+        { id: "seguranca", label: "Segurança e Acesso", roles: ['admin'] }, 
         // Menu Master só é adicionado se for a sua Vercel
         ...(isMaster ? [
           { id: "assinantes", label: "Assinantes SaaS", roles: ['admin'] },
