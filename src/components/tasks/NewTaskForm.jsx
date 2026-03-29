@@ -36,7 +36,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
   
   const [selectedDate, setSelectedDate] = useState(undefined);
   
-  // Estados de Cliente
   const [clientes, setClientes] = useState([]);
   const [mostrarDropdownCliente, setMostrarDropdownCliente] = useState(false);
   const [carregandoClientes, setCarregandoClientes] = useState(false);
@@ -44,7 +43,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
   useEffect(() => {
     if (isOpen) {
-      // Carrega clientes
       async function buscarClientes() {
         setCarregandoClientes(true);
         const { data } = await supabase.from('clientes').select('id, nome, whatsapp').order('nome');
@@ -53,7 +51,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
       }
       buscarClientes();
 
-      // Preenche dados se for edição
       if (taskToEdit) {
         setForm({ ...taskToEdit, checklist: taskToEdit.checklist || [], valor_pago: taskToEdit.valor_pago || 0 });
         setSelectedDate(taskToEdit.delivery_date ? parseISO(taskToEdit.delivery_date) : undefined);
@@ -119,8 +116,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
       transition={{ type: "spring", bounce: 0, duration: 0.4 }}
       className="fixed inset-0 z-[200] bg-[#f8fafc] overflow-y-auto flex flex-col"
     >
-      {/* HEADER DA PÁGINA */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-[250] shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button onClick={onClose} className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
@@ -141,7 +137,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
         </div>
       </div>
 
-      {/* CORPO DO FORMULÁRIO */}
       <div className="flex-1 w-full max-w-3xl mx-auto p-3 md:p-4 pb-20">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
           
@@ -161,7 +156,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                {carregandoClientes && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 animate-spin" />}
                
                {mostrarDropdownCliente && searchStr.length > 0 && !clienteId && (
-                 <div className="absolute top-10 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto p-1 space-y-0.5 z-50">
+                 <div className="absolute top-10 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto p-1 space-y-0.5 z-[300]">
                    {filteredClientes.map(cli => (
                      <div key={cli.id} onMouseDown={(e) => { e.preventDefault(); selecionarCliente(cli); }} className="flex flex-col p-2 hover:bg-slate-50 rounded cursor-pointer transition-colors">
                        <span className="text-[10px] font-semibold text-slate-800 uppercase">{cli.nome}</span>
@@ -188,7 +183,8 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                     <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" align="start">
+                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
+                <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl z-[300]" align="start">
                   <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-2 bg-white scale-90 origin-top-left" />
                 </PopoverContent>
               </Popover>
@@ -200,7 +196,8 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
+                <SelectContent className="z-[300]">
                   <SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
@@ -212,7 +209,8 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
+                <SelectContent className="z-[300]">
                   {DEFAULT_CATEGORIES.map((cat) => (
                      <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
                   ))}
@@ -236,7 +234,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
             </div>
           </div>
 
-          {/* STATUS FINANCEIRO */}
           {displayValue > 0 && (
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-3">
               <label className="text-[9px] font-semibold text-slate-500 mb-2 block uppercase tracking-widest text-center">Status do Pagamento</label>

@@ -138,10 +138,160 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
     window.open(url, '_blank');
   };
 
-  // Lógica do PDF mantida oculta para brevidade (ela continua 100% igual a sua, mas sem ocupar a tela visual)
+  // --- GERADOR DE PDF (CORRIGIDO E OTIMIZADO) ---
   const handleGeneratePDF = (e) => {
     e.stopPropagation();
-    alert("Função PDF acionada (Lógica mantida intacta)");
+    const nomeClienteRaw = task.cliente_nome || "Cliente";
+    const nomeClienteUpper = nomeClienteRaw.toUpperCase();
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
+    const corBase = config?.cor_orcamento || '#0f172a';
+    const corNomeEmpresa = config?.cor_nome_empresa || corBase;
+
+    const checklist = task.checklist || [];
+    const linhasHTML = checklist.length > 0
+      ? checklist.map(item => `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155;">${item.name || 'Serviço'}</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155; text-align: center;">1</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155; text-align: right;">${fmt(item.value)}</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #0f172a; text-align: right; font-weight: bold;">${fmt(item.value)}</td>
+          </tr>
+        `).join('')
+      : `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155;">${task.title}</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155; text-align: center;">1</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #334155; text-align: right;">${fmt(displayValue)}</td>
+            <td style="padding: 10px 12px; font-size: 12px; color: #0f172a; text-align: right; font-weight: bold;">${fmt(displayValue)}</td>
+          </tr>
+        `;
+
+    let totaisHTML = `
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 10px;">
+        <span>Subtotal</span>
+        <span>${fmt(displayValue)}</span>
+      </div>
+    `;
+
+    if (statusPagamento === 'parcial' || valorPago > 0) {
+      totaisHTML += `
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: ${corBase}; margin-bottom: 10px;">
+          <span>Sinal / Pago</span>
+          <span>- ${fmt(valorPago)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #64748b; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+          <span>Restante</span>
+          <span>${fmt(displayValue - valorPago)}</span>
+        </div>
+      `;
+    }
+
+    totaisHTML += `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px;">
+        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">Total Final</span>
+        <span style="font-size: 18px; font-weight: bold; color: ${corBase};">${fmt(displayValue)}</span>
+      </div>
+    `;
+
+    // Cria o elemento e anexa escondido no DOM para que a biblioteca consiga ler
+    const element = document.createElement('div');
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    element.style.top = '-9999px';
+    element.innerHTML = `
+      <div style="font-family: 'Inter', sans-serif; padding: 15mm; width: 210mm; box-sizing: border-box; background: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${corBase}; padding-bottom: 20px; margin-bottom: 30px;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            ${config?.logo_url ? `<img src="${config.logo_url}" style="height: 60px; width: 60px; object-fit: contain; border-radius: 6px;">` : ''}
+            <div>
+              <h1 style="margin: 0; font-size: 22px; font-weight: bold; color: ${corNomeEmpresa}; text-transform: uppercase; letter-spacing: -0.5px;">${config?.nome_loja || 'MINHA EMPRESA'}</h1>
+              ${config?.cnpj ? `<p style="margin: 3px 0 0; font-size: 10px; color: #64748b; font-weight: 500;">CNPJ: ${config.cnpj}</p>` : ''}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <h2 style="margin: 0; font-size: 20px; color: ${corBase}; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px;">DETALHAMENTO DE SERVIÇOS</h2>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-top: 8px;">
+              <span style="font-size: 10px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">Emissão: ${dataAtual}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+          <h3 style="font-size: 11px; font-weight: 700; color: ${corBase}; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Informações do Cliente</h3>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="margin: 0; font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Nome / Razão Social</p>
+              <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b; text-transform: uppercase;">${nomeClienteUpper}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0; font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Status do Pedido</p>
+              <p style="margin: 0; font-size: 13px; font-weight: 700; color: ${statusPagamento === 'pago' ? '#059669' : statusPagamento === 'parcial' ? '#2563eb' : '#e11d48'}; text-transform: uppercase;">
+                ${statusPagamento === 'pago' ? 'PAGO' : statusPagamento === 'parcial' ? 'PAGTO PARCIAL' : 'PENDENTE'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <table style="width: 100%; text-align: left; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+            <thead>
+              <tr style="background-color: ${corBase};">
+                <th style="padding: 10px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: white; letter-spacing: 0.5px;">Descrição do Item</th>
+                <th style="padding: 10px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: white; letter-spacing: 0.5px; text-align: center; width: 60px;">Qtd</th>
+                <th style="padding: 10px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: white; letter-spacing: 0.5px; text-align: right; width: 100px;">V. Unitário</th>
+                <th style="padding: 10px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: white; letter-spacing: 0.5px; text-align: right; width: 100px;">Total</th>
+              </tr>
+            </thead>
+            <tbody style="background: white;">
+              ${linhasHTML}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; gap: 24px; padding-top: 20px; border-top: 2px solid ${corBase};">
+          <div style="flex: 1;">
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Chave PIX</p>
+              <p style="margin: 0; font-size: 12px; font-weight: 600; color: #1e293b; font-family: monospace;">${config?.chave_pix || 'A combinar'}</p>
+            </div>
+            ${task.description ? `
+            <div>
+              <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Observações</p>
+              <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.4;">${task.description}</p>
+            </div>
+            ` : ''}
+          </div>
+
+          <div style="width: 260px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+            ${totaisHTML}
+          </div>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #64748b;">
+            ${config?.whatsapp ? `WhatsApp: ${config.whatsapp}` : ''}
+            ${config?.whatsapp && config?.instagram ? '   |   ' : ''}
+            ${config?.instagram ? `Instagram: ${config.instagram}` : ''}
+          </p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(element);
+
+    const opt = {
+      margin:       0,
+      filename:     `Detalhamento - ${nomeClienteRaw}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: 'avoid-all' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      document.body.removeChild(element); // Destrói o "papel" após gerar
+    });
   };
 
   const toggleChecklistItem = (idx) => {
@@ -152,7 +302,7 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   };
 
   return (
-    <div className={`bg-white border ${isDone ? 'border-slate-100 opacity-80' : 'border-slate-200'} rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-md transition-all`}>
+    <div className={`bg-white border ${isDone ? 'border-slate-100 opacity-80' : 'border-slate-200'} rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all`}>
       
       <div className="flex items-start justify-between p-3 border-b border-slate-50">
         <div className="flex items-start gap-3 w-full">
