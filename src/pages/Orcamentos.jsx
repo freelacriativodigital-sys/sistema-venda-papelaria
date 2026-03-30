@@ -258,7 +258,7 @@ export default function Orcamentos() {
       filename:     nomeArquivo,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, logging: false },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF:        { unit: 'mm', format: [210, Math.max(297, alturaTotalMm + 5)], orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();
@@ -618,8 +618,9 @@ export default function Orcamentos() {
                     ref={printRef} 
                     className="bg-white shadow-md flex flex-col shrink-0 relative mx-auto"
                     style={{ 
-                      width: '200mm', 
-                      minHeight: '295mm', 
+                      width: '210mm', 
+                      minHeight: '297mm', // Altura mínima de uma folha A4
+                      height: 'max-content', // A MÁGICA: Deixa a folha esticar o quanto precisar
                       padding: '22mm', 
                       boxSizing: 'border-box' 
                     }}
