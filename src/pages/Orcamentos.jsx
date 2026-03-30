@@ -253,12 +253,18 @@ export default function Orcamentos() {
     const nomeDoCliente = clienteAtual.nome ? clienteAtual.nome.trim() : 'Novo_Cliente';
     const nomeArquivo = `${nomeDoCliente} - Orcamento.pdf`;
 
+    // MÁGICA AQUI: Calcula a altura real do conteúdo em pixels e converte para milímetros
+    const elementHeightMm = element.offsetHeight * 0.264583;
+    // Define a altura da página como 297mm (A4 padrão) ou a altura real se for maior
+    const pdfHeight = Math.max(297, elementHeightMm + 10);
+
     const opt = {
       margin:       0,
       filename:     nomeArquivo,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, logging: false },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      // Em vez de 'a4', usamos uma página customizada que estica dinamicamente
+      jsPDF:        { unit: 'mm', format: [210, pdfHeight], orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();
@@ -613,13 +619,13 @@ export default function Orcamentos() {
 
                 <div className="w-full bg-slate-100/50 p-4 rounded-xl border border-slate-200 flex justify-center overflow-auto max-h-[85vh]">
                   
-                  {/* --- A FOLHA DINÂMICA --- */}
+                  {/* --- A FOLHA DINÂMICA COM ALTURA MÍNIMA DE A4 --- */}
                   <div 
                     ref={printRef} 
                     className="bg-white shadow-md flex flex-col shrink-0 relative mx-auto"
                     style={{ 
                       width: '200mm', 
-                      minHeight: '295mm', 
+                      minHeight: '297mm', // Garante pelo menos a altura de 1 página A4
                       padding: '22mm', 
                       boxSizing: 'border-box' 
                     }}
