@@ -252,6 +252,7 @@ export default function Orcamentos() {
     const element = printRef.current;
     const nomeDoCliente = clienteAtual.nome ? clienteAtual.nome.trim() : 'Novo_Cliente';
     const nomeArquivo = `${nomeDoCliente} - Orcamento.pdf`;
+    const alturaTotalMm = element.scrollHeight * 0.264583;
 
     const opt = {
       margin:       0,
