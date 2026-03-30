@@ -124,7 +124,7 @@ export default function ProdutoModal({
               <option value="">+ Adicionar Insumo</option>
               {insumos.map(i => <option key={i.id} value={i.id}>{i.nome} ({fmt(i.custo_unitario)})</option>)}
             </select>
-            <Input type="number" min="0.01" placeholder="Qtd" value={qtdInsumo} onChange={(e) => setQtdInsumo(e.target.value)} className="w-14 h-9 bg-white border-white text-center text-[10px] font-semibold shadow-sm" />
+            <Input type="text" inputMode="decimal" placeholder="Qtd" value={qtdInsumo} onChange={(e) => setQtdInsumo(e.target.value.replace(',', '.'))} className="w-14 h-9 bg-white border-white text-center text-[10px] font-semibold shadow-sm" />
             <Button onClick={addInsumoReceita} className="h-9 w-9 p-0 bg-indigo-600 hover:bg-indigo-700 shadow-sm shrink-0 rounded-md"><Plus size={14}/></Button>
           </div>
           {receita.insumos.length > 0 && (
@@ -145,15 +145,15 @@ export default function ProdutoModal({
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
             <label className="text-[8px] font-semibold uppercase text-indigo-600 tracking-widest ml-0.5">Tempo (Min)</label>
-            <Input type="number" value={receita.tempo_minutos} onChange={e => setReceita({...receita, tempo_minutos: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-indigo-900" />
+            <Input type="text" inputMode="decimal" value={receita.tempo_minutos ?? ''} onChange={e => setReceita({...receita, tempo_minutos: e.target.value.replace(',', '.')})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-indigo-900" />
           </div>
           <div className="space-y-1">
             <label className="text-[8px] font-semibold uppercase text-emerald-600 tracking-widest ml-0.5">Margem %</label>
-            <Input type="number" value={receita.margem} onChange={e => setReceita({...receita, margem: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-emerald-600" />
+            <Input type="text" inputMode="decimal" value={receita.margem ?? ''} onChange={e => setReceita({...receita, margem: e.target.value.replace(',', '.')})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-emerald-600" />
           </div>
           <div className="space-y-1">
             <label className="text-[8px] font-semibold uppercase text-rose-500 tracking-widest ml-0.5">Taxas %</label>
-            <Input type="number" value={receita.taxa} onChange={e => setReceita({...receita, taxa: Number(e.target.value)})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-rose-600" />
+            <Input type="text" inputMode="decimal" value={receita.taxa ?? ''} onChange={e => setReceita({...receita, taxa: e.target.value.replace(',', '.')})} className="h-9 bg-white border-white shadow-sm font-semibold text-center text-[10px] text-rose-600" />
           </div>
         </div>
 
@@ -184,7 +184,13 @@ export default function ProdutoModal({
             </div>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[10px]">R$</span>
-              <Input type="number" value={editingProduct?.custo || ''} onChange={(e) => setEditingProduct({...editingProduct, custo: Number(e.target.value)})} className="h-9 pl-7 bg-slate-50 border-slate-200 font-semibold text-xs" />
+              <Input 
+                type="text" 
+                inputMode="decimal" 
+                value={editingProduct?.custo ?? ''} 
+                onChange={(e) => setEditingProduct({...editingProduct, custo: e.target.value.replace(',', '.')})} 
+                className="h-9 pl-7 bg-slate-50 border-slate-200 font-semibold text-xs" 
+              />
             </div>
           </div>
           
@@ -199,7 +205,13 @@ export default function ProdutoModal({
             </div>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-[10px]">R$</span>
-              <Input type="number" value={editingProduct?.preco || ''} onChange={(e) => setEditingProduct({...editingProduct, preco: Number(e.target.value)})} className="h-9 pl-7 bg-emerald-50/50 border-emerald-200 font-semibold text-emerald-700 text-sm shadow-inner focus:border-emerald-400" />
+              <Input 
+                type="text" 
+                inputMode="decimal" 
+                value={editingProduct?.preco ?? ''} 
+                onChange={(e) => setEditingProduct({...editingProduct, preco: e.target.value.replace(',', '.')})} 
+                className="h-9 pl-7 bg-emerald-50/50 border-emerald-200 font-semibold text-emerald-700 text-sm shadow-inner focus:border-emerald-400" 
+              />
             </div>
           </div>
         </div>
@@ -212,7 +224,20 @@ export default function ProdutoModal({
                  <option value="value">R$</option>
                  <option value="percent">%</option>
                </select>
-               <input type="number" placeholder="Opcional" value={promoType === 'percent' ? promoPercent : (editingProduct?.preco_promocional || '')} onChange={(e) => { if (promoType === 'percent') { setPromoPercent(e.target.value); } else { setEditingProduct({...editingProduct, preco_promocional: Number(e.target.value)}); } }} className="w-full bg-purple-50/50 border border-purple-200 rounded-r-md outline-none font-semibold text-xs text-purple-700 focus:border-purple-400 pl-2 transition-all" />
+               <input 
+                 type="text" 
+                 inputMode="decimal" 
+                 placeholder="Opcional" 
+                 value={promoType === 'percent' ? promoPercent : (editingProduct?.preco_promocional ?? '')} 
+                 onChange={(e) => { 
+                   if (promoType === 'percent') { 
+                     setPromoPercent(e.target.value.replace(',', '.')); 
+                   } else { 
+                     setEditingProduct({...editingProduct, preco_promocional: e.target.value.replace(',', '.')}); 
+                   } 
+                 }} 
+                 className="w-full bg-purple-50/50 border border-purple-200 rounded-r-md outline-none font-semibold text-xs text-purple-700 focus:border-purple-400 pl-2 transition-all" 
+               />
             </div>
           </div>
           
@@ -220,7 +245,13 @@ export default function ProdutoModal({
             <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Qtd Mínima</label>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[9px] uppercase">Un</span>
-              <Input type="number" min="1" value={editingProduct?.qtd_minima || 1} onChange={(e) => setEditingProduct({...editingProduct, qtd_minima: Number(e.target.value)})} className="h-9 pl-8 bg-slate-50 border-slate-200 font-semibold text-slate-800 text-xs" />
+              <Input 
+                type="number" 
+                min="1" 
+                value={editingProduct?.qtd_minima ?? ''} 
+                onChange={(e) => setEditingProduct({...editingProduct, qtd_minima: e.target.value})} 
+                className="h-9 pl-8 bg-slate-50 border-slate-200 font-semibold text-slate-800 text-xs" 
+              />
             </div>
           </div>
         </div>
@@ -471,9 +502,10 @@ export default function ProdutoModal({
                                  <div className="relative">
                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-[10px]">R$</span>
                                    <Input 
-                                     type="number" 
-                                     value={opcao.custo} 
-                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', Number(e.target.value))} 
+                                     type="text" 
+                                     inputMode="decimal"
+                                     value={opcao.custo ?? ''} 
+                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'custo', e.target.value.replace(',', '.'))} 
                                      className="pl-7 h-9 text-[10px] font-semibold text-slate-800 rounded-md bg-slate-50 border-slate-200 focus:border-slate-300 focus:bg-white" 
                                    />
                                  </div>
@@ -488,9 +520,10 @@ export default function ProdutoModal({
                                  <div className="relative">
                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-500 font-medium text-[10px]">R$</span>
                                    <Input 
-                                     type="number" 
-                                     value={opcao.preco} 
-                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', Number(e.target.value))} 
+                                     type="text" 
+                                     inputMode="decimal"
+                                     value={opcao.preco ?? ''} 
+                                     onChange={(e) => updateOpcao(atrib.id, opcao.id, 'preco', e.target.value.replace(',', '.'))} 
                                      className="pl-7 h-9 text-[10px] font-semibold text-blue-700 rounded-md bg-blue-50/50 border-blue-100 focus:border-blue-300 focus:bg-white" 
                                    />
                                  </div>
@@ -564,9 +597,9 @@ export default function ProdutoModal({
                       <div key={idx} className="flex flex-col sm:flex-row items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative group hover:border-amber-300 transition-colors">
                          <div className="flex items-center gap-2 w-full sm:w-auto bg-slate-50 p-1.5 rounded-md border border-slate-100">
                             <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest w-6 text-center">De</span>
-                            <Input type="number" value={regra.min || ''} onChange={(e) => updateRegraAtacado(idx, 'min', Number(e.target.value))} className="w-16 text-center h-9 font-semibold rounded bg-white border-slate-200 text-[10px]" />
+                            <Input type="number" value={regra.min ?? ''} onChange={(e) => updateRegraAtacado(idx, 'min', e.target.value)} className="w-16 text-center h-9 font-semibold rounded bg-white border-slate-200 text-[10px]" />
                             <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest w-6 text-center">Até</span>
-                            <Input type="number" placeholder="∞" value={regra.max || ''} onChange={(e) => updateRegraAtacado(idx, 'max', e.target.value ? Number(e.target.value) : null)} className="w-16 text-center h-9 font-semibold rounded bg-white border-slate-200 text-[10px]" />
+                            <Input type="number" placeholder="∞" value={regra.max ?? ''} onChange={(e) => updateRegraAtacado(idx, 'max', e.target.value ? e.target.value : null)} className="w-16 text-center h-9 font-semibold rounded bg-white border-slate-200 text-[10px]" />
                          </div>
                          
                          <div className="flex items-center gap-2 w-full sm:w-auto flex-1 mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:pl-3">
@@ -578,7 +611,13 @@ export default function ProdutoModal({
                             </span>
                             <div className="relative w-full sm:max-w-[140px]">
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-500 font-semibold text-[10px]">R$</span>
-                              <Input type="number" value={regra.preco || ''} onChange={(e) => updateRegraAtacado(idx, 'preco', Number(e.target.value))} className="pl-7 h-9 font-semibold text-emerald-600 text-[11px] rounded-md bg-emerald-50/50 border-emerald-200 focus:border-emerald-400" />
+                              <Input 
+                                type="text" 
+                                inputMode="decimal"
+                                value={regra.preco ?? ''} 
+                                onChange={(e) => updateRegraAtacado(idx, 'preco', e.target.value.replace(',', '.'))} 
+                                className="pl-7 h-9 font-semibold text-emerald-600 text-[11px] rounded-md bg-emerald-50/50 border-emerald-200 focus:border-emerald-400" 
+                              />
                             </div>
                          </div>
                          <button onClick={() => removerRegraAtacado(idx)} className="absolute -top-2 -right-2 sm:relative sm:top-0 sm:right-0 p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors shadow-sm sm:shadow-none"><Trash2 size={12}/></button>
