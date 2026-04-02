@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase"; 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ArrowUpCircle, ArrowDownCircle, DollarSign, Loader2, 
-  Search, Plus, CalendarDays, Download, Wallet, TrendingUp
+  Search, Plus, CalendarDays, Download, Wallet, TrendingUp, Pencil, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import LancamentoModal from '@/components/tasks/LancamentoModal'; // COMPONENTE IMPORTADO
+import LancamentoModal from '@/components/tasks/LancamentoModal';
 
 const formatCurrency = (value) => 
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -19,11 +19,12 @@ const formatDate = (dateString) => {
 };
 
 export default function EntradasSaidas() {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Estados que controlam a abertura do Componente Reutilizável
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState('entrada');
+  const [editingTransaction, setEditingTransaction] = useState(null);
 
   const { data: pedidos = [], isLoading: loadingPedidos } = useQuery({
     queryKey: ["fluxo-pedidos"],
@@ -42,6 +43,37 @@ export default function EntradasSaidas() {
       return data || [];
     },
   });
+
+  const deleteTransactionMutation = useMutation({
+    mutationFn: async ({ idOriginal, tipo }) => {
+      const tabela = tipo === 'entrada' ? 'pedidos' : 'despesas';
+      const { error } = await supabase.from(tabela).delete().eq('id', idOriginal);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fluxo-pedidos"] });
+      queryClient.invalidateQueries({ queryKey: ["fluxo-despesas"] });
+      queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+    }
+  });
+
+  const handleDelete = (t) => {
+    if (window.confirm(`Tem certeza que deseja excluir a transação "${t.descricao}"?`)) {
+      deleteTransactionMutation.mutate({ idOriginal: t.idOriginal, tipo: t.tipo });
+    }
+  };
+
+  const handleEdit = (t) => {
+    setEditingTransaction(t);
+    setModalTipo(t.tipo);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenModalNova = (tipo) => {
+    setEditingTransaction(null);
+    setModalTipo(tipo);
+    setIsModalOpen(true);
+  };
 
   const transacoes = [];
   let totalEntradas = 0;
@@ -66,11 +98,13 @@ export default function EntradasSaidas() {
       totalEntradas += valorRealEntrado;
       transacoes.push({
         id: `p_${p.id}`,
+        idOriginal: p.id,
         tipo: 'entrada',
         descricao: p.title,
         valor: valorRealEntrado,
         dataOriginal: p.completed_date || p.created_at,
         cliente: p.cliente_nome,
+        categoria: p.category || 'Outros',
         status: 'Recebido'
       });
     }
@@ -82,11 +116,13 @@ export default function EntradasSaidas() {
       totalSaidas += valorPago;
       transacoes.push({
         id: `d_${d.id}`,
+        idOriginal: d.id,
         tipo: 'saida',
         descricao: d.descricao,
         valor: valorPago,
         dataOriginal: d.vencimento || d.created_at,
         cliente: null,
+        categoria: d.categoria || 'Outros',
         status: 'Pago'
       });
     }
@@ -103,9 +139,9 @@ export default function EntradasSaidas() {
   const isLoading = loadingPedidos || loadingDespesas;
 
   const handleExport = () => {
-    let csv = 'Data,Tipo,Descricao,Cliente,Valor\n';
+    let csv = 'Data,Tipo,Categoria,Descricao,Cliente,Valor\n';
     filteredTransacoes.forEach(t => {
-      csv += `${formatDate(t.dataOriginal)},${t.tipo.toUpperCase()},"${t.descricao}","${t.cliente || ''}",${t.valor}\n`;
+      csv += `${formatDate(t.dataOriginal)},${t.tipo.toUpperCase()},"${t.categoria}","${t.descricao}","${t.cliente || ''}",${t.valor}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -118,15 +154,9 @@ export default function EntradasSaidas() {
     document.body.removeChild(link);
   };
 
-  const handleOpenModal = (tipo) => {
-    setModalTipo(tipo);
-    setIsModalOpen(true);
-  };
-
   return (
     <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-20 pt-4 md:pt-5 px-4 md:px-0">
       
-      {/* HEADER ALINHADO COM A HOME */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3">
         <div>
           <h1 className="text-lg md:text-xl font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2">
@@ -151,14 +181,13 @@ export default function EntradasSaidas() {
             <Button onClick={handleExport} variant="outline" className="flex-1 sm:flex-none h-8 md:h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-[9px] uppercase tracking-widest gap-1.5 shadow-sm">
               <Download size={12} /> CSV
             </Button>
-            <Button onClick={() => handleOpenModal('entrada')} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white rounded-md h-8 md:h-9 px-4 shadow-sm flex gap-1.5 font-semibold text-[9px] uppercase tracking-widest">
+            <Button onClick={() => handleOpenModalNova('entrada')} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white rounded-md h-8 md:h-9 px-4 shadow-sm flex gap-1.5 font-semibold text-[9px] uppercase tracking-widest">
               <Plus size={12} /> Lançamento
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPI CARDS (Estilo compacto da Home) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
          <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
            <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><TrendingUp size={70} /></div>
@@ -196,7 +225,6 @@ export default function EntradasSaidas() {
          </div>
       </div>
 
-      {/* LISTA DE TRANSAÇÕES */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
            <h3 className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Histórico de Movimentações</h3>
@@ -219,7 +247,12 @@ export default function EntradasSaidas() {
                        {t.tipo === 'entrada' ? <ArrowUpCircle size={16} /> : <ArrowDownCircle size={16} />}
                      </div>
                      <div className="overflow-hidden">
-                        <p className="text-xs font-semibold text-slate-800 truncate mb-0.5">{t.descricao}</p>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-xs font-semibold text-slate-800 truncate">{t.descricao}</p>
+                          <span className="text-[8px] bg-slate-100 border border-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold tracking-widest hidden md:inline-block">
+                            {t.categoria}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1.5 text-[9px] font-medium text-slate-500">
                            <span className="flex items-center gap-1"><CalendarDays size={10}/> {formatDate(t.dataOriginal)}</span>
                            {t.cliente && (
@@ -231,13 +264,20 @@ export default function EntradasSaidas() {
                         </div>
                      </div>
                   </div>
-                  <div className="text-right shrink-0">
-                     <p className={`text-sm font-semibold ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                       {t.tipo === 'entrada' ? '+' : '-'}{formatCurrency(t.valor)}
-                     </p>
-                     <span className={`text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded mt-1 inline-block ${t.tipo === 'entrada' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                       {t.status}
-                     </span>
+                  
+                  <div className="flex items-center gap-4">
+                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mr-2">
+                       <button onClick={() => handleEdit(t)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Pencil size={14}/></button>
+                       <button onClick={() => handleDelete(t)} disabled={deleteTransactionMutation.isPending} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14}/></button>
+                     </div>
+                     <div className="text-right shrink-0">
+                        <p className={`text-sm font-semibold ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {t.tipo === 'entrada' ? '+' : '-'}{formatCurrency(t.valor)}
+                        </p>
+                        <span className={`text-[8px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded mt-1 inline-block ${t.tipo === 'entrada' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                          {t.status}
+                        </span>
+                     </div>
                   </div>
                </div>
              ))}
@@ -245,11 +285,14 @@ export default function EntradasSaidas() {
         )}
       </div>
 
-      {/* --- O COMPONENTE MODAL É INJETADO AQUI --- */}
       <LancamentoModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        }} 
         tipoInicial={modalTipo} 
+        editingData={editingTransaction}
       />
 
     </div>
