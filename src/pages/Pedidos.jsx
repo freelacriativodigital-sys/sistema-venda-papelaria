@@ -1,15 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { supabase } from "../lib/supabase"; 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Plus, CheckCircle2 } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Plus, CheckCircle2, Store, Paintbrush } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Importando os novos componentes modulares
 import LojaSite from "@/components/pedidos/LojaSite";
 import CriacaoArte from "@/components/pedidos/CriacaoArte";
-
 import NewTaskForm from "@/components/tasks/NewTaskForm";
 import FinancialTab from "@/components/tasks/FinancialTab";
 
@@ -18,11 +16,12 @@ const priorityWeight = { urgente: 1, alta: 2, media: 3, baixa: 4 };
 const COLUNAS_PERMITIDAS = [
   'title', 'description', 'priority', 'category', 'service_value', 
   'checklist', 'status', 'kanban_stage', 'payment_status', 'valor_pago', 
-  'delivery_date', 'completed_date', 'cliente_id', 'cliente_nome'
+  'delivery_date', 'completed_date', 'cliente_id', 'cliente_nome', 'tipo_pedido'
 ];
 
 export default function Pedidos() {
-  const [activeTab, setActiveTab] = useState("pendentes");
+  const [viewMode, setViewMode] = useState("site"); // Alterna entre 'site' e 'arte'
+  const [activeTab, setActiveTab] = useState("solicitacoes");
   const queryClient = useQueryClient();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -62,6 +61,10 @@ export default function Pedidos() {
     if ('title' in dadosLimpos && (!dadosLimpos.title || String(dadosLimpos.title).trim() === "")) {
       dadosLimpos.title = "Pedido sem título";
     }
+    
+    // Força o tipo de pedido atual se estiver criando um novo
+    if (!dadosLimpos.tipo_pedido) dadosLimpos.tipo_pedido = viewMode;
+
     return dadosLimpos;
   };
 
@@ -85,11 +88,8 @@ export default function Pedidos() {
   };
 
   const handleSaveOrder = async (data) => {
-    if (data.id) {
-      await handleUpdate(data.id, data);
-    } else {
-      await handleCreate(data);
-    }
+    if (data.id) await handleUpdate(data.id, data);
+    else await handleCreate(data);
     setIsFormOpen(false);
   };
 
@@ -98,63 +98,29 @@ export default function Pedidos() {
     if (!error) queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
   };
 
-  const handleNewOrder = () => {
-    setEditingOrder(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEditOrder = (task) => {
-    setEditingOrder(task);
-    setIsFormOpen(true);
-  };
-
-  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
-
-  const handleExportData = async () => {
-    try {
-      const dataStr = JSON.stringify({ produtos: uniqueTasks }, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      const exportFileDefaultName = `backup_sistema_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-    } catch (error) {
-      console.error("Erro ao exportar:", error);
-    }
-  };
-
-  const handleImportData = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        const itemsToImport = importedData.produtos || importedData;
-        
-        if (Array.isArray(itemsToImport)) {
-          for (const item of itemsToImport) {
-            const { id, created_at, ...dataToImport } = item;
-            await supabase.from("pedidos").insert([blindarDados(dataToImport)]);
-          }
-          queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
-          alert("Backup enviado com sucesso!");
-        }
-      } catch (error) {
-        alert("Erro ao processar o arquivo JSON.");
-      }
-    };
-    reader.readAsText(file);
-  };
+  const handleNewOrder = () => { setEditingOrder(null); setIsFormOpen(true); };
+  const handleEditOrder = (task) => { setEditingOrder(task); setIsFormOpen(true); };
 
   const handleToggle = (task) => {
     const newStatus = task.status === "concluida" ? "pendente" : "concluida";
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
-  // --- CÁLCULOS DOS CARDS SUPERIORES ---
+  // LÓGICA INTELIGENTE DE SEPARAÇÃO (O SEGREDO ESTÁ AQUI)
+  const getTipoPedido = (t) => {
+    if (t.tipo_pedido) return t.tipo_pedido;
+    if (t.status === 'solicitacao') return 'site';
+    return 'arte'; // Pedidos antigos sem tag viram arte por padrão
+  };
+
+  const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
+  
+  // Filtra as tasks apenas para o modo atual
+  const currentTasks = useMemo(() => {
+    return uniqueTasks.filter(t => getTipoPedido(t) === viewMode);
+  }, [uniqueTasks, viewMode]);
+
+  // --- CÁLCULOS DOS CARDS (Agora calculam APENAS o que está na tela) ---
   const getTaskValue = (task) => {
     const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
     if (checklistTotal > 0) return checklistTotal;
@@ -168,46 +134,33 @@ export default function Pedidos() {
     return baseValue;
   };
 
-  let ganhosReais = 0;
-  let pendentesValor = 0;
-  let totalPedidos = 0;
+  let ganhosReais = 0; let pendentesValor = 0; let totalPedidos = 0;
 
-  uniqueTasks.forEach(task => {
+  currentTasks.forEach(task => {
     const totalValue = getTaskValue(task);
     const statusLower = String(task.status || '').toLowerCase().trim();
     const paymentLower = String(task.payment_status || '').toLowerCase().trim();
-    
     const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
     const isPartial = paymentLower === 'parcial';
     const valorAdiantado = Number(task.valor_pago || 0);
 
     totalPedidos += totalValue;
-
-    if (isPaid) {
-      ganhosReais += totalValue;
-    } else if (isPartial || valorAdiantado > 0) {
-      ganhosReais += valorAdiantado;
-      pendentesValor += (totalValue - valorAdiantado);
-    } else {
-      pendentesValor += totalValue;
-    }
+    if (isPaid) ganhosReais += totalValue;
+    else if (isPartial || valorAdiantado > 0) { ganhosReais += valorAdiantado; pendentesValor += (totalValue - valorAdiantado); } 
+    else pendentesValor += totalValue;
   });
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-  };
+  const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
-  // --- SEPARAÇÃO DOS STATUS ---
-  const solicitacoes = uniqueTasks.filter((t) => t.status === "solicitacao");
-  const pendingTasks = uniqueTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
-  const completedTasks = uniqueTasks.filter((t) => t.status === "concluida");
+  // --- SEPARAÇÃO DOS STATUS (Baseado nas tasks filtradas) ---
+  const solicitacoes = currentTasks.filter((t) => t.status === "solicitacao");
+  const pendingTasks = currentTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
+  const completedTasks = currentTasks.filter((t) => t.status === "concluida");
 
   const organizarPorData = (lista) => {
-    const dataAtual = new Date();
-    dataAtual.setHours(dataAtual.getHours() - 3);
+    const dataAtual = new Date(); dataAtual.setHours(dataAtual.getHours() - 3);
     const hoje = dataAtual.toISOString().split('T')[0];
-    const dataAmanha = new Date(dataAtual);
-    dataAmanha.setDate(dataAmanha.getDate() + 1);
+    const dataAmanha = new Date(dataAtual); dataAmanha.setDate(dataAmanha.getDate() + 1);
     const amanha = dataAmanha.toISOString().split('T')[0];
 
     const sortByPriority = (arr) => arr.sort((a, b) => (priorityWeight[String(a.priority || '').toLowerCase()] || 99) - (priorityWeight[String(b.priority || '').toLowerCase()] || 99));
@@ -228,6 +181,12 @@ export default function Pedidos() {
 
   const gruposPendentes = organizarPorData(pendingTasks);
 
+  // Muda as abas se o usuário trocar de modo para evitar aba vazia
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    setActiveTab(mode === "site" ? "solicitacoes" : "pendentes");
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-20 relative">
       <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
@@ -243,20 +202,32 @@ export default function Pedidos() {
               <Plus size={14} className="mr-1.5"/> Novo Pedido
             </Button>
             <div className="w-px h-6 bg-slate-200 mx-1"></div>
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-md border hover:bg-slate-50 text-slate-500" onClick={handleExportData}>
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-md border hover:bg-slate-50 text-slate-500">
               <Download className="w-4 h-4" />
             </Button>
-            <label className="cursor-pointer h-9 w-9 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm text-slate-500">
-              <Upload className="w-4 h-4" />
-              <input type="file" className="hidden" accept=".json" onChange={handleImportData} />
-            </label>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
         
-        {/* CARDS SUPERIORES COLORIDOS (Padrão Executivo) */}
+        {/* TOGGLE: SITE VS ARTE */}
+        <div className="flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-6 md:mb-8">
+          <button 
+            onClick={() => handleViewModeChange("site")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            <Store size={14} /> Loja do Site
+          </button>
+          <button 
+            onClick={() => handleViewModeChange("arte")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "arte" ? "bg-white text-purple-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            <Paintbrush size={14} /> Criação de Arte
+          </button>
+        </div>
+
+        {/* CARDS SUPERIORES COLORIDOS */}
         {!isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
              <div className="bg-violet-600 rounded-xl p-3 md:p-4 border border-violet-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
@@ -268,7 +239,7 @@ export default function Pedidos() {
                  <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(totalPedidos)}</h3>
                </div>
              </div>
-
+             {/* ... (Outros cards iguais ao original) ... */}
              <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
                <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 size={70}/></div>
                <div className="flex items-center justify-between mb-1.5 relative z-10">
@@ -278,7 +249,6 @@ export default function Pedidos() {
                  <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(ganhosReais)}</h3>
                </div>
              </div>
-
              <div className="bg-rose-600 rounded-xl p-3 md:p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
                <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Wallet size={70}/></div>
                <div className="flex items-center justify-between mb-1.5 relative z-10">
@@ -293,10 +263,12 @@ export default function Pedidos() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
-            <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
-              <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Site/Catálogo</span><span className="xs:hidden">Site</span>
-              {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
-            </TabsTrigger>
+            {viewMode === "site" && (
+              <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
+                <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Catálogo</span><span className="xs:hidden">Site</span>
+                {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
+              </TabsTrigger>
+            )}
             
             <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
               <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
@@ -314,7 +286,7 @@ export default function Pedidos() {
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
         ) : (
           <>
-            {activeTab === "solicitacoes" && (
+            {activeTab === "solicitacoes" && viewMode === "site" && (
               <LojaSite 
                 solicitacoes={solicitacoes} 
                 handleUpdate={handleUpdate} 
@@ -336,24 +308,17 @@ export default function Pedidos() {
             )}
 
             {activeTab === "financeiro" && (
-              <FinancialTab tasks={uniqueTasks} onUpdate={handleUpdate} />
+              <FinancialTab tasks={currentTasks} onUpdate={handleUpdate} />
             )}
           </>
         )}
       </div>
 
-      {/* OVERLAY TELA CHEIA PARA NOVO/EDITAR PEDIDO */}
       <AnimatePresence>
          {isFormOpen && (
-            <NewTaskForm 
-              isOpen={isFormOpen} 
-              onClose={() => setIsFormOpen(false)} 
-              taskToEdit={editingOrder} 
-              onSubmit={handleSaveOrder} 
-            />
+            <NewTaskForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} taskToEdit={editingOrder} onSubmit={handleSaveOrder} />
          )}
       </AnimatePresence>
-
     </div>
   );
 }
