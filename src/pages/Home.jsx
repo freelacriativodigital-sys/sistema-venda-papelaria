@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useQuery, useQueryClient } from "@tanstack/react-query"; 
+import { Button } from "@/components/ui/button";
 import { 
   Users, ArrowUpRight, ArrowDownRight, Activity, Loader2,
-  Printer, Target, Sparkles, AlertCircle, ShoppingCart, CheckCircle, TrendingUp, Palette, ShieldCheck
+  Printer, Target, Sparkles, AlertCircle, ShoppingCart, CheckCircle, TrendingUp, Palette, ShieldCheck,
+  ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import LancamentoModal from '@/components/tasks/LancamentoModal'; // COMPONENTE IMPORTADO
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -14,7 +17,10 @@ export default function Home() {
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
   const [isAdjusting, setIsAdjusting] = useState(false);
 
-  // --- ESTADOS DO SALDO BANCÁRIO ---
+  // Estados que controlam a abertura do Componente Reutilizável
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTipo, setModalTipo] = useState('entrada');
+
   const [saldoBancario, setSaldoBancario] = useState(() => {
     const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
@@ -24,6 +30,11 @@ export default function Home() {
     const val = e.target.value;
     setSaldoBancario(val);
     localStorage.setItem('@sistema_saldo', val);
+  };
+
+  const handleOpenModal = (tipo) => {
+    setModalTipo(tipo);
+    setIsModalOpen(true);
   };
 
   const [data, setData] = useState({
@@ -57,10 +68,10 @@ export default function Home() {
         let despPendentesTotal = 0;
         let alertasTemp = [];
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const mesAtual = hoje.getMonth();
-        const anoAtual = hoje.getFullYear();
+        const hojeObj = new Date();
+        hojeObj.setHours(0, 0, 0, 0);
+        const mesAtual = hojeObj.getMonth();
+        const anoAtual = hojeObj.getFullYear();
 
         despData?.forEach(d => {
            let isMesFuturo = false;
@@ -86,7 +97,7 @@ export default function Home() {
            if (d.status !== 'pago' && d.vencimento) {
                const vencimento = new Date(`${d.vencimento}T00:00:00`);
                if (!isNaN(vencimento.getTime())) {
-                 const diffTime = vencimento.getTime() - hoje.getTime();
+                 const diffTime = vencimento.getTime() - hojeObj.getTime();
                  const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                  if (diffDias <= 3) alertasTemp.push({ ...d, diffDias });
                }
@@ -120,7 +131,6 @@ export default function Home() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
-  // --- CÁLCULOS FINANCEIROS ---
   const getTaskValue = (task) => {
     const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
     if (checklistTotal > 0) return checklistTotal;
@@ -163,7 +173,6 @@ export default function Home() {
   const contasAPagar = data.despesas.pendentes;
   const diferencaBanco = saldoBancario !== '' ? Number(saldoBancario) - caixaRealLimpo : 0;
 
-  // Lógica do Ajuste direto no Supabase
   const handleRegistrarAjuste = async () => {
     if (diferencaBanco === 0) return;
     const absDiff = Math.abs(diferencaBanco);
@@ -187,7 +196,7 @@ export default function Home() {
         if (error) throw error;
         
         alert("Ajuste de caixa registrado com sucesso em Pedidos!");
-        queryClient.invalidateQueries(["art-tasks"]);
+        queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
       } catch (error) {
         alert("Erro ao registrar ajuste: " + error.message);
       } finally {
@@ -242,13 +251,18 @@ export default function Home() {
           </h1>
           <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Resumo financeiro e métricas</p>
         </div>
-        <div className="bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-1.5 h-fit">
-           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-           <span className="text-[8px] font-medium text-slate-500 uppercase tracking-widest">Sistema Online</span>
+        
+        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+          <Button onClick={() => handleOpenModal('entrada')} className="flex-1 md:flex-none h-8 md:h-9 bg-emerald-600 hover:bg-emerald-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
+            <ArrowUpCircle size={14} /> Entrada
+          </Button>
+          <Button onClick={() => handleOpenModal('saida')} className="flex-1 md:flex-none h-8 md:h-9 bg-rose-600 hover:bg-rose-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
+            <ArrowDownCircle size={14} /> Saída
+          </Button>
         </div>
       </div>
 
-      {/* NOTIFICAÇÕES DE CONTAS (Estilo Tag Pequena) */}
+      {/* NOTIFICAÇÕES DE CONTAS */}
       {alertasDespesas.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {alertasDespesas.map(alerta => {
@@ -398,9 +412,15 @@ export default function Home() {
              <span className="font-semibold uppercase tracking-widest opacity-70 block mb-0.5 text-[8px]">💡 Resumo:</span>
              {dicaAcao}
            </div>
-
         </div>
       </div>
+
+      {/* --- O COMPONENTE MODAL É INJETADO AQUI --- */}
+      <LancamentoModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        tipoInicial={modalTipo} 
+      />
 
     </div>
   );
