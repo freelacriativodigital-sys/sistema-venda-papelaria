@@ -1,22 +1,22 @@
 import React from "react";
-import { ShoppingBag, CheckCheck, Trash2 } from "lucide-react";
+import { ShoppingBag, CheckCheck, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 
-export default function LojaSite({ solicitacoes, handleUpdate, handleDelete }) {
+export default function PedidosSite({ solicitacoes, handleUpdate, handleDelete }) {
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800">
          <h2 className="font-semibold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
-           <ShoppingBag size={14}/> Novas Solicitações
+           <ShoppingBag size={14}/> Caixa de Entrada do Site
          </h2>
-         <p className="text-[9px] mt-1 font-medium">Pedidos iniciados pelos clientes através do seu Catálogo ou Link da Bio. Aceite para iniciar a produção.</p>
+         <p className="text-[9px] mt-1 font-medium">Pedidos iniciados pelos clientes no seu Catálogo. Aceite para enviar para a fila de Produção.</p>
       </div>
       
       {solicitacoes.length === 0 ? (
          <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
            <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-           <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px]">Nenhum pedido novo</p>
+           <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px]">Nenhum pedido novo no site</p>
          </div>
       ) : (
          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -35,8 +35,12 @@ export default function LojaSite({ solicitacoes, handleUpdate, handleDelete }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-auto">
-                     <Button onClick={() => handleUpdate(t.id, { status: 'pendente' })} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-8 text-[9px] uppercase font-semibold tracking-widest rounded-md">
-                       <CheckCheck size={12} className="mr-1.5"/> Aceitar Pedido
+                     {/* O SEGREDO AQUI: O botão muda o status para 'pendente' e transfere o tipo para 'producao' */}
+                     <Button 
+                       onClick={() => handleUpdate(t.id, { status: 'pendente', tipo_pedido: 'producao' })} 
+                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-8 text-[9px] uppercase font-semibold tracking-widest rounded-md"
+                     >
+                       <CheckCheck size={12} className="mr-1.5"/> Enviar p/ Produção <ArrowRight size={12} className="ml-1"/>
                      </Button>
                      <Button onClick={() => handleDelete(t)} variant="outline" className="h-8 px-2.5 rounded-md border-red-200 text-red-500 hover:bg-red-50">
                        <Trash2 size={14} />

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import TaskItem from "@/components/tasks/TaskItem";
 import EmptyState from "@/components/tasks/EmptyState";
 
-export default function CriacaoArte({ 
+export default function Producao({ 
   activeTab, 
   pendingTasks, 
   completedTasks, 

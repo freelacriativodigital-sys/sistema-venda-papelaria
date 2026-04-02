@@ -3,11 +3,11 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Plus, CheckCircle2, Store, Paintbrush } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Plus, CheckCircle2, Store, Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import LojaSite from "@/components/pedidos/LojaSite";
-import CriacaoArte from "@/components/pedidos/CriacaoArte";
+import PedidosSite from "@/components/pedidos/PedidosSite";
+import Producao from "@/components/pedidos/Producao";
 import NewTaskForm from "@/components/tasks/NewTaskForm";
 import FinancialTab from "@/components/tasks/FinancialTab";
 
@@ -20,7 +20,7 @@ const COLUNAS_PERMITIDAS = [
 ];
 
 export default function Pedidos() {
-  const [viewMode, setViewMode] = useState("site"); // Alterna entre 'site' e 'arte'
+  const [viewMode, setViewMode] = useState("site"); // 'site' ou 'producao'
   const [activeTab, setActiveTab] = useState("solicitacoes");
   const queryClient = useQueryClient();
 
@@ -62,7 +62,6 @@ export default function Pedidos() {
       dadosLimpos.title = "Pedido sem título";
     }
     
-    // Força o tipo de pedido atual se estiver criando um novo
     if (!dadosLimpos.tipo_pedido) dadosLimpos.tipo_pedido = viewMode;
 
     return dadosLimpos;
@@ -106,21 +105,20 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
-  // LÓGICA INTELIGENTE DE SEPARAÇÃO (O SEGREDO ESTÁ AQUI)
+  // SISTEMA DE ESTEIRA INTELIGENTE
   const getTipoPedido = (t) => {
+    if (t.tipo_pedido === 'arte') return 'producao'; // Migra dados antigos para produção automaticamente
     if (t.tipo_pedido) return t.tipo_pedido;
     if (t.status === 'solicitacao') return 'site';
-    return 'arte'; // Pedidos antigos sem tag viram arte por padrão
+    return 'producao'; 
   };
 
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
   
-  // Filtra as tasks apenas para o modo atual
   const currentTasks = useMemo(() => {
     return uniqueTasks.filter(t => getTipoPedido(t) === viewMode);
   }, [uniqueTasks, viewMode]);
 
-  // --- CÁLCULOS DOS CARDS (Agora calculam APENAS o que está na tela) ---
   const getTaskValue = (task) => {
     const checklistTotal = (task.checklist || []).reduce((s, i) => s + (Number(i.value) || 0), 0);
     if (checklistTotal > 0) return checklistTotal;
@@ -152,7 +150,6 @@ export default function Pedidos() {
 
   const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
-  // --- SEPARAÇÃO DOS STATUS (Baseado nas tasks filtradas) ---
   const solicitacoes = currentTasks.filter((t) => t.status === "solicitacao");
   const pendingTasks = currentTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
   const completedTasks = currentTasks.filter((t) => t.status === "concluida");
@@ -181,7 +178,6 @@ export default function Pedidos() {
 
   const gruposPendentes = organizarPorData(pendingTasks);
 
-  // Muda as abas se o usuário trocar de modo para evitar aba vazia
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
     setActiveTab(mode === "site" ? "solicitacoes" : "pendentes");
@@ -194,7 +190,7 @@ export default function Pedidos() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-lg md:text-xl font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
-              <p className="text-[9px] md:text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS</p>
+              <p className="text-[9px] md:text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-1">DE PEDIDOS E PRODUÇÃO</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -211,19 +207,19 @@ export default function Pedidos() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
         
-        {/* TOGGLE: SITE VS ARTE */}
+        {/* TOGGLE: SITE VS PRODUÇÃO */}
         <div className="flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-6 md:mb-8">
           <button 
             onClick={() => handleViewModeChange("site")}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           >
-            <Store size={14} /> Loja do Site
+            <Store size={14} /> Pedidos do Site
           </button>
           <button 
-            onClick={() => handleViewModeChange("arte")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "arte" ? "bg-white text-purple-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            onClick={() => handleViewModeChange("producao")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "producao" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           >
-            <Paintbrush size={14} /> Criação de Arte
+            <Hammer size={14} /> Produção
           </button>
         </div>
 
@@ -239,7 +235,6 @@ export default function Pedidos() {
                  <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(totalPedidos)}</h3>
                </div>
              </div>
-             {/* ... (Outros cards iguais ao original) ... */}
              <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
                <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle2 size={70}/></div>
                <div className="flex items-center justify-between mb-1.5 relative z-10">
@@ -265,13 +260,13 @@ export default function Pedidos() {
           <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
             {viewMode === "site" && (
               <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
-                <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Catálogo</span><span className="xs:hidden">Site</span>
+                <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Caixa de Entrada</span><span className="xs:hidden">Site</span>
                 {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
               </TabsTrigger>
             )}
             
             <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
-              <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Pendentes</span><span className="xs:hidden">Fazer</span>
+              <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Fila de Produção</span><span className="xs:hidden">Fazer</span>
             </TabsTrigger>
             <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
               <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
@@ -287,7 +282,7 @@ export default function Pedidos() {
         ) : (
           <>
             {activeTab === "solicitacoes" && viewMode === "site" && (
-              <LojaSite 
+              <PedidosSite 
                 solicitacoes={solicitacoes} 
                 handleUpdate={handleUpdate} 
                 handleDelete={handleDelete} 
@@ -295,7 +290,7 @@ export default function Pedidos() {
             )}
 
             {(activeTab === "pendentes" || activeTab === "concluidas") && (
-              <CriacaoArte 
+              <Producao 
                 activeTab={activeTab}
                 pendingTasks={pendingTasks}
                 completedTasks={completedTasks}
