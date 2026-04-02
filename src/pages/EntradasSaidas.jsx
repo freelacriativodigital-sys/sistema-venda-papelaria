@@ -14,7 +14,8 @@ const formatCurrency = (value) =>
 
 const formatDate = (dateString) => {
   if (!dateString) return '---';
-  const date = new Date(dateString);
+  // Ajuste de fuso horário para exibir a data correta
+  const date = new Date(`${dateString.includes('T') ? dateString : dateString + 'T12:00:00'}`);
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
@@ -23,9 +24,14 @@ export default function EntradasSaidas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Obter a data de hoje no formato YYYY-MM-DD para o valor padrão
+  const hoje = new Date();
+  const hojeString = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+
   const [tipoTransacao, setTipoTransacao] = useState('entrada');
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
+  const [dataTransacao, setDataTransacao] = useState(hojeString);
 
   const { data: pedidos = [], isLoading: loadingPedidos } = useQuery({
     queryKey: ["fluxo-pedidos"],
@@ -48,6 +54,10 @@ export default function EntradasSaidas() {
   const addTransactionMutation = useMutation({
     mutationFn: async () => {
       const valorNum = parseFloat(valor) || 0;
+      
+      // Cria uma ISO string garantindo o dia selecionado (usando meio-dia para evitar bugs de fuso)
+      const dataISO = new Date(`${dataTransacao}T12:00:00`).toISOString();
+
       if (tipoTransacao === 'entrada') {
         const { error } = await supabase.from('pedidos').insert([{
           title: `Entrada Avulsa: ${descricao}`,
@@ -56,7 +66,7 @@ export default function EntradasSaidas() {
           status: 'concluida',
           payment_status: 'pago',
           category: 'Avulso',
-          completed_date: new Date().toISOString()
+          completed_date: dataISO
         }]);
         if (error) throw error;
       } else {
@@ -65,7 +75,7 @@ export default function EntradasSaidas() {
           valor: valorNum,
           valor_pago: valorNum,
           status: 'pago',
-          vencimento: new Date().toISOString().split('T')[0],
+          vencimento: dataTransacao,
           categoria: 'Avulso'
         }]);
         if (error) throw error;
@@ -78,6 +88,7 @@ export default function EntradasSaidas() {
       setIsModalOpen(false);
       setDescricao('');
       setValor('');
+      setDataTransacao(hojeString);
     }
   });
 
@@ -282,7 +293,7 @@ export default function EntradasSaidas() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-2xl relative z-[110]">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -306,14 +317,23 @@ export default function EntradasSaidas() {
                   <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Venda balcão..." className="h-9 border-slate-200 text-xs font-medium" autoFocus />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Valor (R$)</label>
-                  <Input type="number" value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" className="h-9 border-slate-200 text-xs font-semibold" />
+                {/* COLUNAS COMPACTAS PARA VALOR E DATA */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Valor (R$)</label>
+                    <Input type="number" value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" className="h-9 border-slate-200 text-xs font-semibold" />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Data</label>
+                    <Input type="date" value={dataTransacao} onChange={e => setDataTransacao(e.target.value)} className="h-9 border-slate-200 text-xs font-semibold text-slate-600" />
+                  </div>
                 </div>
 
                 <Button 
                   onClick={() => {
                     if (!descricao.trim() || !valor) return alert("Preencha a descrição e o valor.");
+                    if (!dataTransacao) return alert("A data é obrigatória.");
                     addTransactionMutation.mutate();
                   }} 
                   disabled={addTransactionMutation.isPending}
