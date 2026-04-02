@@ -11,7 +11,8 @@ import { ptBR } from "date-fns/locale";
 
 import { 
   X, Save, DollarSign, TrendingUp, PercentCircle, CalendarDays, 
-  ChevronLeft, ChevronRight, UserSquare2, Loader2, UserPlus, ArrowLeft, Palette 
+  ChevronLeft, ChevronRight, UserSquare2, Loader2, UserPlus, ArrowLeft, Palette,
+  Trash2, Plus, ChevronDown
 } from "lucide-react";
 import { supabase } from "../../lib/supabase"; 
 
@@ -36,12 +37,24 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
   
   const [selectedDate, setSelectedDate] = useState(undefined);
   
+  // Estados de Cliente
   const [clientes, setClientes] = useState([]);
   const [mostrarDropdownCliente, setMostrarDropdownCliente] = useState(false);
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [clienteId, setClienteId] = useState(null);
 
+  // Estados de Categoria
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [novaCategoria, setNovaCategoria] = useState("");
+  const [showCatManager, setShowCatManager] = useState(false);
+
   useEffect(() => {
+    // Carrega as categorias customizadas do LocalStorage (se existirem)
+    const savedCats = localStorage.getItem('organize_categorias');
+    if (savedCats) {
+      setCategories(JSON.parse(savedCats));
+    }
+
     if (isOpen) {
       async function buscarClientes() {
         setCarregandoClientes(true);
@@ -63,17 +76,57 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
     }
   }, [isOpen, taskToEdit]);
 
+  // --- FUNÇÕES DO CALENDÁRIO ---
   const handleDateSelect = (date) => {
     setSelectedDate(date);
     setForm(prev => ({ ...prev, delivery_date: date ? format(date, 'yyyy-MM-dd') : '' }));
   };
 
+  // --- FUNÇÕES DE CLIENTE ---
   const selecionarCliente = (cli) => {
     setForm({ ...form, title: cli.nome });
     setClienteId(cli.id);
     setMostrarDropdownCliente(false);
   };
 
+  const criarNovoCliente = async () => {
+    setCarregandoClientes(true);
+    const novoNome = form.title.trim();
+    const { data, error } = await supabase.from('clientes').insert([{ nome: novoNome }]).select();
+    
+    if (!error && data && data.length > 0) {
+       setClientes([...clientes, data[0]]);
+       selecionarCliente(data[0]);
+    } else {
+       alert('Erro ao criar cliente. Verifique sua conexão.');
+    }
+    setCarregandoClientes(false);
+  };
+
+  // --- FUNÇÕES DE CATEGORIA ---
+  const handleAddCategory = () => {
+    if(!novaCategoria.trim()) return;
+    const slug = novaCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
+    
+    // Evita duplicatas
+    if (categories.find(c => c.slug === slug)) return setNovaCategoria("");
+
+    const updated = [...categories, { name: novaCategoria, slug }];
+    setCategories(updated);
+    localStorage.setItem('organize_categorias', JSON.stringify(updated));
+    setForm({...form, category: slug});
+    setNovaCategoria("");
+  };
+
+  const handleRemoveCategory = (e, slug) => {
+    e.stopPropagation(); // Evita que o Popover feche ao clicar na lixeira
+    const updated = categories.filter(c => c.slug !== slug);
+    setCategories(updated);
+    localStorage.setItem('organize_categorias', JSON.stringify(updated));
+    if (form.category === slug) setForm({...form, category: ""});
+  };
+
+  // --- FUNÇÃO DE SALVAR PEDIDO ---
   const handleSave = () => {
     if (!form.title.trim()) return alert("O título/cliente é obrigatório.");
 
@@ -140,6 +193,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
       <div className="flex-1 w-full max-w-3xl mx-auto p-3 md:p-4 pb-20">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
           
+          {/* CAMPO CLIENTE COM CADASTRO RÁPIDO */}
           <div className="space-y-1 relative">
             <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Cliente / Título</label>
             <div className="relative z-40">
@@ -162,7 +216,16 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                        <span className="text-[10px] font-semibold text-slate-800 uppercase">{cli.nome}</span>
                      </div>
                    ))}
-                   {filteredClientes.length === 0 && <div className="p-2 text-[10px] text-slate-500 text-center">Nenhum encontrado.</div>}
+                   
+                   {/* BOTÃO CADASTRAR NOVO CLIENTE */}
+                   {filteredClientes.length === 0 && (
+                     <div 
+                       onMouseDown={(e) => { e.preventDefault(); criarNovoCliente(); }}
+                       className="p-2 flex items-center gap-2 text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded cursor-pointer transition-colors"
+                     >
+                       <UserPlus size={14} /> Cadastrar "{form.title}"
+                     </div>
+                   )}
                  </div>
                )}
             </div>
@@ -174,6 +237,8 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            {/* CAMPO CALENDÁRIO COM Z-INDEX CORRIGIDO */}
             <div className="space-y-1">
               <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Entrega</label>
               <Popover>
@@ -183,8 +248,8 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                     <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                   </Button>
                 </PopoverTrigger>
-                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
-                <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl z-[300]" align="start">
+                {/* O SEGREDO ESTÁ AQUI: z-[9999] style forçado e portal implícito */}
+                <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" style={{ zIndex: 9999 }} align="start">
                   <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-2 bg-white scale-90 origin-top-left" />
                 </PopoverContent>
               </Popover>
@@ -196,26 +261,46 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                   <SelectValue />
                 </SelectTrigger>
-                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
-                <SelectContent className="z-[300]">
+                <SelectContent style={{ zIndex: 9999 }}>
                   <SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* GERENCIADOR DE CATEGORIAS */}
             <div className="space-y-1">
               <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                {/* AQUI ESTÁ A CORREÇÃO z-[300] */}
-                <SelectContent className="z-[300]">
-                  {DEFAULT_CATEGORIES.map((cat) => (
-                     <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={showCatManager} onOpenChange={setShowCatManager}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-9 w-full justify-between bg-slate-50 text-slate-700 text-[10px] uppercase font-semibold border-slate-200 rounded-md hover:bg-white">
+                    {categories.find(c => c.slug === form.category)?.name || "Selecione"}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2 bg-white rounded-xl shadow-xl border-slate-200" style={{ zIndex: 9999 }}>
+                   <div className="max-h-48 overflow-y-auto space-y-1 mb-2">
+                      {categories.map(cat => (
+                         <div key={cat.slug} className="flex items-center justify-between group p-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors" onClick={() => { setForm({...form, category: cat.slug}); setShowCatManager(false); }}>
+                            <span className="text-[10px] font-semibold text-slate-700 uppercase">{cat.name}</span>
+                            <Trash2 className="w-3.5 h-3.5 text-slate-300 hover:text-red-500 hidden group-hover:block transition-colors" onClick={(e) => handleRemoveCategory(e, cat.slug)} />
+                         </div>
+                      ))}
+                      {categories.length === 0 && <p className="text-[9px] text-slate-400 text-center p-2">Nenhuma categoria.</p>}
+                   </div>
+                   <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5">
+                      <Input 
+                        value={novaCategoria} 
+                        onChange={e => setNovaCategoria(e.target.value)} 
+                        placeholder="Nova categoria..." 
+                        className="h-7 text-[10px] bg-slate-50 focus:bg-white" 
+                        onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+                      />
+                      <Button onClick={handleAddCategory} size="icon" className="h-7 w-7 bg-blue-600 hover:bg-blue-700 text-white shrink-0 rounded">
+                        <Plus size={14}/>
+                      </Button>
+                   </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
