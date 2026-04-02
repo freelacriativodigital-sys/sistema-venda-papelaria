@@ -111,15 +111,16 @@ const Sidebar = ({ st, isOpen, setIsOpen, onOpenLancamento }) => {
                 className="absolute top-full left-4 right-4 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden"
               >
                 <div className="flex flex-col">
-                   <Link to="/pedidos" onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
+                   {/* ENVIANDO O SINAL state={{ action: 'new' }} */}
+                   <Link to="/pedidos" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
                      <Package size={14} className="text-blue-500" />
                      <span className="text-[9px] font-bold uppercase tracking-widest">Novo Pedido</span>
                    </Link>
-                   <Link to="/clientes" onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
+                   <Link to="/clientes" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
                      <Users size={14} className="text-emerald-500" />
                      <span className="text-[9px] font-bold uppercase tracking-widest">Novo Cliente</span>
                    </Link>
-                   <Link to="/produtos" onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
+                   <Link to="/produtos" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
                      <ShoppingBag size={14} className="text-amber-500" />
                      <span className="text-[9px] font-bold uppercase tracking-widest">Novo Produto</span>
                    </Link>
