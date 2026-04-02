@@ -20,7 +20,6 @@ const COLUNAS_PERMITIDAS = [
 ];
 
 export default function Pedidos() {
-  // AQUI: Produção e Pendentes agora são a tela inicial do sistema
   const [viewMode, setViewMode] = useState("producao"); 
   const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
@@ -138,12 +137,12 @@ export default function Pedidos() {
     const totalValue = getTaskValue(task);
     const statusLower = String(task.status || '').toLowerCase().trim();
     const paymentLower = String(task.payment_status || '').toLowerCase().trim();
-    const isPaid = paymentLower === 'pago' || statusLower === 'concluida' || statusLower === 'concluido';
+    const isPaid = paymentLower === 'pago' || statusLower === 'concluido'; // Removido 'concluida' para não inflar ganhos se não pagou
     const isPartial = paymentLower === 'parcial';
     const valorAdiantado = Number(task.valor_pago || 0);
 
     totalPedidos += totalValue;
-    if (isPaid) ganhosReais += totalValue;
+    if (isPaid || (valorAdiantado >= totalValue && totalValue > 0)) ganhosReais += totalValue;
     else if (isPartial || valorAdiantado > 0) { ganhosReais += valorAdiantado; pendentesValor += (totalValue - valorAdiantado); } 
     else pendentesValor += totalValue;
   });
@@ -152,7 +151,21 @@ export default function Pedidos() {
 
   const solicitacoes = currentTasks.filter((t) => t.status === "solicitacao");
   const pendingTasks = currentTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
-  const completedTasks = currentTasks.filter((t) => t.status === "concluida");
+
+  // --- MÁGICA: Filtro Inteligente de Pagamento para Concluídos ---
+  const agPagamentoTasks = currentTasks.filter((t) => {
+    if (t.status !== "concluida") return false;
+    const totalVal = getTaskValue(t);
+    const isPaid = String(t.payment_status || '').toLowerCase().trim() === 'pago' || (Number(t.valor_pago || 0) >= totalVal && totalVal > 0);
+    return !isPaid; // Se concluiu mas NÃO pagou tudo, vem pra cá!
+  });
+
+  const completedTasks = currentTasks.filter((t) => {
+    if (t.status !== "concluida") return false;
+    const totalVal = getTaskValue(t);
+    const isPaid = String(t.payment_status || '').toLowerCase().trim() === 'pago' || (Number(t.valor_pago || 0) >= totalVal && totalVal > 0);
+    return isPaid; // Se concluiu E já pagou, vai para as Feitas!
+  });
 
   const organizarPorData = (lista) => {
     const dataAtual = new Date(); dataAtual.setHours(dataAtual.getHours() - 3);
@@ -271,7 +284,7 @@ export default function Pedidos() {
                   <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Fila de Produção</span><span className="xs:hidden">Fazer</span>
                 </TabsTrigger>
                 <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
-                  <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
+                  <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Feitas</span><span className="xs:hidden">Feitas</span>
                 </TabsTrigger>
                 <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
                   <Wallet className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
@@ -299,6 +312,7 @@ export default function Pedidos() {
                 pendingTasks={pendingTasks}
                 completedTasks={completedTasks}
                 gruposPendentes={gruposPendentes}
+                agPagamentoTasks={agPagamentoTasks} // Enviando a Nova Coluna para Produção
                 handleToggle={handleToggle}
                 handleUpdate={handleUpdate}
                 handleDelete={handleDelete}
