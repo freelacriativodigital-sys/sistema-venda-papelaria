@@ -17,9 +17,16 @@ export default function Home() {
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
   const [isAdjusting, setIsAdjusting] = useState(false);
 
+  // Estados para controlar o Modal de Lançamento na Home
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState('entrada');
 
+  const handleOpenModal = (tipo) => {
+    setModalTipo(tipo);
+    setIsModalOpen(true);
+  };
+
+  // --- ESTADOS DO SALDO BANCÁRIO ---
   const [saldoBancario, setSaldoBancario] = useState(() => {
     const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
@@ -29,11 +36,6 @@ export default function Home() {
     const val = e.target.value;
     setSaldoBancario(val);
     localStorage.setItem('@sistema_saldo', val);
-  };
-
-  const handleOpenModal = (tipo) => {
-    setModalTipo(tipo);
-    setIsModalOpen(true);
   };
 
   const [data, setData] = useState({
@@ -67,10 +69,10 @@ export default function Home() {
         let despPendentesTotal = 0;
         let alertasTemp = [];
 
-        const hojeObj = new Date();
-        hojeObj.setHours(0, 0, 0, 0);
-        const mesAtual = hojeObj.getMonth();
-        const anoAtual = hojeObj.getFullYear();
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
 
         despData?.forEach(d => {
            let isMesFuturo = false;
@@ -96,7 +98,7 @@ export default function Home() {
            if (d.status !== 'pago' && d.vencimento) {
                const vencimento = new Date(`${d.vencimento}T00:00:00`);
                if (!isNaN(vencimento.getTime())) {
-                 const diffTime = vencimento.getTime() - hojeObj.getTime();
+                 const diffTime = vencimento.getTime() - hoje.getTime();
                  const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                  if (diffDias <= 3) alertasTemp.push({ ...d, diffDias });
                }
@@ -195,7 +197,7 @@ export default function Home() {
         if (error) throw error;
         
         alert("Ajuste de caixa registrado com sucesso em Pedidos!");
-        queryClient.invalidateQueries({ queryKey: ["art-tasks"] });
+        queryClient.invalidateQueries(["art-tasks"]);
       } catch (error) {
         alert("Erro ao registrar ajuste: " + error.message);
       } finally {
@@ -240,9 +242,10 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-[100px] md:pb-20 pt-4 md:pt-5 px-4 md:px-0">
+    // Padding bottom aumentado no mobile (pb-[100px]) para não ficar por baixo da barra fixa
+    <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-[100px] md:pb-20 pt-4 md:pt-5 px-4 md:px-0 relative">
       
-      {/* HEADER DA PÁGINA */}
+      {/* HEADER DA PÁGINA COM BOTÕES NO DESKTOP */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3">
         <div>
           <h1 className="text-lg md:text-xl font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2">
@@ -252,7 +255,7 @@ export default function Home() {
         </div>
         
         {/* BOTÕES ESCONDIDOS NO MOBILE (Aparecem só no Desktop) */}
-        <div className="hidden md:flex gap-2 w-auto">
+        <div className="hidden md:flex gap-2 w-auto mt-2 md:mt-0">
           <Button onClick={() => handleOpenModal('entrada')} className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
             <ArrowUpCircle size={14} /> Entrada
           </Button>
@@ -412,10 +415,11 @@ export default function Home() {
              <span className="font-semibold uppercase tracking-widest opacity-70 block mb-0.5 text-[8px]">💡 Resumo:</span>
              {dicaAcao}
            </div>
+
         </div>
       </div>
 
-      {/* BARRA FIXA MOBILE (Colada na base da tela: bottom-0) */}
+      {/* --- BARRA FIXA MOBILE (Apenas no celular, colada na base da tela: bottom-0) --- */}
       <div className="md:hidden fixed bottom-0 inset-x-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] z-[40]">
          <div className="flex gap-3 max-w-md mx-auto">
            <Button onClick={() => handleOpenModal('entrada')} className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm rounded-lg transition-all">
@@ -427,6 +431,7 @@ export default function Home() {
          </div>
       </div>
 
+      {/* MODAL GLOBAL DE LANÇAMENTO (Componente Reutilizável) */}
       <LancamentoModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
