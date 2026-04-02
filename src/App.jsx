@@ -5,16 +5,13 @@ import { queryClientInstance } from '@/lib/query-client';
 import { pagesConfig } from './pages.config';
 import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import { motion, AnimatePresence } from "framer-motion";
 
 import Login from '@/components/tasks/Login';
-import LancamentoModal from '@/components/tasks/LancamentoModal'; 
 
 import {
   Home, Package, MessageCircle, LogOut,
   ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
-  Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon,
-  Plus, Wallet
+  Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon, Wallet
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase";
@@ -39,11 +36,10 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
   );
 };
 
-const Sidebar = ({ st, isOpen, setIsOpen, onOpenLancamento }) => {
+const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
   const categorias = pagesConfig.menuCategorias;
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   const getMenuMeta = (id) => {
     const meta = {
@@ -90,52 +86,7 @@ const Sidebar = ({ st, isOpen, setIsOpen, onOpenLancamento }) => {
         )}
       </div>
 
-      {/* --- BOTÃO DE AÇÃO RÁPIDA GLOBAL --- */}
-      <div className="px-4 pt-5 pb-1 relative z-50">
-        <button 
-          onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg font-bold uppercase text-[10px] tracking-widest shadow-sm transition-all active:scale-95"
-        >
-          <Plus size={14} /> Ação Rápida
-        </button>
-
-        <AnimatePresence>
-          {isQuickAddOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsQuickAddOpen(false)} />
-              
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-4 right-4 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden"
-              >
-                <div className="flex flex-col">
-                   {/* ENVIANDO O SINAL state={{ action: 'new' }} */}
-                   <Link to="/pedidos" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
-                     <Package size={14} className="text-blue-500" />
-                     <span className="text-[9px] font-bold uppercase tracking-widest">Novo Pedido</span>
-                   </Link>
-                   <Link to="/clientes" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
-                     <Users size={14} className="text-emerald-500" />
-                     <span className="text-[9px] font-bold uppercase tracking-widest">Novo Cliente</span>
-                   </Link>
-                   <Link to="/produtos" state={{ action: 'new' }} onClick={() => { setIsQuickAddOpen(false); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-slate-700 transition-colors">
-                     <ShoppingBag size={14} className="text-amber-500" />
-                     <span className="text-[9px] font-bold uppercase tracking-widest">Novo Produto</span>
-                   </Link>
-                   <button onClick={() => { setIsQuickAddOpen(false); onOpenLancamento && onOpenLancamento(); setIsOpen && setIsOpen(false); }} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50 text-slate-700 transition-colors w-full text-left">
-                     <Wallet size={14} className="text-rose-500" />
-                     <span className="text-[9px] font-bold uppercase tracking-widest">Nova Transação</span>
-                   </button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-3 pb-4 px-4 space-y-6">
+      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
         {categorias.map((categoria, idx) => {
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
           if (filteredItems.length === 0) return null;
@@ -199,7 +150,6 @@ const Sidebar = ({ st, isOpen, setIsOpen, onOpenLancamento }) => {
 
 const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLancamentoOpen, setIsLancamentoOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 relative overflow-x-hidden">
@@ -223,18 +173,11 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         st={st} 
         isOpen={isMobileMenuOpen} 
         setIsOpen={setIsMobileMenuOpen} 
-        onOpenLancamento={() => setIsLancamentoOpen(true)}
       />
 
       <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 overflow-y-auto w-full transition-all duration-300">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
       </main>
-
-      <LancamentoModal 
-        isOpen={isLancamentoOpen} 
-        onClose={() => setIsLancamentoOpen(false)} 
-        tipoInicial="entrada" 
-      />
     </div>
   );
 };
