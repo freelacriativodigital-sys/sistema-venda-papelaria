@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase"; 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Trash2, Plus, CheckCircle2, AlertCircle } from "lucide-react";
+import { Palette, CheckCheck, Loader2, Wallet, Download, Upload, ShoppingBag, Plus, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import TaskItem from "@/components/tasks/TaskItem";
+
+// Importando os novos componentes modulares
+import LojaSite from "@/components/pedidos/LojaSite";
+import CriacaoArte from "@/components/pedidos/CriacaoArte";
+
 import NewTaskForm from "@/components/tasks/NewTaskForm";
-import EmptyState from "@/components/tasks/EmptyState";
 import FinancialTab from "@/components/tasks/FinancialTab";
 
 const priorityWeight = { urgente: 1, alta: 2, media: 3, baixa: 4 };
@@ -312,113 +315,24 @@ export default function Pedidos() {
         ) : (
           <>
             {activeTab === "solicitacoes" && (
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800">
-                   <h2 className="font-semibold uppercase tracking-widest text-[10px] flex items-center gap-1.5"><ShoppingBag size={14}/> Novas Solicitações</h2>
-                   <p className="text-[9px] mt-1 font-medium">Pedidos iniciados pelos clientes através do seu Catálogo ou Link da Bio. Aceite para iniciar a produção.</p>
-                </div>
-                
-                {solicitacoes.length === 0 ? (
-                   <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
-                     <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                     <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px]">Nenhum pedido novo</p>
-                   </div>
-                ) : (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                     <AnimatePresence>
-                       {solicitacoes.map(t => (
-                         <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white border border-blue-200 shadow-sm rounded-xl p-3 flex flex-col justify-between">
-                            <div>
-                              <div className="flex justify-between items-start gap-2 mb-2">
-                                 <h3 className="font-semibold text-slate-800 text-xs leading-tight uppercase">{t.title}</h3>
-                                 <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[9px] shrink-0 border border-emerald-100">
-                                   {(t.service_value || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                                 </span>
-                              </div>
-                              <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] text-slate-600 whitespace-pre-wrap mb-3 font-medium">
-                                 {t.description}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-auto">
-                               <Button onClick={() => handleUpdate(t.id, { status: 'pendente' })} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-8 text-[9px] uppercase font-semibold tracking-widest rounded-md">
-                                 <CheckCheck size={12} className="mr-1.5"/> Aceitar Pedido
-                               </Button>
-                               <Button onClick={() => handleDelete(t)} variant="outline" className="h-8 px-2.5 rounded-md border-red-200 text-red-500 hover:bg-red-50">
-                                 <Trash2 size={14} />
-                               </Button>
-                            </div>
-                         </motion.div>
-                       ))}
-                     </AnimatePresence>
-                   </div>
-                )}
-              </div>
+              <LojaSite 
+                solicitacoes={solicitacoes} 
+                handleUpdate={handleUpdate} 
+                handleDelete={handleDelete} 
+              />
             )}
 
-            {activeTab === "pendentes" && (
-              <div className="space-y-5">
-                {pendingTasks.length === 0 ? <EmptyState type="pending" /> : (
-                  <div className="flex flex-col gap-6">
-                    <AnimatePresence mode="popLayout">
-                      {gruposPendentes.hoje.length > 0 && (
-                        <div className="space-y-2.5">
-                          <div className="flex items-center gap-2 px-1">
-                            <span className="text-[9px] font-semibold uppercase tracking-widest text-rose-500">● Entregar Hoje / Atrasados</span>
-                            <div className="h-px flex-1 bg-rose-100"></div>
-                          </div>
-                          <div className="flex flex-col gap-2.5">
-                            {gruposPendentes.hoje.map((t) => (
-                              <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {gruposPendentes.amanha.length > 0 && (
-                        <div className="space-y-2.5">
-                          <div className="flex items-center gap-2 px-1">
-                            <span className="text-[9px] font-semibold uppercase tracking-widest text-amber-500">○ Para Amanhã</span>
-                            <div className="h-px flex-1 bg-amber-100"></div>
-                          </div>
-                          <div className="flex flex-col gap-2.5">
-                            {gruposPendentes.amanha.map((t) => (
-                              <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {gruposPendentes.proximos.length > 0 && (
-                        <div className="space-y-2.5">
-                          <div className="flex items-center gap-2 px-1">
-                            <span className="text-[9px] font-semibold uppercase tracking-widest text-blue-400">📅 Próximas Entregas</span>
-                            <div className="h-px flex-1 bg-blue-100/50"></div>
-                          </div>
-                          <div className="flex flex-col gap-2.5">
-                            {gruposPendentes.proximos.map((t) => (
-                              <motion.div key={t.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                                <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "concluidas" && (
-              <div className="space-y-2.5">
-                {completedTasks.map((t) => (
-                  <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} showUndo />
-                ))}
-              </div>
+            {(activeTab === "pendentes" || activeTab === "concluidas") && (
+              <CriacaoArte 
+                activeTab={activeTab}
+                pendingTasks={pendingTasks}
+                completedTasks={completedTasks}
+                gruposPendentes={gruposPendentes}
+                handleToggle={handleToggle}
+                handleUpdate={handleUpdate}
+                handleDelete={handleDelete}
+                handleEditOrder={handleEditOrder}
+              />
             )}
 
             {activeTab === "financeiro" && (
