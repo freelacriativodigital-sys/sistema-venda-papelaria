@@ -8,7 +8,7 @@ import {
   ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import LancamentoModal from '@/components/tasks/LancamentoModal'; // COMPONENTE IMPORTADO
+import LancamentoModal from '@/components/tasks/LancamentoModal'; 
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -17,7 +17,6 @@ export default function Home() {
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
   const [isAdjusting, setIsAdjusting] = useState(false);
 
-  // Estados que controlam a abertura do Componente Reutilizável
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState('entrada');
 
@@ -241,7 +240,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-20 pt-4 md:pt-5 px-4 md:px-0">
+    <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-[100px] md:pb-20 pt-4 md:pt-5 px-4 md:px-0">
       
       {/* HEADER DA PÁGINA */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3">
@@ -252,11 +251,12 @@ export default function Home() {
           <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Resumo financeiro e métricas</p>
         </div>
         
-        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
-          <Button onClick={() => handleOpenModal('entrada')} className="flex-1 md:flex-none h-8 md:h-9 bg-emerald-600 hover:bg-emerald-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
+        {/* BOTÕES ESCONDIDOS NO MOBILE (Aparecem só no Desktop) */}
+        <div className="hidden md:flex gap-2 w-auto">
+          <Button onClick={() => handleOpenModal('entrada')} className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
             <ArrowUpCircle size={14} /> Entrada
           </Button>
-          <Button onClick={() => handleOpenModal('saida')} className="flex-1 md:flex-none h-8 md:h-9 bg-rose-600 hover:bg-rose-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
+          <Button onClick={() => handleOpenModal('saida')} className="h-8 bg-rose-600 hover:bg-rose-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
             <ArrowDownCircle size={14} /> Saída
           </Button>
         </div>
@@ -415,7 +415,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* --- O COMPONENTE MODAL É INJETADO AQUI --- */}
+      {/* BARRA FIXA MOBILE (Colada na base da tela: bottom-0) */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] z-[40]">
+         <div className="flex gap-3 max-w-md mx-auto">
+           <Button onClick={() => handleOpenModal('entrada')} className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm rounded-lg transition-all">
+             <ArrowUpCircle size={16} /> Entrada
+           </Button>
+           <Button onClick={() => handleOpenModal('saida')} className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm rounded-lg transition-all">
+             <ArrowDownCircle size={16} /> Saída
+           </Button>
+         </div>
+      </div>
+
       <LancamentoModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
