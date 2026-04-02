@@ -20,8 +20,9 @@ const COLUNAS_PERMITIDAS = [
 ];
 
 export default function Pedidos() {
-  const [viewMode, setViewMode] = useState("site"); 
-  const [activeTab, setActiveTab] = useState("solicitacoes");
+  // AQUI: Produção e Pendentes agora são a tela inicial do sistema
+  const [viewMode, setViewMode] = useState("producao"); 
+  const [activeTab, setActiveTab] = useState("pendentes");
   const queryClient = useQueryClient();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -105,15 +106,10 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
-  // --- CORREÇÃO DA REGRA DE TRIAGEM ---
   const getTipoPedido = (t) => {
-    // REGRA 1: Se for solicitação nova, SEMPRE vai para o site, ignorando o padrão do banco.
     if (t.status === 'solicitacao') return 'site';
-    
-    // REGRA 2: Se já foi aceito e o banco marcou como arte antiga, vai para produção.
     if (t.tipo_pedido === 'arte') return 'producao'; 
     if (t.tipo_pedido) return t.tipo_pedido;
-    
     return 'producao'; 
   };
 

@@ -30,7 +30,7 @@ const getDeadlineInfo = (dateStr, isDone) => {
 export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, showUndo = false }) {
   const [config, setConfig] = useState(null);
   const [showAllItems, setShowAllItems] = useState(false); 
-  const [isExpanded, setIsExpanded] = useState(false); // Controle da sanfona (esconder serviços)
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     async function loadConfig() {
@@ -80,7 +80,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
 
   const handleSetAgPagamento = (e) => {
     e.stopPropagation();
-    // Marca como concluído para ir pra aba Feitas, mas não altera o pagamento
     onUpdate(task.id, { status: 'concluida' });
   };
 
@@ -306,7 +305,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
               <h3 className={`text-sm font-semibold leading-none tracking-tight truncate ${isDone ? "text-slate-400 line-through" : "text-slate-800"}`}>
                 {task.cliente_nome || task.title}
               </h3>
-              {/* O PONTO PISCANTE DE URGÊNCIA */}
               {task.priority?.toLowerCase() === 'urgente' && !isDone && (
                 <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0 shadow-[0_0_5px_rgba(244,63,94,0.6)]" title="Urgente" />
               )}
@@ -332,7 +330,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
                 </span>
               )}
 
-              {/* A NOVA TAG DE ENTREGUE AGUARDANDO PAGAMENTO */}
               {isDone && statusPagamento !== 'pago' && (
                 <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest border bg-orange-50 text-orange-600 border-orange-200">
                   Entregue (Ag. Pagto)
@@ -363,7 +360,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         </div>
       </div>
 
-      {/* BOTÃO DA SANFONA DE SERVIÇOS */}
       {(hasDescription || hasChecklist) && (
         <button 
           onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
@@ -374,7 +370,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         </button>
       )}
 
-      {/* ÁREA DOS SERVIÇOS (OCULTA POR PADRÃO) */}
       <AnimatePresence initial={false}>
         {isExpanded && (hasDescription || hasChecklist) && (
           <motion.div 
@@ -422,43 +417,45 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         )}
       </AnimatePresence>
 
-      <div className="flex flex-wrap items-center justify-between px-3 py-2 border-t border-slate-100 bg-white gap-2">
-        <div className="flex gap-1.5 flex-wrap">
-          <Button onClick={handleGeneratePDF} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <FileText size={12} className="md:mr-1"/> <span className="hidden md:inline">PDF</span>
-          </Button>
-          <Button onClick={handleWhatsAppShare} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <MessageCircle size={12} className="md:mr-1"/> <span className="hidden md:inline">Enviar</span>
-          </Button>
+      <div className="flex flex-col bg-white">
+        {/* LINHA 1: AÇÕES FINANCEIRAS (Separadas das demais) */}
+        {statusPagamento !== 'pago' && (
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-slate-50 bg-slate-50/50 overflow-x-auto">
+            <Button onClick={handleSetPago} variant="ghost" className="h-7 px-3 rounded-full text-[9px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 transition-colors border border-emerald-200/50">
+              <DollarSign size={12} className="mr-1.5"/> Pago
+            </Button>
+            <Button onClick={handleSetParcial} variant="ghost" className="h-7 px-3 rounded-full text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors border border-blue-200/50">
+              <Coins size={12} className="mr-1.5"/> Sinal
+            </Button>
+            {!isDone && (
+              <Button onClick={handleSetAgPagamento} variant="ghost" className="h-7 px-3 rounded-full text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-100/50 hover:bg-orange-100 transition-colors border border-orange-200/50">
+                <AlertCircle size={12} className="mr-1.5"/> Ag. Pagto
+              </Button>
+            )}
+          </div>
+        )}
 
-          {statusPagamento !== 'pago' && (
-            <>
-              <Button onClick={handleSetPago} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
-                <DollarSign size={12} className="md:mr-1"/> <span className="hidden md:inline">Pago</span>
-              </Button>
-              <Button onClick={handleSetParcial} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
-                <Coins size={12} className="md:mr-1"/> <span className="hidden md:inline">Sinal</span>
-              </Button>
-              
-              {/* O NOVO BOTÃO DE ENTREGAR AGUARDANDO PAGAMENTO */}
-              {!isDone && (
-                <Button onClick={handleSetAgPagamento} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
-                  <AlertCircle size={12} className="md:mr-1"/> <span className="hidden md:inline">Ag. Pagto</span>
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-        
-        <div className="flex gap-1.5">
-          <Button onClick={() => onEdit(task)} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100">
-            <Pencil size={12} className="md:mr-1"/> <span className="hidden md:inline">Editar</span>
-          </Button>
-          <Button onClick={() => onDelete(task)} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50">
-            <Trash2 size={12} className="md:mr-1"/> <span className="hidden md:inline">Excluir</span>
-          </Button>
+        {/* LINHA 2: AÇÕES GERAIS */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex gap-1.5">
+            <Button onClick={handleGeneratePDF} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+              <FileText size={12} className="mr-1"/> PDF
+            </Button>
+            <Button onClick={handleWhatsAppShare} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+              <MessageCircle size={12} className="mr-1"/> Enviar
+            </Button>
+          </div>
+          <div className="flex gap-1.5">
+            <Button onClick={() => onEdit(task)} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100">
+              <Pencil size={12} className="mr-1"/> Editar
+            </Button>
+            <Button onClick={() => onDelete(task)} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50">
+              <Trash2 size={12} className="mr-1"/> Excluir
+            </Button>
+          </div>
         </div>
       </div>
+
     </div>
   );
 }
