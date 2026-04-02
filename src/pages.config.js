@@ -54,9 +54,10 @@ export const pagesConfig = {
         { id: "clientes", label: "Meus Clientes", roles: ['admin', 'padrao'] },
       ]
     },
-    {
+     {
       titulo: "Financeiro & Vendas",
       items: [
+        { id: "caixa", label: "Fluxo de Caixa", roles: ['admin'] }, // <-- ADICIONE ESTA LINHA AQUI
         { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
         { id: "despesas", label: "Despesas", roles: ['admin'] }, 
         { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
@@ -77,16 +78,7 @@ export const pagesConfig = {
         { id: "whatsapp", label: "WhatsApp", roles: ['admin', 'padrao'] },
       ]
     },
-    {
-      titulo: "Financeiro & Vendas",
-      items: [
-        { id: "caixa", label: "Fluxo de Caixa", roles: ['admin'] }, // <-- ADICIONE ESTA LINHA AQUI
-        { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
-        { id: "despesas", label: "Despesas", roles: ['admin'] }, 
-        { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
-      ]
-    },
-    {
+       {
       titulo: "Sistema",
       items: [
         { id: "configuracoes", label: "Configurações Gerais", roles: ['admin'] }, 
