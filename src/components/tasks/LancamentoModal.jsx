@@ -169,7 +169,7 @@ export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrad
       {isOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-          <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-2xl relative z-[210] overflow-hidden">
+          <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-2xl relative z-[210] overflow-visible">
             
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -239,18 +239,19 @@ export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrad
                       <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Venda balcão..." className="h-9 border-slate-200 text-xs font-medium" autoFocus />
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative">
                        <div className="flex justify-between items-end">
                          <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Categoria</label>
                          <button onClick={() => setIsManagingCats(true)} className="text-[8px] text-blue-600 font-bold uppercase tracking-widest hover:underline flex items-center gap-1"><Pencil size={10}/> Editar Categorias</button>
                        </div>
                        <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
-                          <SelectTrigger className="h-9 border-slate-200 text-xs font-semibold text-slate-700">
+                          <SelectTrigger className="h-9 border-slate-200 text-xs font-semibold text-slate-700 bg-white">
                              <SelectValue placeholder="Selecione a categoria" />
                           </SelectTrigger>
-                          <SelectContent>
+                          {/* CORREÇÃO DO Z-INDEX: Forçando o menu a ficar por cima da janela (z-300) */}
+                          <SelectContent className="z-[300] bg-white border-slate-200 shadow-xl rounded-md">
                              {listaCategoriasAtuais?.map(cat => (
-                               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                               <SelectItem key={cat} value={cat} className="font-semibold text-xs text-slate-700 cursor-pointer hover:bg-slate-100">{cat}</SelectItem>
                              ))}
                           </SelectContent>
                        </Select>
