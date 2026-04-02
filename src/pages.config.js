@@ -10,6 +10,7 @@ import LinkBio from './pages/LinkBio';
 import Briefings from './pages/Briefings'; 
 import Precificacao from './pages/Precificacao'; 
 import Configuracoes from './pages/Configuracoes';
+import EntradasSaidas from './pages/EntradasSaidas';
 
 // Importação da página de Entrega para o Cliente
 import EntregaCliente from './pages/EntregaCliente';
@@ -34,6 +35,7 @@ export const pagesConfig = {
     "briefings": Briefings, 
     "precificacao": Precificacao,
     "configuracoes": Configuracoes,
+    "caixa": EntradasSaidas,
     // Rota pública de entrega (não precisa de isMaster)
     "entrega/:driveFolderId": EntregaCliente,
     // Rotas master só entram no objeto se for a sua Vercel
@@ -76,6 +78,15 @@ export const pagesConfig = {
       ]
     },
     {
+      titulo: "Financeiro & Vendas",
+      items: [
+        { id: "caixa", label: "Fluxo de Caixa", roles: ['admin'] }, // <-- ADICIONE ESTA LINHA AQUI
+        { id: "orcamentos", label: "Orçamentos", roles: ['admin', 'padrao'] },
+        { id: "despesas", label: "Despesas", roles: ['admin'] }, 
+        { id: "precificacao", label: "Calculadora de Preços", roles: ['admin'] }, 
+      ]
+    },
+    {
       titulo: "Sistema",
       items: [
         { id: "configuracoes", label: "Configurações Gerais", roles: ['admin'] }, 
@@ -88,4 +99,5 @@ export const pagesConfig = {
     }
   ],
   mainPage: ""
+  
 };
