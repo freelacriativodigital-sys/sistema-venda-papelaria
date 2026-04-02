@@ -137,7 +137,7 @@ export default function Pedidos() {
     const totalValue = getTaskValue(task);
     const statusLower = String(task.status || '').toLowerCase().trim();
     const paymentLower = String(task.payment_status || '').toLowerCase().trim();
-    const isPaid = paymentLower === 'pago' || statusLower === 'concluido'; // Removido 'concluida' para não inflar ganhos se não pagou
+    const isPaid = paymentLower === 'pago' || statusLower === 'concluido'; 
     const isPartial = paymentLower === 'parcial';
     const valorAdiantado = Number(task.valor_pago || 0);
 
@@ -152,19 +152,18 @@ export default function Pedidos() {
   const solicitacoes = currentTasks.filter((t) => t.status === "solicitacao");
   const pendingTasks = currentTasks.filter((t) => t.status !== "concluida" && t.status !== "solicitacao");
 
-  // --- MÁGICA: Filtro Inteligente de Pagamento para Concluídos ---
   const agPagamentoTasks = currentTasks.filter((t) => {
     if (t.status !== "concluida") return false;
     const totalVal = getTaskValue(t);
     const isPaid = String(t.payment_status || '').toLowerCase().trim() === 'pago' || (Number(t.valor_pago || 0) >= totalVal && totalVal > 0);
-    return !isPaid; // Se concluiu mas NÃO pagou tudo, vem pra cá!
+    return !isPaid; 
   });
 
   const completedTasks = currentTasks.filter((t) => {
     if (t.status !== "concluida") return false;
     const totalVal = getTaskValue(t);
     const isPaid = String(t.payment_status || '').toLowerCase().trim() === 'pago' || (Number(t.valor_pago || 0) >= totalVal && totalVal > 0);
-    return isPaid; // Se concluiu E já pagou, vai para as Feitas!
+    return isPaid; 
   });
 
   const organizarPorData = (lista) => {
@@ -199,7 +198,8 @@ export default function Pedidos() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-20 relative">
       <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between transition-all gap-3">
+        {/* LARGURA EXPANDIDA PARA 95% NO HEADER */}
+        <div className="w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between transition-all gap-3">
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-lg md:text-xl font-semibold text-slate-800 uppercase leading-none tracking-tight">GERENCIADOR</h1>
@@ -218,9 +218,9 @@ export default function Pedidos() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8 w-full">
+      {/* LARGURA EXPANDIDA PARA 95% NO CORPO */}
+      <div className="w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 py-6 md:py-8">
         
-        {/* TOGGLE: SITE VS PRODUÇÃO */}
         <div className="flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-6 md:mb-8">
           <button 
             onClick={() => handleViewModeChange("site")}
@@ -236,9 +236,8 @@ export default function Pedidos() {
           </button>
         </div>
 
-        {/* CARDS SUPERIORES COLORIDOS */}
         {!isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 max-w-4xl mx-auto">
              <div className="bg-violet-600 rounded-xl p-3 md:p-4 border border-violet-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
                <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><ShoppingBag size={70}/></div>
                <div className="flex items-center justify-between mb-1.5 relative z-10">
@@ -269,7 +268,7 @@ export default function Pedidos() {
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 max-w-4xl mx-auto">
           <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
             {viewMode === "site" && (
               <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
@@ -312,7 +311,7 @@ export default function Pedidos() {
                 pendingTasks={pendingTasks}
                 completedTasks={completedTasks}
                 gruposPendentes={gruposPendentes}
-                agPagamentoTasks={agPagamentoTasks} // Enviando a Nova Coluna para Produção
+                agPagamentoTasks={agPagamentoTasks}
                 handleToggle={handleToggle}
                 handleUpdate={handleUpdate}
                 handleDelete={handleDelete}
@@ -321,7 +320,9 @@ export default function Pedidos() {
             )}
 
             {activeTab === "financeiro" && viewMode === "producao" && (
-              <FinancialTab tasks={currentTasks} onUpdate={handleUpdate} />
+              <div className="max-w-4xl mx-auto">
+                <FinancialTab tasks={currentTasks} onUpdate={handleUpdate} />
+              </div>
             )}
           </>
         )}
