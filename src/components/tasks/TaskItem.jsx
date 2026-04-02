@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Trash2, Clock, CheckCircle2, CheckSquare, Square, Pencil, MessageCircle, FileText, DollarSign, Coins, AlertCircle, Calendar } from "lucide-react";
+import { Trash2, Clock, CheckCircle2, CheckSquare, Square, Pencil, MessageCircle, FileText, DollarSign, Coins, AlertCircle, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../../lib/supabase"; 
 import html2pdf from 'html2pdf.js';
 
 const fmt = (v) =>
   v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) ?? "R$ 0,00";
 
-// AQUI ESTÁ A MÁGICA: Adicionamos o 'isDone' para checar se já foi entregue
 const getDeadlineInfo = (dateStr, isDone) => {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-');
@@ -20,7 +19,6 @@ const getDeadlineInfo = (dateStr, isDone) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const dataFormatada = deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-  // Se já foi concluído, tira o vermelho e mostra como entregue pacificamente
   if (isDone) return { label: `Entregue (${dataFormatada})`, color: "bg-slate-50 text-slate-500 border-slate-200", icon: false };
 
   if (diffDays < 0) return { label: `Atrasado (${dataFormatada})`, color: "bg-rose-50 text-rose-600 border-rose-200 animate-pulse", icon: true };
@@ -32,6 +30,7 @@ const getDeadlineInfo = (dateStr, isDone) => {
 export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, showUndo = false }) {
   const [config, setConfig] = useState(null);
   const [showAllItems, setShowAllItems] = useState(false); 
+  const [isExpanded, setIsExpanded] = useState(false); // Controle da sanfona (esconder serviços)
 
   useEffect(() => {
     async function loadConfig() {
@@ -46,29 +45,20 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   const baseValue = task.service_value !== undefined ? Number(task.service_value) : (Number(task.price) || 0);
   const displayValue = checklistTotal > 0 ? checklistTotal : baseValue;
   
-  // Passamos o isDone para a função do prazo
   const deadline = getDeadlineInfo(task.delivery_date, isDone); 
 
   const valorPago = Number(task.valor_pago || 0);
   let statusPagamento = 'pendente';
-  let corBadge = 'bg-emerald-50 text-emerald-600 border-emerald-100';
-  let textoStatus = 'Pago';
-  let corValor = 'text-emerald-600';
+  let corValor = 'text-slate-700';
   
   if (task.payment_status === 'pago' || (valorPago >= displayValue && displayValue > 0)) {
      statusPagamento = 'pago';
-     corBadge = 'bg-emerald-50 text-emerald-600 border-emerald-200';
-     textoStatus = 'Pago';
      corValor = 'text-emerald-600';
   } else if (task.payment_status === 'parcial' || (valorPago > 0 && valorPago < displayValue)) {
      statusPagamento = 'parcial';
-     corBadge = 'bg-blue-50 text-blue-600 border-blue-200';
-     textoStatus = 'Parcial';
      corValor = 'text-rose-500'; 
   } else {
      statusPagamento = 'pendente';
-     corBadge = 'bg-rose-50 text-rose-600 border-rose-200';
-     textoStatus = 'Em Aberto';
      corValor = 'text-slate-700';
   }
 
@@ -86,6 +76,12 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   const handleSetPago = (e) => {
     e.stopPropagation();
     onUpdate(task.id, { payment_status: 'pago', valor_pago: displayValue });
+  };
+
+  const handleSetAgPagamento = (e) => {
+    e.stopPropagation();
+    // Marca como concluído para ir pra aba Feitas, mas não altera o pagamento
+    onUpdate(task.id, { status: 'concluida' });
   };
 
   const handleSetParcial = (e) => {
@@ -306,9 +302,15 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
           </button>
 
           <div className="flex flex-col flex-1 min-w-0">
-            <h3 className={`text-sm font-semibold leading-none tracking-tight truncate ${isDone ? "text-slate-400 line-through" : "text-slate-800"}`}>
-              {task.cliente_nome || task.title}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className={`text-sm font-semibold leading-none tracking-tight truncate ${isDone ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                {task.cliente_nome || task.title}
+              </h3>
+              {/* O PONTO PISCANTE DE URGÊNCIA */}
+              {task.priority?.toLowerCase() === 'urgente' && !isDone && (
+                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0 shadow-[0_0_5px_rgba(244,63,94,0.6)]" title="Urgente" />
+              )}
+            </div>
             
             {task.cliente_nome && task.title !== task.cliente_nome && (
               <span className="text-[9px] text-slate-400 font-medium uppercase tracking-widest mt-1 truncate">
@@ -324,25 +326,18 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
                 </span>
               )}
 
-              {task.priority && (
-                <span className={`px-2 py-0.5 rounded-full text-[8px] font-semibold tracking-widest uppercase border ${
-                  task.priority.toLowerCase() === 'urgente' ? 'text-rose-600 bg-rose-50 border-rose-200 animate-pulse' :
-                  task.priority.toLowerCase() === 'alta' ? 'text-amber-600 bg-amber-50 border-amber-200' :
-                  'text-slate-500 bg-slate-50 border-slate-200'
-                }`}>
-                  {task.priority}
-                </span>
-              )}
-
               {task.category && (
                 <span className="text-[8px] font-medium text-slate-400 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-widest">
                   {task.category}
                 </span>
               )}
 
-              <span className={`px-2 py-0.5 rounded-full text-[8px] font-semibold uppercase tracking-widest border ${corBadge}`}>
-                {textoStatus}
-              </span>
+              {/* A NOVA TAG DE ENTREGUE AGUARDANDO PAGAMENTO */}
+              {isDone && statusPagamento !== 'pago' && (
+                <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest border bg-orange-50 text-orange-600 border-orange-200">
+                  Entregue (Ag. Pagto)
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -368,41 +363,64 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         </div>
       </div>
 
-      <div className="px-3 py-2 bg-slate-50/50">
-        {hasDescription && (
-          <div className="mb-2">
-            <p className="text-[10px] md:text-xs text-slate-500 leading-relaxed font-medium whitespace-pre-wrap">{task.description}</p>
-          </div>
-        )}
+      {/* BOTÃO DA SANFONA DE SERVIÇOS */}
+      {(hasDescription || hasChecklist) && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+          className="w-full py-1.5 flex items-center justify-center gap-1 bg-slate-50/80 border-b border-slate-100 hover:bg-slate-100 transition-colors text-slate-400"
+        >
+          <span className="text-[9px] font-bold uppercase tracking-widest">{isExpanded ? "Ocultar Serviços" : "Ver Serviços"}</span>
+          {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+      )}
 
-        {hasChecklist && (
-          <div className="space-y-1">
-            {visibleChecklist.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between py-1 group border-b border-slate-100/50 last:border-0">
-                <button onClick={(e) => { e.stopPropagation(); toggleChecklistItem(idx); }} className="flex items-center gap-2 flex-1 text-left">
-                  {item.done ? <CheckSquare className="w-3 h-3 text-emerald-500 shrink-0" /> : <Square className="w-3 h-3 text-slate-300 shrink-0 group-hover:text-emerald-400 transition-colors" />}
-                  <span className={`text-[10px] md:text-xs font-medium ${item.done ? "line-through text-slate-400" : "text-slate-600"}`}>
-                    {item.name || "Item sem nome"}
-                  </span>
-                </button>
-                {item.value > 0 && <span className="text-[10px] font-semibold text-slate-400">{fmt(item.value)}</span>}
-              </div>
-            ))}
-            
-            {hiddenItemsCount > 0 && (
-              <button onClick={() => setShowAllItems(true)} className="mt-1 w-full text-center text-[9px] font-semibold text-slate-400 hover:text-emerald-600 uppercase tracking-widest py-1.5 border border-dashed border-slate-200 rounded-md bg-white transition-colors">
-                + Exibir {hiddenItemsCount} detalhes
-              </button>
-            )}
-            
-            {showAllItems && (
-              <button onClick={() => setShowAllItems(false)} className="mt-1 w-full text-center text-[9px] font-semibold text-rose-400 hover:text-rose-600 uppercase tracking-widest py-1.5 border border-dashed border-slate-200 rounded-md bg-white transition-colors">
-                Recolher itens
-              </button>
-            )}
-          </div>
+      {/* ÁREA DOS SERVIÇOS (OCULTA POR PADRÃO) */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (hasDescription || hasChecklist) && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }} 
+            animate={{ height: 'auto', opacity: 1 }} 
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-slate-50/50"
+          >
+            <div className="px-3 py-2">
+              {hasDescription && (
+                <div className="mb-2">
+                  <p className="text-[10px] md:text-xs text-slate-500 leading-relaxed font-medium whitespace-pre-wrap">{task.description}</p>
+                </div>
+              )}
+
+              {hasChecklist && (
+                <div className="space-y-1">
+                  {visibleChecklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-1 group border-b border-slate-100/50 last:border-0">
+                      <button onClick={(e) => { e.stopPropagation(); toggleChecklistItem(idx); }} className="flex items-center gap-2 flex-1 text-left">
+                        {item.done ? <CheckSquare className="w-3 h-3 text-emerald-500 shrink-0" /> : <Square className="w-3 h-3 text-slate-300 shrink-0 group-hover:text-emerald-400 transition-colors" />}
+                        <span className={`text-[10px] md:text-xs font-medium ${item.done ? "line-through text-slate-400" : "text-slate-600"}`}>
+                          {item.name || "Item sem nome"}
+                        </span>
+                      </button>
+                      {item.value > 0 && <span className="text-[10px] font-semibold text-slate-400">{fmt(item.value)}</span>}
+                    </div>
+                  ))}
+                  
+                  {hiddenItemsCount > 0 && (
+                    <button onClick={() => setShowAllItems(true)} className="mt-1 w-full text-center text-[9px] font-semibold text-slate-400 hover:text-emerald-600 uppercase tracking-widest py-1.5 border border-dashed border-slate-200 rounded-md bg-white transition-colors">
+                      + Exibir {hiddenItemsCount} detalhes
+                    </button>
+                  )}
+                  
+                  {showAllItems && (
+                    <button onClick={() => setShowAllItems(false)} className="mt-1 w-full text-center text-[9px] font-semibold text-rose-400 hover:text-rose-600 uppercase tracking-widest py-1.5 border border-dashed border-slate-200 rounded-md bg-white transition-colors">
+                      Recolher itens
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
       <div className="flex flex-wrap items-center justify-between px-3 py-2 border-t border-slate-100 bg-white gap-2">
         <div className="flex gap-1.5 flex-wrap">
@@ -421,6 +439,13 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
               <Button onClick={handleSetParcial} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
                 <Coins size={12} className="md:mr-1"/> <span className="hidden md:inline">Sinal</span>
               </Button>
+              
+              {/* O NOVO BOTÃO DE ENTREGAR AGUARDANDO PAGAMENTO */}
+              {!isDone && (
+                <Button onClick={handleSetAgPagamento} variant="ghost" className="h-7 px-2.5 rounded-full text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
+                  <AlertCircle size={12} className="md:mr-1"/> <span className="hidden md:inline">Ag. Pagto</span>
+                </Button>
+              )}
             </>
           )}
         </div>
