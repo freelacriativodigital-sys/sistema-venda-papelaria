@@ -19,14 +19,7 @@ import { supabase } from "../../lib/supabase";
 import ChecklistEditor from "./ChecklistEditor";
 
 const DEFAULT_CATEGORIES = [
-  { name: "Ilustração", slug: "ilustracao" },
-  { name: "Pintura Digital", slug: "pintura_digital" },
-  { name: "Concept Art", slug: "concept_art" },
-  { name: "Design Gráfico", slug: "design_grafico" },
-  { name: "Modelagem 3D", slug: "modelagem_3d" },
-  { name: "Animação", slug: "animacao" },
-  { name: "Edição de Foto", slug: "edição_foto" },
-  { name: "Outro", slug: "outro" },
+  { name: "Ilustração", slug: "ilustracao" }
 ];
 
 export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
@@ -43,26 +36,30 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [clienteId, setClienteId] = useState(null);
 
-  // Estados de Categoria
+  // Estados de Categoria (Agora vem do Banco)
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [novaCategoria, setNovaCategoria] = useState("");
   const [showCatManager, setShowCatManager] = useState(false);
 
   useEffect(() => {
-    // Carrega as categorias customizadas do LocalStorage (se existirem)
-    const savedCats = localStorage.getItem('organize_categorias');
-    if (savedCats) {
-      setCategories(JSON.parse(savedCats));
-    }
-
     if (isOpen) {
-      async function buscarClientes() {
+      async function fetchData() {
         setCarregandoClientes(true);
-        const { data } = await supabase.from('clientes').select('id, nome, whatsapp').order('nome');
-        if (data) setClientes(data);
+        
+        // Busca Clientes e Categorias do Supabase ao mesmo tempo
+        const [resClientes, resCategorias] = await Promise.all([
+          supabase.from('clientes').select('id, nome, whatsapp').order('nome'),
+          supabase.from('categorias').select('*').order('name')
+        ]);
+
+        if (resClientes.data) setClientes(resClientes.data);
+        if (resCategorias.data && resCategorias.data.length > 0) {
+          setCategories(resCategorias.data);
+        }
+        
         setCarregandoClientes(false);
       }
-      buscarClientes();
+      fetchData();
 
       if (taskToEdit) {
         setForm({ ...taskToEdit, checklist: taskToEdit.checklist || [], valor_pago: taskToEdit.valor_pago || 0 });
@@ -103,27 +100,35 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
     setCarregandoClientes(false);
   };
 
-  // --- FUNÇÕES DE CATEGORIA ---
-  const handleAddCategory = () => {
+  // --- FUNÇÕES DE CATEGORIA (SUPABASE) ---
+  const handleAddCategory = async () => {
     if(!novaCategoria.trim()) return;
     const slug = novaCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
     
-    // Evita duplicatas
     if (categories.find(c => c.slug === slug)) return setNovaCategoria("");
 
-    const updated = [...categories, { name: novaCategoria, slug }];
-    setCategories(updated);
-    localStorage.setItem('organize_categorias', JSON.stringify(updated));
+    const novaCat = { name: novaCategoria, slug };
+    
+    // Atualiza a tela instantaneamente
+    setCategories([...categories, novaCat]);
     setForm({...form, category: slug});
     setNovaCategoria("");
+
+    // Salva no Supabase
+    const { error } = await supabase.from('categorias').insert([novaCat]);
+    if (error) console.error("Erro ao salvar categoria no banco:", error);
   };
 
-  const handleRemoveCategory = (e, slug) => {
-    e.stopPropagation(); // Evita que o Popover feche ao clicar na lixeira
-    const updated = categories.filter(c => c.slug !== slug);
-    setCategories(updated);
-    localStorage.setItem('organize_categorias', JSON.stringify(updated));
+  const handleRemoveCategory = async (e, slug) => {
+    e.stopPropagation(); 
+    
+    // Atualiza a tela instantaneamente
+    setCategories(categories.filter(c => c.slug !== slug));
     if (form.category === slug) setForm({...form, category: ""});
+
+    // Deleta no Supabase
+    const { error } = await supabase.from('categorias').delete().eq('slug', slug);
+    if (error) console.error("Erro ao deletar categoria do banco:", error);
   };
 
   // --- FUNÇÃO DE SALVAR PEDIDO ---
@@ -238,7 +243,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             
-            {/* CAMPO CALENDÁRIO COM Z-INDEX CORRIGIDO */}
+            {/* CAMPO CALENDÁRIO */}
             <div className="space-y-1">
               <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Entrega</label>
               <Popover>
@@ -248,7 +253,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                     <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                   </Button>
                 </PopoverTrigger>
-                {/* O SEGREDO ESTÁ AQUI: z-[9999] style forçado e portal implícito */}
                 <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" style={{ zIndex: 9999 }} align="start">
                   <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-2 bg-white scale-90 origin-top-left" />
                 </PopoverContent>
@@ -267,7 +271,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
               </Select>
             </div>
 
-            {/* GERENCIADOR DE CATEGORIAS */}
+            {/* GERENCIADOR DE CATEGORIAS (VIA SUPABASE) */}
             <div className="space-y-1">
               <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
               <Popover open={showCatManager} onOpenChange={setShowCatManager}>
