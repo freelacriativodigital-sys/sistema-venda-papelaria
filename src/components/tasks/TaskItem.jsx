@@ -8,7 +8,8 @@ import html2pdf from 'html2pdf.js';
 const fmt = (v) =>
   v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) ?? "R$ 0,00";
 
-const getDeadlineInfo = (dateStr) => {
+// AQUI ESTÁ A MÁGICA: Adicionamos o 'isDone' para checar se já foi entregue
+const getDeadlineInfo = (dateStr, isDone) => {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-');
   const deadline = new Date(year, month - 1, day);
@@ -18,6 +19,9 @@ const getDeadlineInfo = (dateStr) => {
   const diffTime = deadline - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const dataFormatada = deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+  // Se já foi concluído, tira o vermelho e mostra como entregue pacificamente
+  if (isDone) return { label: `Entregue (${dataFormatada})`, color: "bg-slate-50 text-slate-500 border-slate-200", icon: false };
 
   if (diffDays < 0) return { label: `Atrasado (${dataFormatada})`, color: "bg-rose-50 text-rose-600 border-rose-200 animate-pulse", icon: true };
   if (diffDays === 0) return { label: `Hoje (${dataFormatada})`, color: "bg-amber-500 text-white border-amber-600 shadow-sm", icon: true };
@@ -42,7 +46,8 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   const baseValue = task.service_value !== undefined ? Number(task.service_value) : (Number(task.price) || 0);
   const displayValue = checklistTotal > 0 ? checklistTotal : baseValue;
   
-  const deadline = getDeadlineInfo(task.delivery_date); 
+  // Passamos o isDone para a função do prazo
+  const deadline = getDeadlineInfo(task.delivery_date, isDone); 
 
   const valorPago = Number(task.valor_pago || 0);
   let statusPagamento = 'pendente';
@@ -193,7 +198,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
       </div>
     `;
 
-    // Geramos o código HTML como uma string pura, sem manipular o DOM
     const htmlContent = `
       <div style="font-family: 'Inter', sans-serif; padding: 15mm; width: 210mm; box-sizing: border-box; background: white;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${corBase}; padding-bottom: 20px; margin-bottom: 30px;">
@@ -282,7 +286,6 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
       pagebreak:    { mode: 'avoid-all' }
     };
 
-    // Agora passamos a string HTML diretamente para a biblioteca
     html2pdf().set(opt).from(htmlContent).save();
   };
 
