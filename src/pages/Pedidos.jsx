@@ -20,7 +20,7 @@ const COLUNAS_PERMITIDAS = [
 ];
 
 export default function Pedidos() {
-  const [viewMode, setViewMode] = useState("site"); // 'site' ou 'producao'
+  const [viewMode, setViewMode] = useState("site"); 
   const [activeTab, setActiveTab] = useState("solicitacoes");
   const queryClient = useQueryClient();
 
@@ -105,10 +105,15 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
+  // --- CORREÇÃO DA REGRA DE TRIAGEM ---
   const getTipoPedido = (t) => {
+    // REGRA 1: Se for solicitação nova, SEMPRE vai para o site, ignorando o padrão do banco.
+    if (t.status === 'solicitacao') return 'site';
+    
+    // REGRA 2: Se já foi aceito e o banco marcou como arte antiga, vai para produção.
     if (t.tipo_pedido === 'arte') return 'producao'; 
     if (t.tipo_pedido) return t.tipo_pedido;
-    if (t.status === 'solicitacao') return 'site';
+    
     return 'producao'; 
   };
 
@@ -179,7 +184,6 @@ export default function Pedidos() {
 
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
-    // Garante que a aba correta seja selecionada ao trocar de modo
     setActiveTab(mode === "site" ? "solicitacoes" : "pendentes");
   };
 
@@ -258,7 +262,6 @@ export default function Pedidos() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
-            {/* RENDERIZAÇÃO CONDICIONAL DAS ABAS */}
             {viewMode === "site" && (
               <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
                 <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Aguardando Aprovação</span><span className="xs:hidden">Aguardando</span>
