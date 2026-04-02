@@ -76,14 +76,14 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
 
   return (
     <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      
+      {/* A LOGO OFICIAL DO SISTEMA CRAVADA AQUI */}
       <div className="flex justify-center items-center h-24 border-b border-slate-100 shrink-0 px-6">
-        {st.logoUrl ? (
-          <img src={st.logoUrl} alt="Logo" className="max-h-12 w-auto object-contain drop-shadow-sm" />
-        ) : (
-          <span className="text-sm font-black text-slate-700 uppercase tracking-widest text-center truncate">
-            {st.nomeLoja || "Portal Criarte"}
-          </span>
-        )}
+        <img 
+          src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
+          alt="Logo Organize" 
+          className="max-h-14 w-auto object-contain drop-shadow-sm" 
+        />
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
