@@ -105,9 +105,8 @@ export default function Pedidos() {
     handleUpdate(task.id, { status: newStatus, completed_date: newStatus === "concluida" ? new Date().toISOString() : null });
   };
 
-  // SISTEMA DE ESTEIRA INTELIGENTE
   const getTipoPedido = (t) => {
-    if (t.tipo_pedido === 'arte') return 'producao'; // Migra dados antigos para produção automaticamente
+    if (t.tipo_pedido === 'arte') return 'producao'; 
     if (t.tipo_pedido) return t.tipo_pedido;
     if (t.status === 'solicitacao') return 'site';
     return 'producao'; 
@@ -180,6 +179,7 @@ export default function Pedidos() {
 
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
+    // Garante que a aba correta seja selecionada ao trocar de modo
     setActiveTab(mode === "site" ? "solicitacoes" : "pendentes");
   };
 
@@ -258,22 +258,27 @@ export default function Pedidos() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="w-full bg-slate-100 h-11 border border-slate-200 p-1 rounded-md flex">
+            {/* RENDERIZAÇÃO CONDICIONAL DAS ABAS */}
             {viewMode === "site" && (
               <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
-                <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Caixa de Entrada</span><span className="xs:hidden">Site</span>
+                <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Aguardando Aprovação</span><span className="xs:hidden">Aguardando</span>
                 {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
               </TabsTrigger>
             )}
             
-            <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
-              <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Fila de Produção</span><span className="xs:hidden">Fazer</span>
-            </TabsTrigger>
-            <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
-              <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
-            </TabsTrigger>
-            <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
-              <Wallet className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
-            </TabsTrigger>
+            {viewMode === "producao" && (
+              <>
+                <TabsTrigger value="pendentes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
+                  <Palette className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Fila de Produção</span><span className="xs:hidden">Fazer</span>
+                </TabsTrigger>
+                <TabsTrigger value="concluidas" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
+                  <CheckCheck className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Concluídas</span><span className="xs:hidden">Feitas</span>
+                </TabsTrigger>
+                <TabsTrigger value="financeiro" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600">
+                  <Wallet className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Financeiro</span><span className="xs:hidden">Caixa</span>
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
         </Tabs>
 
@@ -289,7 +294,7 @@ export default function Pedidos() {
               />
             )}
 
-            {(activeTab === "pendentes" || activeTab === "concluidas") && (
+            {(activeTab === "pendentes" || activeTab === "concluidas") && viewMode === "producao" && (
               <Producao 
                 activeTab={activeTab}
                 pendingTasks={pendingTasks}
@@ -302,7 +307,7 @@ export default function Pedidos() {
               />
             )}
 
-            {activeTab === "financeiro" && (
+            {activeTab === "financeiro" && viewMode === "producao" && (
               <FinancialTab tasks={currentTasks} onUpdate={handleUpdate} />
             )}
           </>
