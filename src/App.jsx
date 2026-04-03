@@ -10,7 +10,7 @@ import Login from '@/components/tasks/Login';
 
 import {
   Home, Package, MessageCircle, LogOut,
-  ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
+  ChevronRight, ChevronLeft, Users, ShoppingBag, Settings, Globe, FileText,
   Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon, Wallet
 } from "lucide-react";
 
@@ -75,15 +75,20 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   };
 
   return (
-    <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.05)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       
-      {/* A LOGO OFICIAL DO SISTEMA CRAVADA AQUI */}
-      <div className="flex justify-center items-center h-24 border-b border-slate-100 shrink-0 px-6">
-        <img 
-          src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
-          alt="Logo Organize" 
-          className="max-h-14 w-auto object-contain drop-shadow-sm" 
-        />
+      <div className="flex justify-between items-center h-24 border-b border-slate-100 shrink-0 px-4 relative">
+        <div className="flex-1 flex justify-center">
+          <img 
+            src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
+            alt="Logo Organize" 
+            className="max-h-14 w-auto object-contain drop-shadow-sm" 
+          />
+        </div>
+        {/* Botão extra para fechar o menu dentro dele mesmo */}
+        <button onClick={() => setIsOpen(false)} className="absolute right-3 p-1.5 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
+           <ChevronLeft size={18} />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
@@ -152,20 +157,23 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 relative overflow-x-hidden">
+    <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 relative overflow-x-hidden">
+      
+      {/* OVERLAY ESCURO: Fica visível em TODAS as telas quando o menu abrir */}
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
-          className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90]"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] transition-opacity"
         />
       )}
 
+      {/* PUXADOR DO MENU: Fica visível sempre que o menu estiver fechado */}
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-[80] bg-white text-slate-800 p-1 py-4 rounded-r-lg shadow-xl border border-l-0 border-slate-200"
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-[80] bg-white text-slate-800 p-1.5 py-6 rounded-r-xl shadow-[4px_0_15px_rgba(0,0,0,0.06)] border border-l-0 border-slate-200 hover:bg-slate-50 hover:pr-4 hover:shadow-md transition-all flex items-center justify-center group"
         >
-          <ChevronRight size={24} />
+          <ChevronRight size={24} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
         </button>
       )}
 
@@ -175,7 +183,8 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         setIsOpen={setIsMobileMenuOpen} 
       />
 
-      <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8 overflow-y-auto w-full transition-all duration-300">
+      {/* CONTEÚDO PRINCIPAL: Agora usa 100% da largura e não tem margem esquerda */}
+      <main className="flex-1 ml-0 w-full overflow-y-auto transition-all duration-300">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
       </main>
     </div>
