@@ -19,14 +19,15 @@ export default function Producao({
       {activeTab === "pendentes" && (
         <div className="w-full">
           {(pendingTasks.length === 0 && agPagamentoTasks?.length === 0) ? <EmptyState type="pending" /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            /* AQUI: Grid inteligente e fluido que se adapta ao tamanho da tela */
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 items-start">
               
               {/* COLUNA 1: HOJE / ATRASADOS */}
               <div className="flex flex-col gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 min-h-[150px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
                 <div className="flex items-center gap-2 px-1 pb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">● Hoje / Atrasados</span>
                   <div className="h-px flex-1 bg-rose-200/50"></div>
-                  <span className="text-[9px] font-bold text-rose-500 bg-white border border-rose-100 px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="text-[9px] font-bold text-rose-500 bg-white border border-rose-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
                     {gruposPendentes.hoje.length}
                   </span>
                 </div>
@@ -51,7 +52,7 @@ export default function Producao({
                 <div className="flex items-center gap-2 px-1 pb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">○ Amanhã</span>
                   <div className="h-px flex-1 bg-amber-200/50"></div>
-                  <span className="text-[9px] font-bold text-amber-500 bg-white border border-amber-100 px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="text-[9px] font-bold text-amber-500 bg-white border border-amber-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
                     {gruposPendentes.amanha.length}
                   </span>
                 </div>
@@ -76,7 +77,7 @@ export default function Producao({
                 <div className="flex items-center gap-2 px-1 pb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500">📅 Próximos</span>
                   <div className="h-px flex-1 bg-blue-200/50"></div>
-                  <span className="text-[9px] font-bold text-blue-500 bg-white border border-blue-100 px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="text-[9px] font-bold text-blue-500 bg-white border border-blue-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
                     {gruposPendentes.proximos.length}
                   </span>
                 </div>
@@ -101,7 +102,7 @@ export default function Producao({
                 <div className="flex items-center gap-2 px-1 pb-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">⏳ Ag. Pagto</span>
                   <div className="h-px flex-1 bg-orange-200/50"></div>
-                  <span className="text-[9px] font-bold text-orange-500 bg-white border border-orange-100 px-1.5 py-0.5 rounded-full shadow-sm">
+                  <span className="text-[9px] font-bold text-orange-500 bg-white border border-orange-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
                     {agPagamentoTasks?.length || 0}
                   </span>
                 </div>
@@ -127,15 +128,17 @@ export default function Producao({
       )}
 
       {activeTab === "concluidas" && (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 w-full">
           {completedTasks.length === 0 ? (
-             <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+             <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm w-full">
                <p className="text-slate-500 font-medium uppercase tracking-widest text-[10px]">Nenhum pedido totalmente concluído e pago.</p>
              </div>
           ) : (
-            completedTasks.map((t) => (
-              <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} showUndo />
-            ))
+            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
+              {completedTasks.map((t) => (
+                <TaskItem key={t.id} task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} showUndo />
+              ))}
+            </div>
           )}
         </div>
       )}
