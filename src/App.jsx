@@ -48,7 +48,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const getMenuMeta = (id) => {
     const meta = {
       "": { path: "/app", icon: Home, color: "text-blue-500" },
-      "produtos": { path: "/produtos", icon: Package, color: "text-amber-500" },
+      "produtos": { path: "/produtos", icon: Package, color: "text-slate-800" },
       "clientes": { path: "/clientes", icon: Users, color: "text-indigo-500" },
       "orcamentos": { path: "/orcamentos", icon: FileText, color: "text-teal-500" },
       "catalogo": { path: "/catalogo", icon: ShoppingBag, color: "text-pink-500" },
@@ -91,7 +91,6 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           alt="Logo Organize" 
           className="max-h-10 w-auto object-contain drop-shadow-sm absolute left-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" 
         />
-        {/* Ícone menor perfeitamente centralizado */}
         <img 
           src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png" 
           alt="Ícone Organize" 
@@ -102,14 +101,28 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto flex flex-col pt-5 pb-4 space-y-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <nav className="flex-1 overflow-y-auto flex flex-col pt-5 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {categorias.map((categoria, idx) => {
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
           if (filteredItems.length === 0) return null;
 
           return (
-            <div key={idx} className="space-y-1">
-              <h4 className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 px-6 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+            <div 
+              key={idx} 
+              // A MÁGICA DOS ESPAÇOS: Se a gaveta tá fechada, a margem de cima é 'mt-1' para grudar os ícones.
+              // Quando o mouse passa por cima, ele injeta 'mt-6' para afastar os blocos lindamente.
+              className={`flex flex-col transition-all duration-300 ${
+                isOpen 
+                  ? (idx > 0 ? 'mt-6' : 'mt-0') 
+                  : (idx > 0 ? 'mt-1 md:group-hover:mt-6' : 'mt-0')
+              }`}
+            >
+              {/* O título some e perde tamanho quando o menu encolhe, e reaparece quando expande */}
+              <h4 className={`text-[8px] font-semibold text-slate-400 uppercase tracking-widest px-6 whitespace-nowrap overflow-hidden transition-all duration-300 ${
+                isOpen 
+                  ? 'max-h-6 opacity-100 mb-1.5' 
+                  : 'max-h-0 opacity-0 mb-0 md:group-hover:max-h-6 md:group-hover:opacity-100 md:group-hover:mb-1.5'
+              }`}>
                 {categoria.titulo}
               </h4>
               <div className="space-y-0.5">
@@ -133,7 +146,10 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
-        <div className="pt-3 mt-2 border-t border-slate-100 space-y-1.5">
+        {/* MÁGICA DOS ESPAÇOS TAMBÉM NOS LINKS EXTERNOS E DIVISÓRIA */}
+        <div className={`border-t border-slate-100 space-y-1.5 flex flex-col transition-all duration-300 ${
+          isOpen ? 'pt-4 mt-6' : 'pt-1 mt-1 md:group-hover:pt-4 md:group-hover:mt-6'
+        }`}>
           <a
             href="/"
             target="_blank"
