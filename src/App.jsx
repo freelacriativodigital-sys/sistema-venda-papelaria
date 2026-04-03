@@ -10,27 +10,28 @@ import Login from '@/components/tasks/Login';
 
 import {
   Home, Package, MessageCircle, LogOut,
-  ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
+  ChevronRight, ChevronLeft, Users, ShoppingBag, Settings, Globe, FileText,
   Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon, Wallet
 } from "lucide-react";
 
 import { supabase } from "./lib/supabase";
 import BriefingPublico from './pages/BriefingPublico';
 
-const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
+const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconColor }) => {
   return (
     <Link
       to={path}
       onClick={onClick}
       title={item.label}
-      className={`flex items-center justify-between px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all overflow-hidden mx-2 ${
-        isActive ? 'shadow-sm border' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+      className={`flex items-center justify-between px-4 py-3 mx-2 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all overflow-hidden ${
+        isActive ? 'shadow-sm border' : 'hover:bg-slate-50 hover:text-slate-800'
       }`}
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
       <div className="flex items-center">
-        <Icon size={20} className={`shrink-0 ${isActive ? '' : 'text-slate-400'}`} />
-        <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+        {/* ÍCONE MAIOR (24px) E COLORIDO SE NÃO ESTIVER ATIVO */}
+        <Icon size={24} className={`shrink-0 transition-colors ${isActive ? '' : iconColor}`} />
+        <span className={`ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${isActive ? '' : 'text-slate-500'}`}>
           {item.label}
         </span>
       </div>
@@ -44,24 +45,25 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const categorias = pagesConfig.menuCategorias;
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
+  // --- MAPA DE ÍCONES E SUAS CORES ---
   const getMenuMeta = (id) => {
     const meta = {
-      "": { path: "/app", icon: Home },
-      "produtos": { path: "/produtos", icon: Package },
-      "clientes": { path: "/clientes", icon: Users },
-      "orcamentos": { path: "/orcamentos", icon: FileText },
-      "catalogo": { path: "/catalogo", icon: ShoppingBag },
-      "minhabio": { path: "/minhabio", icon: LinkIcon },
-      "configuracoes": { path: "/configuracoes", icon: Settings },
-      "whatsapp": { path: "/whatsapp", icon: MessageCircle },
-      "briefings": { path: "/briefings", icon: Palette },
-      "precificacao": { path: "/precificacao", icon: Calculator },
-      "seguranca": { path: "/seguranca", icon: ShieldCheck },
-      "assinantes": { path: "/assinantes", icon: Key },
-      "links": { path: "/links", icon: Link2Icon },
-      "caixa": { path: "/caixa", icon: Wallet },
+      "": { path: "/app", icon: Home, color: "text-blue-500" },
+      "produtos": { path: "/produtos", icon: Package, color: "text-amber-500" },
+      "clientes": { path: "/clientes", icon: Users, color: "text-indigo-500" },
+      "orcamentos": { path: "/orcamentos", icon: FileText, color: "text-teal-500" },
+      "catalogo": { path: "/catalogo", icon: ShoppingBag, color: "text-pink-500" },
+      "minhabio": { path: "/minhabio", icon: LinkIcon, color: "text-rose-500" },
+      "configuracoes": { path: "/configuracoes", icon: Settings, color: "text-slate-400" },
+      "whatsapp": { path: "/whatsapp", icon: MessageCircle, color: "text-emerald-500" },
+      "briefings": { path: "/briefings", icon: Palette, color: "text-fuchsia-500" },
+      "precificacao": { path: "/precificacao", icon: Calculator, color: "text-cyan-500" },
+      "seguranca": { path: "/seguranca", icon: ShieldCheck, color: "text-red-500" },
+      "assinantes": { path: "/assinantes", icon: Key, color: "text-yellow-500" },
+      "links": { path: "/links", icon: Link2Icon, color: "text-sky-500" },
+      "caixa": { path: "/caixa", icon: Wallet, color: "text-emerald-600" },
     };
-    return meta[id] || { path: `/${id}`, icon: Package };
+    return meta[id] || { path: `/${id}`, icon: Package, color: "text-slate-400" };
   };
 
   const handleLogout = async () => {
@@ -84,23 +86,24 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       ${isOpen ? 'translate-x-0' : ''}`}
     >
       
-      {/* HEADER DA LOGO (Com transição mágica entre Ícone e Logo Completa) */}
       <div className="flex items-center h-24 border-b border-slate-100 shrink-0 relative overflow-hidden">
-        {/* Logo Completa (Aparece no celular ou quando o mouse passa por cima no PC) */}
         <img 
           src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
           alt="Logo Organize" 
           className="max-h-12 w-auto object-contain drop-shadow-sm absolute left-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" 
         />
-        {/* Ícone Fino (Aparece apenas quando o menu está colapsado no PC) */}
         <img 
           src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png" 
           alt="Ícone Organize" 
           className="max-h-8 w-auto object-contain absolute left-[20px] hidden md:block md:group-hover:opacity-0 transition-opacity duration-300" 
         />
+        <button onClick={() => setIsOpen(false)} className="md:hidden absolute right-3 p-1.5 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
+           <ChevronLeft size={24} />
+        </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col pt-6 pb-4 space-y-6">
+      {/* REMOVIDA A BARRA DE ROLAGEM COM CLASSES ESPECIAIS (CSS) */}
+      <nav className="flex-1 overflow-y-auto flex flex-col pt-6 pb-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {categorias.map((categoria, idx) => {
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
           if (filteredItems.length === 0) return null;
@@ -112,13 +115,14 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
               </h4>
               <div className="space-y-1.5">
                 {filteredItems.map((item) => {
-                  const { path, icon } = getMenuMeta(item.id);
+                  const { path, icon, color } = getMenuMeta(item.id);
                   return (
                     <MenuItem
                       key={item.id}
                       item={item}
                       path={path}
                       Icon={icon}
+                      iconColor={color}
                       isActive={location.pathname === path}
                       colorPrincipal={st.corPrincipal}
                       onClick={() => setIsOpen && setIsOpen(false)}
@@ -130,7 +134,6 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
-        {/* Links Externos */}
         <div className="pt-4 mt-2 border-t border-slate-100 space-y-2 px-2">
           <a
             href="/"
@@ -139,7 +142,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
             title="Ver Site"
             className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full overflow-hidden"
           >
-            <Globe size={18} className="shrink-0" />
+            <Globe size={24} className="shrink-0" />
             <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Site do Cliente</span>
           </a>
           <a
@@ -149,20 +152,19 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
             title="Link da Bio"
             className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full overflow-hidden"
           >
-            <LinkIcon size={18} className="shrink-0" />
+            <LinkIcon size={24} className="shrink-0" />
             <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Link da Bio</span>
           </a>
         </div>
       </nav>
 
-      {/* Botão de Sair */}
-      <div className="p-3 border-t border-slate-100 flex flex-col gap-2 shrink-0">
+      <div className="p-2 border-t border-slate-100 flex flex-col gap-2 shrink-0">
         <button
           onClick={handleLogout}
           title="Sair do Sistema"
-          className="flex items-center px-3 py-3 rounded-xl border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors w-full overflow-hidden"
+          className="flex items-center px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors w-full overflow-hidden"
         >
-          <LogOut size={18} className="shrink-0" />
+          <LogOut size={24} className="shrink-0" />
           <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair do Sistema</span>
         </button>
       </div>
@@ -176,7 +178,6 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 relative overflow-x-hidden">
       
-      {/* Overlay escuro (Só aparece no Mobile quando aberto) */}
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
@@ -184,7 +185,6 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         />
       )}
 
-      {/* Botão flutuante para abrir o menu no Mobile */}
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
@@ -200,7 +200,6 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         setIsOpen={setIsMobileMenuOpen} 
       />
 
-      {/* CONTEÚDO PRINCIPAL: Fica alinhado logo após os 72px do menu colapsado no desktop */}
       <main className="flex-1 w-full overflow-y-auto transition-all duration-300 ml-0 md:ml-[72px]">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
       </main>
