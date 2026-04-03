@@ -23,19 +23,19 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconCol
       to={path}
       onClick={onClick}
       title={item.label}
-      className={`flex items-center justify-between px-4 py-3 mx-2 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all overflow-hidden ${
+      className={`flex items-center justify-between px-4 py-2.5 mx-3 rounded-lg font-semibold uppercase text-[9px] tracking-widest transition-all overflow-hidden ${
         isActive ? 'shadow-sm border' : 'hover:bg-slate-50 hover:text-slate-800'
       }`}
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
       <div className="flex items-center">
-        {/* ÍCONE MAIOR (24px) E COLORIDO SE NÃO ESTIVER ATIVO */}
-        <Icon size={24} className={`shrink-0 transition-colors ${isActive ? '' : iconColor}`} />
-        <span className={`ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${isActive ? '' : 'text-slate-500'}`}>
+        {/* Ícone no padrão compacto (16px) e colorido */}
+        <Icon size={16} className={`shrink-0 transition-colors ${isActive ? '' : iconColor}`} />
+        <span className={`ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${isActive ? '' : 'text-slate-500'}`}>
           {item.label}
         </span>
       </div>
-      {isActive && <ChevronRight size={14} className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />}
+      {isActive && <ChevronRight size={12} className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />}
     </Link>
   );
 };
@@ -45,7 +45,6 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const categorias = pagesConfig.menuCategorias;
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
-  // --- MAPA DE ÍCONES E SUAS CORES ---
   const getMenuMeta = (id) => {
     const meta = {
       "": { path: "/app", icon: Home, color: "text-blue-500" },
@@ -86,34 +85,34 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
       ${isOpen ? 'translate-x-0' : ''}`}
     >
       
-      <div className="flex items-center h-24 border-b border-slate-100 shrink-0 relative overflow-hidden">
+      <div className="flex items-center h-20 border-b border-slate-100 shrink-0 relative overflow-hidden">
         <img 
           src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
           alt="Logo Organize" 
-          className="max-h-12 w-auto object-contain drop-shadow-sm absolute left-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" 
+          className="max-h-10 w-auto object-contain drop-shadow-sm absolute left-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" 
         />
+        {/* Ícone menor perfeitamente centralizado */}
         <img 
           src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png" 
           alt="Ícone Organize" 
-          className="max-h-8 w-auto object-contain absolute left-[20px] hidden md:block md:group-hover:opacity-0 transition-opacity duration-300" 
+          className="max-h-6 w-auto object-contain absolute left-[24px] hidden md:block md:group-hover:opacity-0 transition-opacity duration-300" 
         />
         <button onClick={() => setIsOpen(false)} className="md:hidden absolute right-3 p-1.5 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
-           <ChevronLeft size={24} />
+           <ChevronLeft size={18} />
         </button>
       </div>
 
-      {/* REMOVIDA A BARRA DE ROLAGEM COM CLASSES ESPECIAIS (CSS) */}
-      <nav className="flex-1 overflow-y-auto flex flex-col pt-6 pb-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <nav className="flex-1 overflow-y-auto flex flex-col pt-5 pb-4 space-y-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {categorias.map((categoria, idx) => {
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
           if (filteredItems.length === 0) return null;
 
           return (
             <div key={idx} className="space-y-1">
-              <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-6 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+              <h4 className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 px-6 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                 {categoria.titulo}
               </h4>
-              <div className="space-y-1.5">
+              <div className="space-y-0.5">
                 {filteredItems.map((item) => {
                   const { path, icon, color } = getMenuMeta(item.id);
                   return (
@@ -134,38 +133,38 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
-        <div className="pt-4 mt-2 border-t border-slate-100 space-y-2 px-2">
+        <div className="pt-3 mt-2 border-t border-slate-100 space-y-1.5">
           <a
             href="/"
             target="_blank"
             rel="noreferrer"
             title="Ver Site"
-            className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full overflow-hidden"
+            className="flex items-center px-4 py-2.5 mx-3 rounded-lg font-semibold uppercase text-[9px] tracking-widest text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100/50 overflow-hidden"
           >
-            <Globe size={24} className="shrink-0" />
-            <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Site do Cliente</span>
+            <Globe size={16} className="shrink-0" />
+            <span className="ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Site do Cliente</span>
           </a>
           <a
             href="/bio"
             target="_blank"
             rel="noreferrer"
             title="Link da Bio"
-            className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full overflow-hidden"
+            className="flex items-center px-4 py-2.5 mx-3 rounded-lg font-semibold uppercase text-[9px] tracking-widest text-pink-600 hover:bg-pink-50 transition-all border border-pink-100/50 overflow-hidden"
           >
-            <LinkIcon size={24} className="shrink-0" />
-            <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Link da Bio</span>
+            <LinkIcon size={16} className="shrink-0" />
+            <span className="ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Link da Bio</span>
           </a>
         </div>
       </nav>
 
-      <div className="p-2 border-t border-slate-100 flex flex-col gap-2 shrink-0">
+      <div className="py-3 border-t border-slate-100 flex flex-col shrink-0">
         <button
           onClick={handleLogout}
           title="Sair do Sistema"
-          className="flex items-center px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors w-full overflow-hidden"
+          className="flex items-center px-4 py-2.5 mx-3 rounded-lg border border-red-100/50 bg-red-50 text-red-500 font-semibold uppercase tracking-widest text-[9px] hover:bg-red-100 transition-colors overflow-hidden"
         >
-          <LogOut size={24} className="shrink-0" />
-          <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair do Sistema</span>
+          <LogOut size={16} className="shrink-0" />
+          <span className="ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair do Sistema</span>
         </button>
       </div>
     </div>
@@ -188,9 +187,9 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="md:hidden fixed left-0 top-[15%] z-[80] bg-white text-slate-800 p-2 py-5 rounded-r-xl shadow-[4px_0_15px_rgba(0,0,0,0.1)] border border-l-0 border-slate-200 flex items-center justify-center group"
+          className="md:hidden fixed left-0 top-[15%] z-[80] bg-white text-slate-800 p-1.5 py-4 rounded-r-lg shadow-[4px_0_15px_rgba(0,0,0,0.1)] border border-l-0 border-slate-200 flex items-center justify-center group"
         >
-          <ChevronRight size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+          <ChevronRight size={18} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
         </button>
       )}
 
