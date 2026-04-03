@@ -10,7 +10,7 @@ import Login from '@/components/tasks/Login';
 
 import {
   Home, Package, MessageCircle, LogOut,
-  ChevronRight, ChevronLeft, Users, ShoppingBag, Settings, Globe, FileText,
+  ChevronRight, Users, ShoppingBag, Settings, Globe, FileText,
   Link as LinkIcon, Palette, Calculator, ShieldCheck, Key, Link2, Link2 as Link2Icon, Wallet
 } from "lucide-react";
 
@@ -22,16 +22,19 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick }) => {
     <Link
       to={path}
       onClick={onClick}
-      className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-bold uppercase text-[10.5px] tracking-tight transition-all ${
+      title={item.label}
+      className={`flex items-center justify-between px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-all overflow-hidden mx-2 ${
         isActive ? 'shadow-sm border' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
       }`}
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
-      <div className="flex items-center gap-3">
-        <Icon size={16} className={isActive ? '' : 'text-slate-400'} />
-        {item.label}
+      <div className="flex items-center">
+        <Icon size={20} className={`shrink-0 ${isActive ? '' : 'text-slate-400'}`} />
+        <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+          {item.label}
+        </span>
       </div>
-      {isActive && <ChevronRight size={14} />}
+      {isActive && <ChevronRight size={14} className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />}
     </Link>
   );
 };
@@ -75,33 +78,39 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   };
 
   return (
-    <div className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-[100] transition-transform duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.05)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+    <div className={`fixed left-0 top-0 h-screen bg-white border-r border-slate-200 flex flex-col z-[100] transition-all duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.05)] overflow-hidden group
+      w-64 -translate-x-full 
+      md:translate-x-0 md:w-[72px] md:hover:w-64 
+      ${isOpen ? 'translate-x-0' : ''}`}
+    >
       
-      <div className="flex justify-between items-center h-24 border-b border-slate-100 shrink-0 px-4 relative">
-        <div className="flex-1 flex justify-center">
-          <img 
-            src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
-            alt="Logo Organize" 
-            className="max-h-14 w-auto object-contain drop-shadow-sm" 
-          />
-        </div>
-        {/* Botão extra para fechar o menu dentro dele mesmo */}
-        <button onClick={() => setIsOpen(false)} className="absolute right-3 p-1.5 rounded-md hover:bg-slate-100 text-slate-400 transition-colors">
-           <ChevronLeft size={18} />
-        </button>
+      {/* HEADER DA LOGO (Com transição mágica entre Ícone e Logo Completa) */}
+      <div className="flex items-center h-24 border-b border-slate-100 shrink-0 relative overflow-hidden">
+        {/* Logo Completa (Aparece no celular ou quando o mouse passa por cima no PC) */}
+        <img 
+          src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
+          alt="Logo Organize" 
+          className="max-h-12 w-auto object-contain drop-shadow-sm absolute left-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" 
+        />
+        {/* Ícone Fino (Aparece apenas quando o menu está colapsado no PC) */}
+        <img 
+          src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png" 
+          alt="Ícone Organize" 
+          className="max-h-8 w-auto object-contain absolute left-[20px] hidden md:block md:group-hover:opacity-0 transition-opacity duration-300" 
+        />
       </div>
 
-      <nav className="flex-1 overflow-y-auto no-scrollbar flex flex-col pt-6 pb-4 px-4 space-y-6">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col pt-6 pb-4 space-y-6">
         {categorias.map((categoria, idx) => {
           const filteredItems = categoria.items.filter(item => item.roles.includes(userRole));
           if (filteredItems.length === 0) return null;
 
           return (
             <div key={idx} className="space-y-1">
-              <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-3">
+              <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-6 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                 {categoria.titulo}
               </h4>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {filteredItems.map((item) => {
                   const { path, icon } = getMenuMeta(item.id);
                   return (
@@ -121,32 +130,40 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
-        <div className="pt-4 mt-2 border-t border-slate-100 space-y-2">
+        {/* Links Externos */}
+        <div className="pt-4 mt-2 border-t border-slate-100 space-y-2 px-2">
           <a
             href="/"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full"
+            title="Ver Site"
+            className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-emerald-600 hover:bg-emerald-50 transition-all border border-emerald-100 w-full overflow-hidden"
           >
-            <Globe size={14} /> Ver Site do Cliente
+            <Globe size={18} className="shrink-0" />
+            <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Site do Cliente</span>
           </a>
           <a
             href="/bio"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 p-3 rounded-lg font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full"
+            title="Link da Bio"
+            className="flex items-center px-4 py-3 rounded-xl font-bold uppercase text-[10px] text-pink-600 hover:bg-pink-50 transition-all border border-pink-100 w-full overflow-hidden"
           >
-            <LinkIcon size={14} /> Ver Link da Bio
+            <LinkIcon size={18} className="shrink-0" />
+            <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Ver Link da Bio</span>
           </a>
         </div>
       </nav>
 
-      <div className="p-4 border-t border-slate-100 flex flex-col gap-2 shrink-0">
+      {/* Botão de Sair */}
+      <div className="p-3 border-t border-slate-100 flex flex-col gap-2 shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 w-full p-3 rounded-lg border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors"
+          title="Sair do Sistema"
+          className="flex items-center px-3 py-3 rounded-xl border border-red-100 bg-red-50 text-red-500 font-bold uppercase text-[10px] hover:bg-red-100 transition-colors w-full overflow-hidden"
         >
-          <LogOut size={14} /> Sair do Sistema
+          <LogOut size={18} className="shrink-0" />
+          <span className="ml-4 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair do Sistema</span>
         </button>
       </div>
     </div>
@@ -159,21 +176,21 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 relative overflow-x-hidden">
       
-      {/* OVERLAY ESCURO: Fica visível em TODAS as telas quando o menu abrir */}
+      {/* Overlay escuro (Só aparece no Mobile quando aberto) */}
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] transition-opacity"
+          className="md:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] transition-opacity"
         />
       )}
 
-      {/* PUXADOR DO MENU: Fica visível sempre que o menu estiver fechado */}
+      {/* Botão flutuante para abrir o menu no Mobile */}
       {!isMobileMenuOpen && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-[80] bg-white text-slate-800 p-1.5 py-6 rounded-r-xl shadow-[4px_0_15px_rgba(0,0,0,0.06)] border border-l-0 border-slate-200 hover:bg-slate-50 hover:pr-4 hover:shadow-md transition-all flex items-center justify-center group"
+          className="md:hidden fixed left-0 top-[15%] z-[80] bg-white text-slate-800 p-2 py-5 rounded-r-xl shadow-[4px_0_15px_rgba(0,0,0,0.1)] border border-l-0 border-slate-200 flex items-center justify-center group"
         >
-          <ChevronRight size={24} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+          <ChevronRight size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
         </button>
       )}
 
@@ -183,8 +200,8 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         setIsOpen={setIsMobileMenuOpen} 
       />
 
-      {/* CONTEÚDO PRINCIPAL: Agora usa 100% da largura e não tem margem esquerda */}
-      <main className="flex-1 ml-0 w-full overflow-y-auto transition-all duration-300">
+      {/* CONTEÚDO PRINCIPAL: Fica alinhado logo após os 72px do menu colapsado no desktop */}
+      <main className="flex-1 w-full overflow-y-auto transition-all duration-300 ml-0 md:ml-[72px]">
         {Layout ? <Layout currentPageName={currentPageName}>{children}</Layout> : children}
       </main>
     </div>
