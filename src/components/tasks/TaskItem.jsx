@@ -294,7 +294,7 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
   return (
     <div className={`bg-white w-full border ${isDone ? 'border-slate-100 opacity-80' : 'border-slate-200'} rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex flex-col`}>
       
-      {/* HEADER DO CARD (Flexível e sem cortes) */}
+      {/* HEADER DO CARD */}
       <div className="flex items-start justify-between p-2.5 border-b border-slate-50 gap-2">
         <div className="flex items-start gap-2 flex-1 min-w-0">
           <button onClick={(e) => { e.stopPropagation(); onToggle(task); }} className="mt-0.5 hover:scale-110 transition-transform shrink-0">
@@ -418,39 +418,39 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         )}
       </AnimatePresence>
 
-      {/* RODAPÉ E AÇÕES (Fluidos e sem quebrar para fora do card) */}
+      {/* RODAPÉ E AÇÕES (Fluidos, sem cortes) */}
       <div className="flex flex-col bg-white w-full mt-auto">
         
-        {/* LINHA 1: FINANCEIRO (Usa flex-wrap para ajustar os botões se a tela for pequena) */}
+        {/* LINHA 1: FINANCEIRO (Cai de linha suavemente se a tela apertar) */}
         {statusPagamento !== 'pago' && (
-          <div className="flex flex-wrap gap-1 px-2.5 py-1.5 border-b border-slate-50 bg-slate-50/50">
-            <Button onClick={handleSetPago} variant="ghost" className="flex-1 basis-[30%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 transition-colors border border-emerald-200/50">
-              <span className="whitespace-nowrap truncate flex items-center justify-center"><DollarSign size={10} className="mr-1 shrink-0"/> Pago</span>
+          <div className="flex flex-wrap gap-1.5 px-2.5 py-2 border-b border-slate-50 bg-slate-50/50">
+            <Button onClick={handleSetPago} variant="ghost" className="flex-1 min-w-[75px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 transition-colors border border-emerald-200/50">
+              <DollarSign size={12} className="mr-1.5 shrink-0"/> Pago
             </Button>
-            <Button onClick={handleSetParcial} variant="ghost" className="flex-1 basis-[30%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors border border-blue-200/50">
-              <span className="whitespace-nowrap truncate flex items-center justify-center"><Coins size={10} className="mr-1 shrink-0"/> Sinal</span>
+            <Button onClick={handleSetParcial} variant="ghost" className="flex-1 min-w-[75px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors border border-blue-200/50">
+              <Coins size={12} className="mr-1.5 shrink-0"/> Sinal
             </Button>
             {!isDone && (
-              <Button onClick={handleSetAgPagamento} variant="ghost" className="flex-1 basis-[30%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-100/50 hover:bg-orange-100 transition-colors border border-orange-200/50">
-                <span className="whitespace-nowrap truncate flex items-center justify-center"><AlertCircle size={10} className="mr-1 shrink-0"/> Ag. Pagto</span>
+              <Button onClick={handleSetAgPagamento} variant="ghost" className="flex-1 min-w-[85px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-100/50 hover:bg-orange-100 transition-colors border border-orange-200/50">
+                <AlertCircle size={12} className="mr-1.5 shrink-0"/> Ag. Pagto
               </Button>
             )}
           </div>
         )}
 
         {/* LINHA 2: AÇÕES GERAIS */}
-        <div className="flex flex-wrap gap-1 px-2.5 py-1.5">
-          <Button onClick={handleGeneratePDF} variant="ghost" className="flex-1 basis-[20%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <span className="whitespace-nowrap truncate flex items-center justify-center"><FileText size={10} className="mr-0.5 sm:mr-1 shrink-0"/> PDF</span>
+        <div className="flex flex-wrap gap-1.5 px-2.5 py-2">
+          <Button onClick={handleGeneratePDF} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+            <FileText size={12} className="mr-1.5 shrink-0"/> PDF
           </Button>
-          <Button onClick={handleWhatsAppShare} variant="ghost" className="flex-1 basis-[20%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <span className="whitespace-nowrap truncate flex items-center justify-center"><MessageCircle size={10} className="mr-0.5 sm:mr-1 shrink-0"/> Enviar</span>
+          <Button onClick={handleWhatsAppShare} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+            <MessageCircle size={12} className="mr-1.5 shrink-0"/> Enviar
           </Button>
-          <Button onClick={() => onEdit(task)} variant="ghost" className="flex-1 basis-[20%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100">
-            <span className="whitespace-nowrap truncate flex items-center justify-center"><Pencil size={10} className="mr-0.5 sm:mr-1 shrink-0"/> Editar</span>
+          <Button onClick={() => onEdit(task)} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100">
+            <Pencil size={12} className="mr-1.5 shrink-0"/> Editar
           </Button>
-          <Button onClick={() => onDelete(task)} variant="ghost" className="flex-1 basis-[20%] min-w-0 h-6 sm:h-7 px-1 rounded-md text-[8px] sm:text-[8.5px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50">
-            <span className="whitespace-nowrap truncate flex items-center justify-center"><Trash2 size={10} className="mr-0.5 sm:mr-1 shrink-0"/> Excluir</span>
+          <Button onClick={() => onDelete(task)} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50">
+            <Trash2 size={12} className="mr-1.5 shrink-0"/> Excluir
           </Button>
         </div>
       </div>
