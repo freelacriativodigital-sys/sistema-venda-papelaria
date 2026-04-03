@@ -418,39 +418,46 @@ export default function TaskItem({ task, onToggle, onDelete, onUpdate, onEdit, s
         )}
       </AnimatePresence>
 
-      {/* RODAPÉ E AÇÕES (Fluidos, sem cortes) */}
+      {/* RODAPÉ E AÇÕES - BLOQUEIO DE LINHA ÚNICA */}
       <div className="flex flex-col bg-white w-full mt-auto">
         
-        {/* LINHA 1: FINANCEIRO (Cai de linha suavemente se a tela apertar) */}
+        {/* LINHA 1: FINANCEIRO */}
         {statusPagamento !== 'pago' && (
-          <div className="flex flex-wrap gap-1.5 px-2.5 py-2 border-b border-slate-50 bg-slate-50/50">
-            <Button onClick={handleSetPago} variant="ghost" className="flex-1 min-w-[75px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 transition-colors border border-emerald-200/50">
-              <DollarSign size={12} className="mr-1.5 shrink-0"/> Pago
+          <div className="flex gap-1.5 px-2.5 py-2 border-b border-slate-50 bg-slate-50/50 overflow-hidden">
+            <Button onClick={handleSetPago} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-100/50 hover:bg-emerald-100 transition-colors border border-emerald-200/50 flex items-center justify-center">
+              <DollarSign size={14} className="shrink-0"/>
+              <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Pago</span>
             </Button>
-            <Button onClick={handleSetParcial} variant="ghost" className="flex-1 min-w-[75px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors border border-blue-200/50">
-              <Coins size={12} className="mr-1.5 shrink-0"/> Sinal
+            <Button onClick={handleSetParcial} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors border border-blue-200/50 flex items-center justify-center">
+              <Coins size={14} className="shrink-0"/>
+              <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Sinal</span>
             </Button>
             {!isDone && (
-              <Button onClick={handleSetAgPagamento} variant="ghost" className="flex-1 min-w-[85px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-100/50 hover:bg-orange-100 transition-colors border border-orange-200/50">
-                <AlertCircle size={12} className="mr-1.5 shrink-0"/> Ag. Pagto
+              <Button onClick={handleSetAgPagamento} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-orange-600 bg-orange-100/50 hover:bg-orange-100 transition-colors border border-orange-200/50 flex items-center justify-center">
+                <AlertCircle size={14} className="shrink-0"/>
+                <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Ag. Pagto</span>
               </Button>
             )}
           </div>
         )}
 
         {/* LINHA 2: AÇÕES GERAIS */}
-        <div className="flex flex-wrap gap-1.5 px-2.5 py-2">
-          <Button onClick={handleGeneratePDF} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <FileText size={12} className="mr-1.5 shrink-0"/> PDF
+        <div className="flex gap-1.5 px-2.5 py-2 overflow-hidden">
+          <Button onClick={handleGeneratePDF} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center">
+            <FileText size={14} className="shrink-0"/>
+            <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">PDF</span>
           </Button>
-          <Button onClick={handleWhatsAppShare} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
-            <MessageCircle size={12} className="mr-1.5 shrink-0"/> Enviar
+          <Button onClick={handleWhatsAppShare} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center">
+            <MessageCircle size={14} className="shrink-0"/>
+            <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Enviar</span>
           </Button>
-          <Button onClick={() => onEdit(task)} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100">
-            <Pencil size={12} className="mr-1.5 shrink-0"/> Editar
+          <Button onClick={() => onEdit(task)} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-slate-500 hover:bg-slate-100 border border-slate-100 flex items-center justify-center">
+            <Pencil size={14} className="shrink-0"/>
+            <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Editar</span>
           </Button>
-          <Button onClick={() => onDelete(task)} variant="ghost" className="flex-1 min-w-[70px] h-7 px-2 rounded-md text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50">
-            <Trash2 size={12} className="mr-1.5 shrink-0"/> Excluir
+          <Button onClick={() => onDelete(task)} variant="ghost" className="flex-1 h-7 px-0 rounded-md text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:bg-rose-50 border border-rose-50 flex items-center justify-center">
+            <Trash2 size={14} className="shrink-0"/>
+            <span className="hidden sm:inline md:hidden lg:inline xl:hidden 2xl:inline ml-1.5">Excluir</span>
           </Button>
         </div>
       </div>
