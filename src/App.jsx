@@ -29,6 +29,7 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconCol
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
       <div className="flex items-center">
+        {/* Ícone no padrão compacto (16px) e colorido */}
         <Icon size={16} className={`shrink-0 transition-colors ${isActive ? '' : iconColor}`} />
         <span className={`ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${isActive ? '' : 'text-slate-500'}`}>
           {item.label}
@@ -108,12 +109,15 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           return (
             <div 
               key={idx} 
+              // A MÁGICA DOS ESPAÇOS: Se a gaveta tá fechada, a margem de cima é 'mt-1' para grudar os ícones.
+              // Quando o mouse passa por cima, ele injeta 'mt-6' para afastar os blocos lindamente.
               className={`flex flex-col transition-all duration-300 ${
                 isOpen 
                   ? (idx > 0 ? 'mt-6' : 'mt-0') 
                   : (idx > 0 ? 'mt-1 md:group-hover:mt-6' : 'mt-0')
               }`}
             >
+              {/* O título some e perde tamanho quando o menu encolhe, e reaparece quando expande */}
               <h4 className={`text-[8px] font-semibold text-slate-400 uppercase tracking-widest px-6 whitespace-nowrap overflow-hidden transition-all duration-300 ${
                 isOpen 
                   ? 'max-h-6 opacity-100 mb-1.5' 
@@ -142,6 +146,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
+        {/* MÁGICA DOS ESPAÇOS TAMBÉM NOS LINKS EXTERNOS E DIVISÓRIA */}
         <div className={`border-t border-slate-100 space-y-1.5 flex flex-col transition-all duration-300 ${
           isOpen ? 'pt-4 mt-6' : 'pt-1 mt-1 md:group-hover:pt-4 md:group-hover:mt-6'
         }`}>
@@ -195,17 +200,13 @@ const LayoutWrapper = ({ children, currentPageName, st, Layout }) => {
         />
       )}
 
-      {/* NOVO BOTÃO MOBILE (INSPIRADO NA SUA IMAGEM DE REFERÊNCIA) */}
       {!isMobileMenuOpen && (
-        <div className="md:hidden fixed left-0 top-[20%] z-[80] flex flex-col items-center gap-1">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="bg-[#00bcd4] text-white pl-1.5 pr-2.5 py-4 rounded-r-xl shadow-[4px_0_15px_rgba(0,188,212,0.4)] flex items-center justify-center transition-all active:scale-95 border border-[#00bcd4] border-l-0"
-          >
-            <ChevronRight size={32} strokeWidth={3} />
-          </button>
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1 bg-white/80 px-1.5 rounded">Menu</span>
-        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="md:hidden fixed left-0 top-[15%] z-[80] bg-white text-slate-800 p-1.5 py-4 rounded-r-lg shadow-[4px_0_15px_rgba(0,0,0,0.1)] border border-l-0 border-slate-200 flex items-center justify-center group"
+        >
+          <ChevronRight size={18} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+        </button>
       )}
 
       <Sidebar 
