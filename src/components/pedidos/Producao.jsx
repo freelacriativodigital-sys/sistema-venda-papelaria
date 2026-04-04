@@ -33,11 +33,12 @@ export default function Producao({
       {activeTab === "pendentes" && (
         <div className="w-full">
           {(pendingTasks.length === 0 && agPagamentoTasks?.length === 0) ? <EmptyState type="pending" /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 items-start">
+            // AQUI ESTÁ A MÁGICA DA CENTRALIZAÇÃO: Flex wrap e Justify Center
+            <div className="flex flex-wrap justify-center items-start gap-3 lg:gap-4 w-full">
               
-              {/* COLUNA 1: HOJE / ATRASADOS (Só aparece se tiver itens) */}
+              {/* COLUNA 1: HOJE / ATRASADOS */}
               {gruposPendentes.hoje.length > 0 && (
-                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit w-full sm:w-[calc(50%-0.75rem)] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]">
                   <div 
                     onClick={() => toggleCol('hoje')}
                     className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
@@ -72,9 +73,9 @@ export default function Producao({
                 </div>
               )}
 
-              {/* COLUNA 2: AMANHÃ (Só aparece se tiver itens) */}
+              {/* COLUNA 2: AMANHÃ */}
               {gruposPendentes.amanha.length > 0 && (
-                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit w-full sm:w-[calc(50%-0.75rem)] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]">
                   <div 
                     onClick={() => toggleCol('amanha')}
                     className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
@@ -109,9 +110,9 @@ export default function Producao({
                 </div>
               )}
 
-              {/* COLUNA 3: PRÓXIMOS (Só aparece se tiver itens) */}
+              {/* COLUNA 3: PRÓXIMOS */}
               {gruposPendentes.proximos.length > 0 && (
-                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit w-full sm:w-[calc(50%-0.75rem)] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]">
                   <div 
                     onClick={() => toggleCol('proximos')}
                     className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
@@ -146,9 +147,9 @@ export default function Producao({
                 </div>
               )}
 
-              {/* COLUNA 4: AG. PAGAMENTO (Só aparece se tiver itens) */}
+              {/* COLUNA 4: AG. PAGAMENTO */}
               {agPagamentoTasks?.length > 0 && (
-                <div className="flex flex-col bg-orange-50/40 p-2.5 rounded-xl border border-orange-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                <div className="flex flex-col bg-orange-50/40 p-2.5 rounded-xl border border-orange-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit w-full sm:w-[calc(50%-0.75rem)] lg:w-[320px] xl:w-[340px] 2xl:w-[360px]">
                   <div 
                     onClick={() => toggleCol('agPagamento')}
                     className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
