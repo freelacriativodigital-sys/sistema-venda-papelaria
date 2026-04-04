@@ -11,7 +11,6 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
   const [novaCategoria, setNovaCategoria] = useState('');
   const queryClient = useQueryClient();
 
-  // Puxar as categorias dinamicamente de acordo com o contexto (pedido, despesa, receita, catalogo)
   const { data: categorias = [], isLoading } = useQuery({
     queryKey: ['sistema-categorias', contexto],
     queryFn: async () => {
@@ -24,7 +23,6 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
       if (error && error.code !== '42P01') throw error;
       return data || [];
     },
-    // Refazer a query sempre que o contexto mudar
     enabled: !!contexto
   });
 
@@ -33,11 +31,15 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
       const { error } = await supabase
         .from('categorias')
         .insert([{ nome: nome.trim(), contexto }]);
-      if (error) throw error;
+      if (error) throw error; // Lança o erro para o onError capturar
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sistema-categorias', contexto] });
       setNovaCategoria('');
+    },
+    // SE DER ERRO NO BANCO DE DADOS, AVISA NA TELA!
+    onError: (error) => {
+      alert(`Erro ao salvar no banco de dados: ${error.message}`);
     }
   });
 
@@ -58,7 +60,6 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
 
   return (
     <div className="flex gap-1.5 items-center w-full">
-      {/* O Campo de Seleção Normal */}
       <div className="relative flex-1">
         {isLoading ? (
           <div className="h-10 border border-slate-200 bg-slate-50 rounded-md flex items-center px-3 text-[10px] font-medium text-slate-400">
@@ -68,31 +69,29 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
           <select 
             value={value || ''} 
             onChange={e => onChange(e.target.value)}
-            className="w-full h-10 border border-slate-200 rounded-md px-3 text-[10px] font-semibold uppercase tracking-widest outline-none bg-slate-50 focus:bg-white text-slate-700 appearance-none"
+            className="w-full h-10 border border-slate-200 rounded-md px-3 text-[10px] font-bold uppercase tracking-widest outline-none bg-slate-50 focus:bg-white text-slate-700 appearance-none"
           >
             <option value="" disabled>Selecione...</option>
             {categorias.map(cat => (
               <option key={cat.id} value={cat.nome}>{cat.nome}</option>
             ))}
             {categorias.length === 0 && (
-              <option value="" disabled>Nenhuma categoria criada</option>
+              <option value="" disabled>Sem categorias...</option>
             )}
           </select>
         )}
       </div>
 
-      {/* O Botão de Engrenagem (Abre o Gestor) */}
       <Button 
         type="button"
         onClick={() => setIsManageOpen(true)}
         variant="outline" 
         className="h-10 w-10 shrink-0 border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-0"
-        title="Gerir Categorias"
+        title="Gerenciar Categorias"
       >
         <Settings size={14} />
       </Button>
 
-      {/* MODAL: GESTOR DE CATEGORIAS */}
       <AnimatePresence>
         {isManageOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
@@ -106,14 +105,13 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
                 <button onClick={() => setIsManageOpen(false)} className="p-1 hover:bg-slate-100 text-slate-500 rounded transition-colors"><X size={16} /></button>
               </div>
 
-              {/* Formulário de Adicionar Nova */}
               <div className="flex gap-2 mb-4 bg-slate-50 p-2 rounded-lg border border-slate-100">
                 <Input 
                   placeholder="Nova categoria..." 
                   value={novaCategoria}
                   onChange={e => setNovaCategoria(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                  className="h-8 bg-white border-slate-200 text-xs font-medium"
+                  className="h-8 bg-white border-slate-200 text-xs font-bold text-slate-800"
                 />
                 <Button 
                   onClick={handleAdd} 
@@ -124,16 +122,15 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
                 </Button>
               </div>
 
-              {/* Lista das Categorias Existentes */}
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-1.5 pr-1">
                 {categorias.length === 0 ? (
-                  <p className="text-center text-[10px] font-medium uppercase tracking-widest text-slate-400 py-6">
+                  <p className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 py-6">
                     Ainda não existem categorias neste contexto.
                   </p>
                 ) : (
                   categorias.map(cat => (
                     <div key={cat.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-md hover:border-slate-200 transition-colors group">
-                      <span className="text-xs font-semibold text-slate-700 uppercase tracking-tight">{cat.nome}</span>
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{cat.nome}</span>
                       <button 
                         onClick={() => { if(window.confirm("Apagar esta categoria?")) deleteMutation.mutate(cat.id); }}
                         className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
