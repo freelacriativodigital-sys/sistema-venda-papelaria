@@ -196,7 +196,7 @@ export default function Pedidos() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-20 relative">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-24 md:pb-20 relative">
       <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
         {/* LARGURA EXPANDIDA PARA 95% NO HEADER */}
         <div className="w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between transition-all gap-3">
@@ -221,7 +221,8 @@ export default function Pedidos() {
       {/* LARGURA EXPANDIDA PARA 95% NO CORPO */}
       <div className="w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 py-6 md:py-8">
         
-        <div className="flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-6 md:mb-8">
+        {/* SELETOR DESKTOP (Escondido no Mobile) */}
+        <div className="hidden md:flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-8">
           <button 
             onClick={() => handleViewModeChange("site")}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
@@ -326,6 +327,24 @@ export default function Pedidos() {
             )}
           </>
         )}
+      </div>
+
+      {/* SELETOR FIXO NA BASE EXCLUSIVO PARA MOBILE */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full p-2.5 bg-white border-t border-slate-200 z-[90] shadow-[0_-4px_15px_rgba(0,0,0,0.03)] pb-safe">
+        <div className="flex bg-slate-100 p-1 rounded-xl w-full">
+          <button 
+            onClick={() => handleViewModeChange("site")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[9px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm border border-slate-200/50" : "text-slate-500"}`}
+          >
+            <Store size={14} /> Site
+          </button>
+          <button 
+            onClick={() => handleViewModeChange("producao")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[9px] font-semibold uppercase tracking-widest transition-all ${viewMode === "producao" ? "bg-white text-emerald-600 shadow-sm border border-slate-200/50" : "text-slate-500"}`}
+          >
+            <Hammer size={14} /> Produção
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
