@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Palette, Image as ImageIcon, Upload, Check, Trash2, 
-  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft, Grid
+  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, 
+  LayoutTemplate, ShoppingBag, ChevronDown, ArrowLeft, Grid, LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,12 +90,12 @@ export default function LinkBio({ isPublic = false }) {
 
   const [logoLoja, setLogoLoja] = useState('');
   const [paletaCores, setPaletaCores] = useState([]);
-  const [produtosDestaque, setProdutosDestaque] = useState([]);
+  const [produtosCatalogo, setProdutosCatalogo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
   const [openSection, setOpenSection] = useState('');
-  const [activeTab, setActiveTab] = useState('links'); 
+  const [activeTab, setActiveTab] = useState('links'); // 'links' | 'catalogo'
 
   useEffect(() => {
     async function loadData() {
@@ -116,8 +117,14 @@ export default function LinkBio({ isPublic = false }) {
         setPaletaCores(configLoja.paleta_cores || []);
       }
 
-      const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(10);
-      if (prods) setProdutosDestaque(prods);
+      // Puxa TODOS os produtos ativos para montar o Catálogo na Bio
+      const { data: prods } = await supabase
+        .from('produtos')
+        .select('id, nome, preco, preco_promocional, imagens, imagem_url')
+        .eq('status_online', true)
+        .order('created_at', { ascending: false });
+        
+      if (prods) setProdutosCatalogo(prods);
 
       setLoading(false);
     }
@@ -221,8 +228,8 @@ export default function LinkBio({ isPublic = false }) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-x-hidden bg-slate-100 lg:py-10">
         
-        {/* CONTAINER RESPONSIVO - Adicionado pb-24 para não esconder conteúdo atrás do menu fixo */}
-        <div className="w-full lg:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl min-h-screen lg:min-h-0 lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800 overflow-hidden pb-24 lg:pb-10" style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
+        {/* CONTAINER RESPONSIVO - pb-28 garante espaço livre sobre a barra do app mobile */}
+        <div className="w-full lg:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl min-h-screen lg:min-h-0 lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800 overflow-hidden pb-28 lg:pb-10" style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
           
           <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
              {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
@@ -236,13 +243,13 @@ export default function LinkBio({ isPublic = false }) {
              <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
              {config.descricao && <p className="text-center text-sm md:text-[15px] font-medium mb-6 md:mb-8 opacity-80 leading-relaxed max-w-sm" style={{ color: config.cor_texto }}>{config.descricao}</p>}
 
-             {/* SELETOR DE ABAS (DESKTOP) */}
-             {config.mostrar_loja && produtosDestaque.length > 0 && (
+             {/* SELETOR DE ABAS (DESKTOP ONLY) */}
+             {config.mostrar_loja && produtosCatalogo.length > 0 && (
                <div className="hidden md:flex w-full max-w-[280px] bg-black/5 p-1.5 rounded-full items-center mb-8 relative border border-black/5" style={{ borderColor: `${config.cor_texto}15` }}>
                  <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
                       style={{ backgroundColor: config.cor_botoes, left: activeTab === 'links' ? '6px' : 'calc(50% + 2px)' }} />
-                 <button onClick={() => setActiveTab('links')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}>Links</button>
-                 <button onClick={() => setActiveTab('loja')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'loja' ? config.cor_texto_botoes : config.cor_texto }}>Loja</button>
+                 <button onClick={() => setActiveTab('links')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}>Links Rápidos</button>
+                 <button onClick={() => setActiveTab('catalogo')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'catalogo' ? config.cor_texto_botoes : config.cor_texto }}>Catálogo</button>
                </div>
              )}
 
@@ -275,7 +282,7 @@ export default function LinkBio({ isPublic = false }) {
                      {config.links?.map((link, i) => (
                        <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
                          {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
-                         <span className="flex-1 text-center text-[13px] md:text-sm uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
+                         <span className="flex-1 text-center text-[12px] md:text-[13px] uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
                          <div className="w-10 h-10" /> 
                        </a>
                      ))}
@@ -284,65 +291,58 @@ export default function LinkBio({ isPublic = false }) {
                ) : (
                  <div className="w-full flex flex-col gap-4 animate-in slide-in-from-right-8 duration-300">
                     <div className="grid grid-cols-2 gap-3 w-full">
-                      {produtosDestaque.map((prod) => {
+                      {produtosCatalogo.map((prod) => {
                          const imgUrl = prod.imagens?.[0] || prod.imagem_url;
                          return (
-                           <a href={`/vitrine?produto=${prod.id}`} onClick={(e) => { e.preventDefault(); window.location.href = `/vitrine?produto=${prod.id}`; }} key={prod.id} className="bg-white/80 backdrop-blur rounded-2xl overflow-hidden shadow-md border border-black/5 flex flex-col hover:scale-[1.02] transition-transform text-left">
+                           <a href={`/vitrine?produto=${prod.id}`} key={prod.id} className="bg-white/80 backdrop-blur rounded-2xl overflow-hidden shadow-md border border-black/5 flex flex-col hover:shadow-lg transition-all text-left">
                              <div className={`w-full bg-slate-50 overflow-hidden ${aspectClass}`}>
                                <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover mix-blend-multiply" />
                              </div>
                              <div className="p-3 flex flex-col flex-1">
-                               <p className="text-[10px] md:text-xs font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
+                               <p className="text-[10px] md:text-xs font-semibold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
                                <p className="text-xs md:text-[13px] font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
                              </div>
                            </a>
                          )
                       })}
                     </div>
-                    <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mt-4 py-4 rounded-2xl font-black uppercase text-[11px] md:text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
-                      <ShoppingBag size={16}/> Acessar Catálogo Completo
-                    </a>
                  </div>
                )}
              </div>
           </div>
 
-          <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
+          <div className="mt-auto opacity-40 flex items-center justify-center gap-1.5 pt-10" style={{ color: config.cor_texto }}>
              <Globe size={12} />
-             <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
+             <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
           </div>
 
-          {/* NAVEGAÇÃO FIXA NA BASE (EXCLUSIVO MOBILE) */}
-          {config.mostrar_loja && produtosDestaque.length > 0 && (
+          {/* NAVEGAÇÃO FIXA DE APP PREMIUM (MOBILE ONLY) */}
+          {config.mostrar_loja && produtosCatalogo.length > 0 && (
             <div 
-              className="md:hidden fixed bottom-0 inset-x-0 z-[90] flex justify-around items-center px-2 py-1.5 border-t backdrop-blur-md shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe" 
-              style={{ backgroundColor: `${config.cor_fundo}E6`, borderColor: `${config.cor_texto}15` }}
+              className="md:hidden fixed bottom-0 inset-x-0 z-[90] flex justify-around items-center px-4 py-2 backdrop-blur-xl shadow-[0_-10px_30px_rgba(0,0,0,0.06)] pb-safe" 
+              style={{ backgroundColor: `${config.cor_fundo}E6`, borderTop: `1px solid ${config.cor_texto}15` }}
             >
               <button
                 onClick={() => setActiveTab('links')}
-                className="flex flex-col items-center justify-center gap-1 w-full py-2 px-1 rounded-xl transition-all"
-                style={{ color: activeTab === 'links' ? config.cor_botoes : `${config.cor_texto}80` }}
+                className="flex flex-col items-center justify-center gap-1 w-20 py-1 transition-all relative group"
+                style={{ color: activeTab === 'links' ? config.cor_botoes : `${config.cor_texto}70` }}
               >
-                <div className="relative p-1">
-                   {activeTab === 'links' && <div className="absolute inset-0 opacity-10 rounded-md" style={{ backgroundColor: config.cor_botoes }}></div>}
-                   <LinkIcon size={20} className={`transition-transform ${activeTab === 'links' ? 'scale-110' : ''}`} />
-                </div>
-                <span className={`text-[9px] uppercase tracking-widest whitespace-nowrap ${activeTab === 'links' ? 'font-bold' : 'font-semibold'}`}>
-                  Links Rápidos
+                {activeTab === 'links' && <div className="absolute -top-3 w-8 h-1 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
+                <LinkIcon size={22} className={`transition-transform duration-300 ${activeTab === 'links' ? '-translate-y-1' : ''}`} />
+                <span className={`text-[8.5px] uppercase tracking-widest ${activeTab === 'links' ? 'font-bold' : 'font-medium'}`}>
+                  LINKS
                 </span>
               </button>
 
               <button
-                onClick={() => setActiveTab('loja')}
-                className="flex flex-col items-center justify-center gap-1 w-full py-2 px-1 rounded-xl transition-all"
-                style={{ color: activeTab === 'loja' ? config.cor_botoes : `${config.cor_texto}80` }}
+                onClick={() => setActiveTab('catalogo')}
+                className="flex flex-col items-center justify-center gap-1 w-20 py-1 transition-all relative group"
+                style={{ color: activeTab === 'catalogo' ? config.cor_botoes : `${config.cor_texto}70` }}
               >
-                <div className="relative p-1">
-                   {activeTab === 'loja' && <div className="absolute inset-0 opacity-10 rounded-md" style={{ backgroundColor: config.cor_botoes }}></div>}
-                   <ShoppingBag size={20} className={`transition-transform ${activeTab === 'loja' ? 'scale-110' : ''}`} />
-                </div>
-                <span className={`text-[9px] uppercase tracking-widest whitespace-nowrap ${activeTab === 'loja' ? 'font-bold' : 'font-semibold'}`}>
-                  Vitrine / Loja
+                {activeTab === 'catalogo' && <div className="absolute -top-3 w-8 h-1 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
+                <LayoutGrid size={22} className={`transition-transform duration-300 ${activeTab === 'catalogo' ? '-translate-y-1' : ''}`} />
+                <span className={`text-[8.5px] uppercase tracking-widest ${activeTab === 'catalogo' ? 'font-bold' : 'font-medium'}`}>
+                  CATÁLOGO
                 </span>
               </button>
             </div>
@@ -402,10 +402,10 @@ export default function LinkBio({ isPublic = false }) {
               </div>
            </EditorSection>
 
-           <EditorSection id="layout" title="Aba da Loja" icon={Grid} openSection={openSection} setOpenSection={setOpenSection}>
+           <EditorSection id="layout" title="Aba do Catálogo" icon={Grid} openSection={openSection} setOpenSection={setOpenSection}>
               <div className="space-y-4">
                  <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md">
-                   <span className="text-[10px] font-bold uppercase text-slate-300">Mostrar Aba Loja</span>
+                   <span className="text-[10px] font-bold uppercase text-slate-300">Mostrar Aba Catálogo</span>
                    <button onClick={() => setConfig({...config, mostrar_loja: !config.mostrar_loja})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${config.mostrar_loja ? 'bg-emerald-500' : 'bg-slate-600'}`}>
                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${config.mostrar_loja ? 'translate-x-4' : 'translate-x-0'}`} />
                    </button>
@@ -420,7 +420,7 @@ export default function LinkBio({ isPublic = false }) {
                      </div>
                    </div>
                  )}
-                 <p className="text-[9px] text-slate-500 font-medium">A aba loja mostrará automaticamente até 10 produtos marcados como 'Destaque' no catálogo.</p>
+                 <p className="text-[9px] text-slate-500 font-medium">A aba catálogo vai importar automaticamente todos os produtos ativos do seu sistema para exibição direta.</p>
               </div>
            </EditorSection>
 
@@ -548,11 +548,11 @@ export default function LinkBio({ isPublic = false }) {
 
         <LivePreview />
 
-        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE DO EDITOR (Isso já existia no código, é do próprio editor do admin) */}
+        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE DO EDITOR */}
         <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[160] px-1 pointer-events-auto">
           {[
             { id: 'textos', icon: LayoutTemplate, label: 'Perfil' },
-            { id: 'layout', icon: Grid, label: 'Loja' },
+            { id: 'layout', icon: Grid, label: 'Catálogo' },
             { id: 'cores', icon: Palette, label: 'Cores' },
             { id: 'links', icon: LinkIcon, label: 'Links' },
             { id: 'banners', icon: ImageIcon, label: 'Banners' }
