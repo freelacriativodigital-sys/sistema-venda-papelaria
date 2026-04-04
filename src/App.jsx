@@ -5,7 +5,7 @@ import { queryClientInstance } from '@/lib/query-client';
 import { pagesConfig } from './pages.config';
 import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import RedirectLink from '@/components/RedirectLink'; // <-- IMPORTAÇÃO DO REDIRECIONADOR
+import RedirectLink from '@/components/Links/RedirectLink'; // <-- IMPORTAÇÃO DO REDIRECIONADOR
 
 import Login from '@/components/tasks/Login';
 
