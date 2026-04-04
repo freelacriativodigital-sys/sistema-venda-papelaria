@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase'; // <-- CORREÇÃO DO CAMINHO AQUI
 import { Loader2 } from "lucide-react";
 
 export default function RedirectLink() {
