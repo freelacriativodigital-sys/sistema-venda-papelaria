@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Save, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { X, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../../lib/supabase";
+import SeletorData from "@/components/SeletorData"; // IMPORTANDO O NOVO COMPONENTE
 
 export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onSuccess }) {
   const [nome, setNome] = useState("");
@@ -43,9 +44,23 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
     if (error) {
       alert("Erro ao salvar cliente: " + error.message);
     } else if (data && data.length > 0) {
-      if (onSuccess) onSuccess(data[0]); // Devolve o cliente salvo para a tela que chamou
+      if (onSuccess) onSuccess(data[0]); 
       onClose();
     }
+  };
+
+  // --- MÁSCARA INTELIGENTE DO WHATSAPP ---
+  const handleWhatsappEdit = (val) => {
+    if (!val) { setWhatsapp(''); return; }
+    let nums = val.replace(/\D/g, '');
+    if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
+    if (nums.length === 0) { setWhatsapp(''); return; }
+    
+    let formatted = '+55 ';
+    if (nums.length > 0) formatted += nums.slice(0, 2);
+    if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
+    if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
+    setWhatsapp(formatted);
   };
 
   if (!isOpen) return null;
@@ -57,7 +72,7 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }} 
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
+          className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col relative overflow-visible"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100">
@@ -77,14 +92,20 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">WhatsApp</label>
-                <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="h-9 text-xs font-medium" />
+                <Input 
+                  value={whatsapp} 
+                  onChange={e => handleWhatsappEdit(e.target.value)} 
+                  placeholder="+55 85 98765-4321"
+                  className="h-9 text-xs font-medium" 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Aniversário</label>
-                <div className="relative">
-                  <Input type="date" value={aniversario} onChange={e => setAniversario(e.target.value)} className="h-9 text-xs font-medium pl-3 pr-8" />
-                  <CalendarIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
+                {/* NOVO SELETOR DE DATA APLICADO AQUI */}
+                <SeletorData 
+                  value={aniversario} 
+                  onChange={val => setAniversario(val)} 
+                />
               </div>
             </div>
 
@@ -102,7 +123,7 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
           </div>
 
           {/* Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100">
+          <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-xl">
             <Button onClick={handleSalvar} disabled={loading} className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-widest text-[10px]">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save size={14} className="mr-2" /> Salvar Cliente</>}
             </Button>

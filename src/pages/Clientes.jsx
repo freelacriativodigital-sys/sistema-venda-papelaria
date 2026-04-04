@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -9,6 +9,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
+import SeletorData from "@/components/SeletorData"; // IMPORTANDO O NOVO COMPONENTE
+
+// Função global para formatar o telefone
+const formatPhoneInit = (val) => {
+  if (!val) return '';
+  let nums = val.replace(/\D/g, '');
+  // Verifica se a pessoa já digitou o 55 e possui mais de 11 dígitos no total
+  if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
+  if (nums.length === 0) return '';
+  
+  let formatted = '+55 ';
+  if (nums.length > 0) formatted += nums.slice(0, 2);
+  if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
+  if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
+  return formatted;
+};
 
 export default function Clientes() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +38,17 @@ export default function Clientes() {
   const [selectedClientForPedidos, setSelectedClientForPedidos] = useState(null);
 
   const queryClient = useQueryClient();
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (location.state?.action === 'new') {
+      setEditingClient({ nome: '', whatsapp: '', pendente: 0, pago: 0, aniversario: '' });
+      setIsModalOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const { data: clientes = [], isLoading: isLoadingClientes } = useQuery({
     queryKey: ["sistema-clientes"],
@@ -138,6 +166,20 @@ export default function Clientes() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
+  // --- MÁSCARA INTELIGENTE DO WHATSAPP ---
+  const handleWhatsappEdit = (val) => {
+    if (!val) { setEditingClient(prev => ({...prev, whatsapp: ''})); return; }
+    let nums = val.replace(/\D/g, '');
+    if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
+    if (nums.length === 0) { setEditingClient(prev => ({...prev, whatsapp: ''})); return; }
+    
+    let formatted = '+55 ';
+    if (nums.length > 0) formatted += nums.slice(0, 2);
+    if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
+    if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
+    setEditingClient(prev => ({...prev, whatsapp: formatted}));
+  };
+
   const isLoading = isLoadingClientes || isLoadingTasks;
 
   return (
@@ -231,7 +273,6 @@ export default function Clientes() {
                 >
                   
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 w-full">
-                    {/* Avatar e Nome */}
                     <div className="flex items-center gap-3 w-full md:w-1/3 min-w-[220px]">
                       <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center font-semibold text-blue-600 text-sm shrink-0 shadow-sm">
                         {(cliente.nome || 'C').charAt(0).toUpperCase()}
@@ -244,7 +285,6 @@ export default function Clientes() {
                       </div>
                     </div>
 
-                    {/* Contato */}
                     <div className="hidden sm:flex flex-col gap-1 w-full md:w-1/4">
                       {cliente.whatsapp && (
                         <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
@@ -258,7 +298,6 @@ export default function Clientes() {
                       )}
                     </div>
 
-                    {/* Valores Financeiros e Ações */}
                     <div className="flex items-center justify-between w-full md:w-auto gap-2">
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="flex flex-col bg-rose-50 px-2 py-0.5 rounded border border-rose-100 min-w-[60px] md:min-w-[80px] text-center md:text-left md:items-center md:justify-center">
@@ -271,7 +310,6 @@ export default function Clientes() {
                         </div>
                       </div>
 
-                      {/* Botões de Ação */}
                       <div className="flex items-center gap-1 shrink-0 justify-end">
                         {cliente.whatsapp ? (
                           <a href={`https://wa.me/55${(cliente.whatsapp || '').replace(/\D/g, '')}`} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
@@ -283,13 +321,17 @@ export default function Clientes() {
                           </div>
                         )}
                         <div className="h-4 w-px bg-slate-200 mx-0.5 hidden sm:block"></div>
-                        <button onClick={(e) => { e.stopPropagation(); setEditingClient(cliente); setEditingClientTotals({pago: totalGastoReal, pendente: totalPendenteReal}); setIsModalOpen(true); }} className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit3 size={14} /></button>
+                        <button onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setEditingClient({...cliente, whatsapp: formatPhoneInit(cliente.whatsapp)}); 
+                          setEditingClientTotals({pago: totalGastoReal, pendente: totalPendenteReal}); 
+                          setIsModalOpen(true); 
+                        }} className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit3 size={14} /></button>
                         <button onClick={(e) => { e.stopPropagation(); if(window.confirm("Deseja mesmo excluir o cliente?")) deleteMutation.mutate(cliente.id); }} className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Resumo do Histórico */}
                   <div className="bg-slate-50/80 p-2 md:p-2.5 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-[9px] text-slate-500 group-hover:bg-blue-50/50 group-hover:border-blue-100 transition-colors">
                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                         <span><strong className="text-slate-700 uppercase">Último pedido:</strong> {ultimoPedidoData}</span>
@@ -315,7 +357,6 @@ export default function Clientes() {
         )}
       </div>
 
-      {/* BOTÃO FIXO NA BASE PARA MOBILE */}
       <div className="md:hidden fixed bottom-0 left-0 w-full p-3 bg-white border-t border-slate-200 z-[90] shadow-[0_-4px_15px_rgba(0,0,0,0.03)] pb-safe">
         <Button 
           onClick={() => {
@@ -334,7 +375,7 @@ export default function Clientes() {
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-xl relative z-10 border border-slate-100">
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-xl relative z-10 border border-slate-100 overflow-visible">
               
               <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
                 <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight">
@@ -352,20 +393,21 @@ export default function Clientes() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
-                    <Input value={editingClient?.whatsapp || ''} onChange={e => setEditingClient(prev => ({...prev, whatsapp: e.target.value}))} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
+                    <Input 
+                      value={editingClient?.whatsapp || ''} 
+                      onChange={e => handleWhatsappEdit(e.target.value)} 
+                      placeholder="+55 85 98765-4321"
+                      className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" 
+                    />
                   </div>
-                  {/* MAGIA DO CSS: Esconde o ícone nativo do navegador mas deixa toda a área clicável */}
+                  
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
-                    <div className="relative">
-                      <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                      <Input 
-                        type="date" 
-                        value={editingClient?.aniversario || ''} 
-                        onChange={e => setEditingClient(prev => ({...prev, aniversario: e.target.value}))} 
-                        className="h-9 pl-8 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600 w-full relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer" 
-                      />
-                    </div>
+                    {/* NOVO SELETOR DE DATA APLICADO AQUI */}
+                    <SeletorData 
+                      value={editingClient?.aniversario || ''} 
+                      onChange={val => setEditingClient(prev => ({...prev, aniversario: val}))} 
+                    />
                   </div>
                 </div>
 
