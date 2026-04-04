@@ -194,13 +194,10 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               
-              {/* MÓDULO CENTRAL DE DATA */}
-              <SeletorData 
-                label="Entrega" 
-                value={form.delivery_date} 
-                onChange={(val) => setForm({ ...form, delivery_date: val })} 
-                className="w-full"
-              />
+              <div className="space-y-1.5 w-full">
+                <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Entrega</label>
+                <SeletorData value={form.delivery_date} onChange={(val) => setForm({ ...form, delivery_date: val })} />
+              </div>
 
               <div className="space-y-1.5 w-full">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
@@ -217,15 +214,11 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 </Select>
               </div>
 
-              {/* MÓDULO CENTRAL DE CATEGORIA */}
               <div className="space-y-1.5 w-full">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
-                <SeletorCategoria 
-                  contexto="pedido" 
-                  value={form.category} 
-                  onChange={(val) => setForm({ ...form, category: val })} 
-                />
+                <SeletorCategoria contexto="pedido" value={form.category} onChange={(val) => setForm({ ...form, category: val })} />
               </div>
+
             </div>
 
             <div className="pt-3 border-t border-slate-100 space-y-3">
