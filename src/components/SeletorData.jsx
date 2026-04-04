@@ -1,7 +1,7 @@
 import React from 'react';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,8 @@ export default function SeletorData({
           {label}
         </label>
       )}
-      <Popover>
+      {/* A MÁGICA ESTÁ AQUI: modal={true} impede que ele voe pela tela */}
+      <Popover modal={true}>
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
@@ -42,23 +43,21 @@ export default function SeletorData({
           </Button>
         </PopoverTrigger>
         
-        {/* A JANELA DO CALENDÁRIO FLUTUANTE */}
-        <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-2xl" align="start" style={{ zIndex: 9999 }}>
-          
-          <div className="flex justify-between items-center p-2.5 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-2">Calendário</span>
-            <PopoverTrigger asChild>
-               <button className="p-1 hover:bg-slate-200 rounded text-slate-400 transition-colors"><X size={14}/></button>
-            </PopoverTrigger>
-          </div>
-
+        {/* sideOffset e align travam ele grudado no botão */}
+        <PopoverContent 
+          className="w-auto p-0 rounded-xl border border-slate-200 shadow-2xl" 
+          align="start" 
+          side="bottom"
+          sideOffset={4}
+          style={{ zIndex: 99999 }}
+        >
           <Calendar
             mode="single"
             selected={dataFormatada}
             onSelect={handleSelect}
             locale={ptBR}
             initialFocus
-            className="p-3 bg-white rounded-b-xl"
+            className="p-3 bg-white rounded-xl"
             classNames={{
               head_cell: "text-slate-500 rounded-md w-9 font-normal text-[11px] uppercase tracking-wider",
               cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-slate-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
