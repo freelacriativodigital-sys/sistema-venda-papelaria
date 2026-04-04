@@ -1,249 +1,582 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Instagram, MessageCircle, ShoppingBag, ArrowRight, 
-  Loader2, Link as LinkIcon, Store, Globe, MapPin 
-} from 'lucide-react';
+  Palette, Image as ImageIcon, Upload, Check, Trash2, 
+  Copy, Loader2, Save, X, Link as LinkIcon, Plus, Globe, LayoutTemplate, Star, ShoppingBag, ChevronDown, ArrowLeft, Grid
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "../lib/supabase";
 
-export default function LinkBio() {
-  const [config, setConfig] = useState(null);
-  const [produtos, setProdutos] = useState([]);
+const compressImageToBlob = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image(); 
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200; 
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.8);
+      };
+    };
+  });
+};
+
+const EditorSection = ({ id, title, icon: Icon, openSection, setOpenSection, children }) => {
+  const isOpen = openSection === id;
+  return (
+    <div className="lg:border-b lg:border-slate-700/50 pointer-events-auto">
+      <button onClick={() => setOpenSection(isOpen ? '' : id)} className="hidden lg:flex w-full items-center justify-between p-3.5 hover:bg-slate-800 transition-colors">
+        <div className="flex items-center gap-2.5 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+          <Icon size={14} className="text-slate-400" /> {title}
+        </div>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      <div className={`
+        ${isOpen ? 'fixed inset-x-0 bottom-[64px] bg-slate-900 z-[200] p-5 rounded-t-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.7)] border-t border-slate-700 block' : 'hidden'}
+        lg:static lg:inset-auto lg:bottom-auto lg:rounded-none lg:shadow-none lg:border-none lg:bg-transparent lg:z-auto lg:p-0
+        lg:block ${isOpen ? 'lg:max-h-[1500px] lg:opacity-100 lg:p-4' : 'lg:max-h-0 lg:opacity-0 lg:overflow-hidden lg:p-0 lg:m-0'}
+        transition-all duration-300 ease-in-out
+      `}>
+        <div className="flex lg:hidden items-center justify-between mb-5 border-b border-slate-800 pb-3 shrink-0">
+           <div className="flex items-center gap-2 text-[11px] font-bold text-white uppercase tracking-widest">
+             <Icon size={16} className="text-blue-400" /> {title}
+           </div>
+           <button onClick={() => setOpenSection('')} className="bg-slate-800 p-1.5 rounded-full text-slate-400 hover:text-white"><X size={14}/></button>
+        </div>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto lg:max-h-none lg:overflow-visible pb-6 lg:pb-0 no-scrollbar">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function LinkBio({ isPublic = false }) {
+  const navigate = useNavigate();
+  const [config, setConfig] = useState({
+    capa_url: '',
+    cor_capa: '#cbd5e1', 
+    titulo: 'Portal Criarte',
+    descricao: 'Tudo feito com muito carinho.',
+    cor_fundo: '#f8fafc',
+    cor_botoes: '#f472b6',
+    cor_texto_botoes: '#ffffff',
+    cor_texto: '#1e293b',
+    mostrar_loja: true,
+    formato_imagens: 'quadrado',
+    links: [],
+    banners: []
+  });
+
+  const [logoLoja, setLogoLoja] = useState('');
+  const [paletaCores, setPaletaCores] = useState([]);
+  const [produtosDestaque, setProdutosDestaque] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('links'); // 'links' | 'loja'
+  const [saved, setSaved] = useState(false);
+  const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
+  const [openSection, setOpenSection] = useState('');
+  const [activeTab, setActiveTab] = useState('links'); 
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        // 1. Busca configurações da loja
-        const { data: configData } = await supabase
-          .from('configuracoes')
-          .select('*')
-          .eq('id', 1)
-          .single();
-          
-        if (configData) setConfig(configData);
-
-        // 2. Busca os produtos para a aba loja
-        const { data: produtosData } = await supabase
-          .from('produtos')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (produtosData) setProdutos(produtosData);
-
-        // Ajusta o título e cor da página
-        if (configData?.nome_loja) document.title = `Links | ${configData.nome_loja}`;
-      } catch (err) {
-        console.error("Erro ao carregar LinkBio:", err);
-      } finally {
-        setLoading(false);
+    async function loadData() {
+      const { data: configData } = await supabase.from('bio_config').select('*').eq('id', 1).single();
+      if (configData) {
+        setConfig({
+          ...configData,
+          cor_capa: configData.cor_capa || '#cbd5e1',
+          mostrar_loja: configData.mostrar_loja ?? true,
+          formato_imagens: configData.formato_imagens || 'quadrado',
+          links: configData.links || [],
+          banners: configData.banners || [] 
+        });
       }
+
+      const { data: configLoja } = await supabase.from('configuracoes').select('logo_url, paleta_cores').eq('id', 1).single();
+      if (configLoja) {
+        setLogoLoja(configLoja.logo_url);
+        setPaletaCores(configLoja.paleta_cores || []);
+      }
+
+      const { data: prods } = await supabase.from('produtos').select('id, nome, preco, preco_promocional, imagens, imagem_url').eq('status_online', true).eq('destaque', true).limit(10);
+      if (prods) setProdutosDestaque(prods);
+
+      setLoading(false);
     }
-    fetchData();
+    loadData();
   }, []);
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  const handleSave = async () => {
+    const { error } = await supabase.from('bio_config').update(config).eq('id', 1);
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      setOpenSection(''); 
+    } else {
+      alert("Erro ao salvar: " + error.message);
+    }
   };
 
-  const handleComprarProduto = (produto) => {
-    if (!config?.whatsapp) return alert("WhatsApp da loja não configurado.");
-    const numero = config.whatsapp.replace(/\D/g, '');
-    const mensagem = `Olá! Estava na sua Bio e tenho interesse no produto: *${produto.nome}* (${formatCurrency(produto.preco)}). Pode me dar mais detalhes?`;
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`, '_blank');
+  const copyBioLink = () => {
+    const url = window.location.origin + "/bio";
+    navigator.clipboard.writeText(url);
+    alert("Link da Bio copiado!");
   };
 
-  if (loading) {
+  const uploadToSupabase = async (file, prefix) => {
+    const blob = await compressImageToBlob(file);
+    const fileName = `bio-${prefix}-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+    const { error } = await supabase.storage.from('produtos').upload(fileName, blob, { contentType: 'image/webp', upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from('produtos').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsUploadingGlobal(true);
+      try {
+        const url = await uploadToSupabase(file, 'capa');
+        setConfig({ ...config, [field]: url });
+      } catch (err) { alert("Erro no upload: " + err.message); } 
+      finally { setIsUploadingGlobal(false); }
+    }
+  };
+
+  const addLink = () => setConfig({ ...config, links: [...(config.links || []), { id: Date.now(), titulo: '', url: '', imagem_icone: '', cor_fundo: '', cor_texto: '', ativo: true }] });
+  const updateLink = (id, field, value) => setConfig({ ...config, links: config.links.map(l => l.id === id ? { ...l, [field]: value } : l) });
+  const removeLink = (id) => setConfig({ ...config, links: config.links.filter(l => l.id !== id) });
+  
+  const handleLinkIconUpload = async (e, id) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsUploadingGlobal(true);
+      try {
+        const url = await uploadToSupabase(file, 'icone');
+        updateLink(id, 'imagem_icone', url);
+      } catch (err) { alert("Erro no upload: " + err.message); } 
+      finally { setIsUploadingGlobal(false); }
+    }
+  };
+
+  const addBanner = () => setConfig({ ...config, banners: [...(config.banners || []), { id: Date.now(), imagem_url: '', link: '', descricao: '', botao_texto: 'Acessar' }] });
+  const updateBanner = (id, field, value) => setConfig({ ...config, banners: config.banners.map(b => b.id === id ? { ...b, [field]: value } : b) });
+  const removeBanner = (id) => setConfig({ ...config, banners: config.banners.filter(b => b.id !== id) });
+
+  const handleBannerUpload = async (e, id) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsUploadingGlobal(true);
+      try {
+        const url = await uploadToSupabase(file, 'banner');
+        updateBanner(id, 'imagem_url', url);
+      } catch (err) { alert("Erro no upload: " + err.message); } 
+      finally { setIsUploadingGlobal(false); }
+    }
+  };
+
+  const PaletaSugestoes = ({ field, isLink = false, linkId = null }) => {
+    if (!paletaCores || paletaCores.length === 0) return null;
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        <span className="text-[7px] text-slate-500 font-bold uppercase w-full">Cores da sua Marca:</span>
+        {paletaCores.map(cor => (
+          <button
+            key={cor}
+            onClick={() => {
+              if (isLink) updateLink(linkId, field, cor);
+              else setConfig({...config, [field]: cor});
+            }}
+            className="w-4 h-4 rounded-full border border-slate-600 shadow-sm hover:scale-125 transition-transform"
+            style={{ backgroundColor: cor }}
+            title={cor}
+          />
+        ))}
       </div>
     );
-  }
+  };
 
-  const corBanner = config?.cor_orcamento || '#33BEE8';
+  const LivePreview = () => {
+    const aspectClass = config.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
+
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-x-hidden bg-slate-100 lg:py-10">
+        
+        {/* CONTAINER RESPONSIVO - Adicionado pb-24 para não esconder conteúdo atrás do menu fixo */}
+        <div className="w-full lg:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl min-h-screen lg:min-h-0 lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800 overflow-hidden pb-24 lg:pb-10" style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
+          
+          <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+             {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
+          </div>
+          
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 md:-mt-14 bg-white flex items-center justify-center" style={{ borderColor: config.cor_fundo }}>
+            {logoLoja ? <img src={logoLoja} className="w-full h-full object-contain p-1 bg-white" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
+          </div>
+          
+          <div className="px-4 mt-3 md:mt-5 flex flex-col items-center w-full">
+             <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
+             {config.descricao && <p className="text-center text-sm md:text-[15px] font-medium mb-6 md:mb-8 opacity-80 leading-relaxed max-w-sm" style={{ color: config.cor_texto }}>{config.descricao}</p>}
+
+             {/* SELETOR DE ABAS (DESKTOP) */}
+             {config.mostrar_loja && produtosDestaque.length > 0 && (
+               <div className="hidden md:flex w-full max-w-[280px] bg-black/5 p-1.5 rounded-full items-center mb-8 relative border border-black/5" style={{ borderColor: `${config.cor_texto}15` }}>
+                 <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
+                      style={{ backgroundColor: config.cor_botoes, left: activeTab === 'links' ? '6px' : 'calc(50% + 2px)' }} />
+                 <button onClick={() => setActiveTab('links')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'links' ? config.cor_texto_botoes : config.cor_texto }}>Links</button>
+                 <button onClick={() => setActiveTab('loja')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: activeTab === 'loja' ? config.cor_texto_botoes : config.cor_texto }}>Loja</button>
+               </div>
+             )}
+
+             <div className="w-full max-w-sm animate-in fade-in duration-300">
+               {activeTab === 'links' || !config.mostrar_loja ? (
+                 <>
+                   {config.banners?.length > 0 && (
+                     <div className="w-full flex flex-col gap-6 mb-6">
+                       {config.banners.map(banner => {
+                         if (!banner.imagem_url) return null;
+                         return (
+                         <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
+                           <img src={banner.imagem_url} className="w-full object-cover" alt="Banner Promo" />
+                           {(banner.descricao || banner.link) && (
+                              <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
+                                {banner.descricao && <p className="text-[13px] md:text-sm font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
+                                {banner.link && (
+                                   <a href={banner.link} target="_blank" rel="noreferrer" className="w-full py-3 md:py-4 rounded-xl text-center font-bold text-[11px] md:text-xs uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                                      {banner.botao_texto || 'Acessar Link'}
+                                   </a>
+                                )}
+                              </div>
+                           )}
+                         </div>
+                       )})}
+                     </div>
+                   )}
+
+                   <div className="w-full flex flex-col gap-4">
+                     {config.links?.map((link, i) => (
+                       <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
+                         {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
+                         <span className="flex-1 text-center text-[13px] md:text-sm uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
+                         <div className="w-10 h-10" /> 
+                       </a>
+                     ))}
+                   </div>
+                 </>
+               ) : (
+                 <div className="w-full flex flex-col gap-4 animate-in slide-in-from-right-8 duration-300">
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      {produtosDestaque.map((prod) => {
+                         const imgUrl = prod.imagens?.[0] || prod.imagem_url;
+                         return (
+                           <a href={`/vitrine?produto=${prod.id}`} onClick={(e) => { e.preventDefault(); window.location.href = `/vitrine?produto=${prod.id}`; }} key={prod.id} className="bg-white/80 backdrop-blur rounded-2xl overflow-hidden shadow-md border border-black/5 flex flex-col hover:scale-[1.02] transition-transform text-left">
+                             <div className={`w-full bg-slate-50 overflow-hidden ${aspectClass}`}>
+                               <img src={imgUrl || `https://placehold.co/400?text=Produto`} className="w-full h-full object-cover mix-blend-multiply" />
+                             </div>
+                             <div className="p-3 flex flex-col flex-1">
+                               <p className="text-[10px] md:text-xs font-bold text-slate-800 line-clamp-2 mb-1.5 leading-tight">{prod.nome}</p>
+                               <p className="text-xs md:text-[13px] font-black text-slate-900 mt-auto">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</p>
+                             </div>
+                           </a>
+                         )
+                      })}
+                    </div>
+                    <a href="/vitrine" onClick={(e) => { e.preventDefault(); window.location.href = "/vitrine"; }} className="w-full mt-4 py-4 rounded-2xl font-black uppercase text-[11px] md:text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                      <ShoppingBag size={16}/> Acessar Catálogo Completo
+                    </a>
+                 </div>
+               )}
+             </div>
+          </div>
+
+          <div className="mt-14 opacity-40 flex items-center justify-center gap-1.5 pb-6" style={{ color: config.cor_texto }}>
+             <Globe size={12} />
+             <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
+          </div>
+
+          {/* NAVEGAÇÃO FIXA NA BASE (EXCLUSIVO MOBILE) */}
+          {config.mostrar_loja && produtosDestaque.length > 0 && (
+            <div 
+              className="md:hidden fixed bottom-0 inset-x-0 z-[90] flex justify-around items-center px-2 py-1.5 border-t backdrop-blur-md shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe" 
+              style={{ backgroundColor: `${config.cor_fundo}E6`, borderColor: `${config.cor_texto}15` }}
+            >
+              <button
+                onClick={() => setActiveTab('links')}
+                className="flex flex-col items-center justify-center gap-1 w-full py-2 px-1 rounded-xl transition-all"
+                style={{ color: activeTab === 'links' ? config.cor_botoes : `${config.cor_texto}80` }}
+              >
+                <div className="relative p-1">
+                   {activeTab === 'links' && <div className="absolute inset-0 opacity-10 rounded-md" style={{ backgroundColor: config.cor_botoes }}></div>}
+                   <LinkIcon size={20} className={`transition-transform ${activeTab === 'links' ? 'scale-110' : ''}`} />
+                </div>
+                <span className={`text-[9px] uppercase tracking-widest whitespace-nowrap ${activeTab === 'links' ? 'font-bold' : 'font-semibold'}`}>
+                  Links Rápidos
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('loja')}
+                className="flex flex-col items-center justify-center gap-1 w-full py-2 px-1 rounded-xl transition-all"
+                style={{ color: activeTab === 'loja' ? config.cor_botoes : `${config.cor_texto}80` }}
+              >
+                <div className="relative p-1">
+                   {activeTab === 'loja' && <div className="absolute inset-0 opacity-10 rounded-md" style={{ backgroundColor: config.cor_botoes }}></div>}
+                   <ShoppingBag size={20} className={`transition-transform ${activeTab === 'loja' ? 'scale-110' : ''}`} />
+                </div>
+                <span className={`text-[9px] uppercase tracking-widest whitespace-nowrap ${activeTab === 'loja' ? 'font-bold' : 'font-semibold'}`}>
+                  Vitrine / Loja
+                </span>
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-slate-300 w-10 h-10" /></div>;
+
+  if (isPublic) return <LivePreview />;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex justify-center pb-10 font-sans">
+    <div className="fixed inset-0 z-[120] flex bg-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* O CARD PRINCIPAL (Estilo Mobile, mesmo no Desktop) */}
-      <div className="w-full max-w-md bg-white min-h-screen md:min-h-[auto] md:mt-10 md:rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-slate-100 flex flex-col">
+      {/* CONTAINER DO EDITOR */}
+      <div className="absolute inset-0 z-[140] pointer-events-none lg:static lg:w-[320px] lg:shrink-0 lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl lg:z-20 lg:pointer-events-auto flex flex-col h-full">
         
-        {/* BANNER DE TOPO COLORIDO */}
-        <div 
-          className="h-32 md:h-40 w-full relative"
-          style={{ backgroundColor: corBanner }}
-        >
-          {/* Curva suave na parte inferior do banner */}
-          <div className="absolute -bottom-1 left-0 right-0 h-6 bg-white rounded-t-[2rem]"></div>
+        <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950 pointer-events-auto">
+          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft size={14} /> Sair
+          </button>
+          <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all">
+            {saved ? <Check size={14} /> : "Salvar"}
+          </Button>
         </div>
 
-        {/* FOTO E PERFIL */}
-        <div className="px-6 flex flex-col items-center relative -mt-16">
-          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white bg-slate-50 shadow-md flex items-center justify-center overflow-hidden z-10">
-            {config?.logo_url ? (
-              <img src={config.logo_url} alt="Logo" className="w-full h-full object-contain p-2" />
-            ) : (
-              <Store className="w-10 h-10 text-slate-300" />
-            )}
-          </div>
-          
-          <h1 className="mt-3 text-lg md:text-xl font-bold text-slate-800 tracking-tight text-center">
-            {config?.nome_loja || "Sua Empresa"}
-          </h1>
-          
-          <p className="mt-1.5 text-[11px] md:text-xs font-medium text-slate-500 text-center leading-relaxed max-w-[280px]">
-            {config?.descricao_bio || "✨ Organização com charme! Sua papelaria funcional para deixar a rotina mais leve e bonita."}
-          </p>
-
-          {/* LOCALIZAÇÃO (Opcional) */}
-          <div className="flex items-center gap-1 mt-3 text-[9px] font-semibold uppercase tracking-widest text-slate-400">
-            <MapPin size={10} /> Brasil
-          </div>
-        </div>
-
-        {/* SELETOR DE ABAS (PÍLULA PREMIUM) */}
-        <div className="px-6 mt-6 w-full">
-          <div className="flex bg-slate-100 p-1 rounded-full relative">
-            <button 
-              onClick={() => setActiveTab('links')}
-              className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all z-10 ${activeTab === 'links' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              Links Rápidos
-            </button>
-            <button 
-              onClick={() => setActiveTab('loja')}
-              className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all z-10 ${activeTab === 'loja' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              Vitrine
-            </button>
-
-            {/* Pílula Deslizante Animada */}
-            <motion.div 
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] z-0"
-              initial={false}
-              animate={{ left: activeTab === 'links' ? '4px' : 'calc(50%)' }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
-          </div>
-        </div>
-
-        {/* CONTEÚDO DAS ABAS */}
-        <div className="flex-1 w-full px-6 pt-6 pb-8">
-          <AnimatePresence mode="wait">
-            
-            {/* ABA: LINKS */}
-            {activeTab === 'links' && (
-              <motion.div 
-                key="links"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="space-y-3"
-              >
-                {config?.whatsapp && (
-                  <a 
-                    href={`https://wa.me/${config.whatsapp.replace(/\D/g, '')}`}
-                    target="_blank" rel="noreferrer"
-                    className="flex items-center p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-emerald-200 group transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <MessageCircle size={18} />
+        <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
+           <EditorSection id="textos" title="Capa e Textos" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-2 border-b border-slate-700/50 pb-4">
+                 <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Fundo da Capa</label>
+                 <div className="flex gap-2">
+                    <div className="relative w-8 h-8 rounded border border-slate-700 shrink-0" style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+                      <input type="color" value={config.cor_capa || '#cbd5e1'} onChange={(e) => setConfig({...config, cor_capa: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
                     </div>
-                    <span className="ml-4 text-xs font-bold text-slate-700 uppercase tracking-widest flex-1">
-                      Fale no WhatsApp
-                    </span>
-                    <ArrowRight size={14} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                  </a>
-                )}
-
-                {config?.instagram && (
-                  <a 
-                    href={config.instagram.startsWith('http') ? config.instagram : `https://${config.instagram}`}
-                    target="_blank" rel="noreferrer"
-                    className="flex items-center p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-pink-200 group transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Instagram size={18} />
+                    <div className="relative flex-1">
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'capa_url')} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                      <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-800 text-slate-300 font-bold uppercase text-[9px] hover:bg-slate-700">
+                         <Upload size={12} className="mr-1.5"/> Imagem
+                      </Button>
                     </div>
-                    <span className="ml-4 text-xs font-bold text-slate-700 uppercase tracking-widest flex-1">
-                      Siga no Instagram
-                    </span>
-                    <ArrowRight size={14} className="text-slate-300 group-hover:text-pink-500 transition-colors" />
-                  </a>
-                )}
+                    {config.capa_url && <button onClick={() => setConfig({...config, capa_url: ''})} className="bg-red-500 text-white p-1.5 rounded"><Trash2 size={12}/></button>}
+                 </div>
+                 <PaletaSugestoes field="cor_capa" />
+                 <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest text-center mt-1">Medida: 800 x 300 px</p>
+              </div>
 
-                {/* Exemplo de botão para o site ou catálogo completo */}
-                <LinkIcon href="/" className="flex items-center p-3.5 bg-slate-900 border border-slate-800 rounded-xl shadow-md hover:bg-slate-800 group transition-all cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center shrink-0">
-                      <Globe size={18} />
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Título Principal</label>
+                <Input value={config.titulo || ''} onChange={(e) => setConfig({...config, titulo: e.target.value})} className="h-8 text-xs bg-slate-800 border-slate-700 text-white focus:border-slate-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Descrição (Bio)</label>
+                <textarea value={config.descricao || ''} onChange={(e) => setConfig({...config, descricao: e.target.value})} className="w-full h-20 p-2 bg-slate-800 border border-slate-700 rounded text-[10px] text-white resize-none outline-none focus:border-slate-500" />
+              </div>
+           </EditorSection>
+
+           <EditorSection id="layout" title="Aba da Loja" icon={Grid} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between bg-slate-800 p-2.5 rounded-md">
+                   <span className="text-[10px] font-bold uppercase text-slate-300">Mostrar Aba Loja</span>
+                   <button onClick={() => setConfig({...config, mostrar_loja: !config.mostrar_loja})} className={`w-8 h-4 rounded-full p-0.5 transition-all ${config.mostrar_loja ? 'bg-emerald-500' : 'bg-slate-600'}`}>
+                     <div className={`w-3 h-3 bg-white rounded-full transition-transform ${config.mostrar_loja ? 'translate-x-4' : 'translate-x-0'}`} />
+                   </button>
+                 </div>
+                 
+                 {config.mostrar_loja && (
+                   <div className="space-y-1.5 pt-3 border-t border-slate-700/50">
+                     <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Formato das Fotos</label>
+                     <div className="flex gap-2">
+                       <button onClick={() => setConfig({...config, formato_imagens: 'quadrado'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${config.formato_imagens !== 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Quad. (1:1)</button>
+                       <button onClick={() => setConfig({...config, formato_imagens: 'retrato'})} className={`flex-1 h-8 text-[10px] font-bold uppercase rounded border transition-colors ${config.formato_imagens === 'retrato' ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>Retrato (4:5)</button>
+                     </div>
+                   </div>
+                 )}
+                 <p className="text-[9px] text-slate-500 font-medium">A aba loja mostrará automaticamente até 10 produtos marcados como 'Destaque' no catálogo.</p>
+              </div>
+           </EditorSection>
+
+           <EditorSection id="cores" title="Cores Globais" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { label: 'Cor do Fundo', field: 'cor_fundo', def: '#f8fafc' },
+                  { label: 'Texto Principal', field: 'cor_texto', def: '#1e293b' },
+                  { label: 'Fundo dos Botões', field: 'cor_botoes', def: '#f472b6' },
+                  { label: 'Texto dos Botões', field: 'cor_texto_botoes', def: '#ffffff' }
+                ].map(item => (
+                  <div key={item.field} className="space-y-2 bg-slate-800 p-2 rounded border border-slate-700">
+                    <label className="text-[9px] font-bold uppercase text-slate-400">{item.label}</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="relative w-7 h-7 rounded border border-slate-600 shrink-0" style={{ backgroundColor: config?.[item.field] || item.def }}>
+                        <input type="color" value={config?.[item.field] || item.def} onChange={(e) => setConfig({...config, [item.field]: e.target.value})} className="absolute -inset-2 w-12 h-12 opacity-0 cursor-pointer" />
+                      </div>
+                      <Input value={config?.[item.field] || ''} onChange={(e) => setConfig({...config, [item.field]: e.target.value})} className="h-7 font-mono text-[9px] uppercase bg-slate-900 border-slate-600 text-white" />
                     </div>
-                    <span className="ml-4 text-xs font-bold text-white uppercase tracking-widest flex-1">
-                      Acessar Site Completo
-                    </span>
-                    <ArrowRight size={14} className="text-slate-400 group-hover:text-white transition-colors" />
-                </LinkIcon>
-
-              </motion.div>
-            )}
-
-            {/* ABA: LOJA / VITRINE */}
-            {activeTab === 'loja' && (
-              <motion.div 
-                key="loja"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              >
-                {produtos.length === 0 ? (
-                  <div className="text-center py-10 flex flex-col items-center">
-                    <ShoppingBag className="w-10 h-10 text-slate-200 mb-3" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nenhum produto cadastrado.</p>
+                    <PaletaSugestoes field={item.field} />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    {produtos.map((produto) => (
-                      <button 
-                        key={produto.id} 
-                        onClick={() => handleComprarProduto(produto)}
-                        className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all text-left flex flex-col group"
-                      >
-                        <div className="aspect-square bg-slate-50 w-full overflow-hidden relative">
-                          {produto.imagem_url ? (
-                            <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-200"><ShoppingBag size={32}/></div>
-                          )}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-white/50 rounded-full backdrop-blur-sm">
-                              Eu Quero
-                            </span>
+                ))}
+              </div>
+           </EditorSection>
+
+           <EditorSection id="links" title="Botões de Link" icon={LinkIcon} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-4">
+                 {config.links?.map((link, index) => (
+                   <div key={link.id} className="bg-slate-800 p-3 rounded border border-slate-700 space-y-3 relative group">
+                     <button onClick={() => removeLink(link.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"><Trash2 size={10}/></button>
+                     
+                     <div className="flex gap-2 items-start">
+                       <div className="flex flex-col items-center gap-1">
+                         <div className="w-8 h-8 rounded bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0">
+                           {link.imagem_icone ? <img src={link.imagem_icone} className="w-5 h-5 object-contain"/> : <ImageIcon size={14} className="text-slate-500"/>}
+                           <input type="file" accept="image/*" onChange={(e) => handleLinkIconUpload(e, link.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                         </div>
+                         <span className="text-[6px] text-slate-500 font-bold uppercase tracking-widest text-center">100x100px</span>
+                       </div>
+                       <Input value={link.titulo} onChange={e => updateLink(link.id, 'titulo', e.target.value)} placeholder="Título" className="h-8 text-[10px] bg-slate-900 border-slate-700 text-white flex-1" />
+                     </div>
+                     <Input value={link.url} onChange={e => updateLink(link.id, 'url', e.target.value)} placeholder="https://..." className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400" />
+                     
+                     <div className="flex flex-col gap-2 pt-2 border-t border-slate-700/50">
+                        <div className="flex gap-2">
+                          <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0" style={{ backgroundColor: link.cor_fundo || config.cor_botoes }}>
+                             <input type="color" value={link.cor_fundo || config.cor_botoes} onChange={e => updateLink(link.id, 'cor_fundo', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                           </div>
+                          <span className="text-[9px] text-slate-400 flex items-center">Fundo</span>
+                          
+                          <div className="relative w-6 h-6 rounded border border-slate-600 shrink-0 ml-2" style={{ backgroundColor: link.cor_texto || config.cor_texto_botoes }}>
+                             <input type="color" value={link.cor_texto || config.cor_texto_botoes} onChange={e => updateLink(link.id, 'cor_texto', e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                          </div>
+                          <span className="text-[9px] text-slate-400 flex items-center">Texto</span>
                         </div>
-                        <div className="p-3 flex flex-col flex-1">
-                          <h3 className="text-[10px] md:text-xs font-semibold text-slate-800 leading-snug line-clamp-2" title={produto.nome}>
-                            {produto.nome}
-                          </h3>
-                          <p className="text-[11px] md:text-sm font-bold text-emerald-600 mt-auto pt-2">
-                            {formatCurrency(produto.preco)}
-                          </p>
+                        
+                        <div className="flex gap-4">
+                           <div className="flex-1"><PaletaSugestoes field="cor_fundo" isLink={true} linkId={link.id} /></div>
+                           <div className="flex-1"><PaletaSugestoes field="cor_texto" isLink={true} linkId={link.id} /></div>
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            )}
+                     </div>
+                   </div>
+                 ))}
+                 <Button onClick={addLink} variant="outline" className="w-full h-8 border-dashed border-slate-600 font-bold uppercase text-[9px] bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-500">
+                   <Plus size={12} className="mr-1.5"/> Add Link
+                 </Button>
+              </div>
+           </EditorSection>
 
-          </AnimatePresence>
+           <EditorSection id="banners" title="Banners Promo" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
+              <div className="space-y-4">
+                 {config.banners?.map((banner) => (
+                   <div key={banner.id} className="bg-slate-800 p-3 rounded border border-slate-700 space-y-3 relative group">
+                     <button onClick={() => removeBanner(banner.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"><Trash2 size={10}/></button>
+
+                     <div className="flex gap-2 flex-col">
+                       <div className="relative flex-1">
+                         <input type="file" accept="image/*" onChange={(e) => handleBannerUpload(e, banner.id)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                         <Button variant="outline" className="w-full h-8 rounded border-dashed border-slate-600 bg-slate-900 text-slate-400 font-bold uppercase text-[9px] hover:bg-slate-800">
+                           <Upload size={12} className="mr-1.5"/> {banner.imagem_url ? "Trocar Banner" : "Subir Imagem"}
+                         </Button>
+                       </div>
+                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest text-center mt-1">Medida: 1200 x 1200 px</span>
+                     </div>
+                     {banner.imagem_url && (
+                       <div className="aspect-square rounded overflow-hidden border border-slate-700 relative bg-slate-950">
+                         <img src={banner.imagem_url} className="w-full h-full object-cover" />
+                       </div>
+                     )}
+                     
+                     <div className="space-y-2 pt-2 border-t border-slate-700/50">
+                        <textarea value={banner.descricao || ''} onChange={e => updateBanner(banner.id, 'descricao', e.target.value)} placeholder="Descrição (Opcional)" className="w-full h-12 p-2 bg-slate-900 border border-slate-700 rounded text-[9px] text-white resize-none outline-none" />
+                        <Input value={banner.link || ''} onChange={(e) => updateBanner(banner.id, 'link', e.target.value)} placeholder="Link (https://...)" className="h-7 text-[9px] bg-slate-900 border-slate-700 text-slate-400" />
+                        {banner.link && (
+                           <Input value={banner.botao_texto || ''} onChange={(e) => updateBanner(banner.id, 'botao_texto', e.target.value)} placeholder="Texto do Botão (Ex: Acessar)" className="h-7 text-[9px] font-bold bg-slate-900 border-slate-700 text-white" />
+                        )}
+                     </div>
+                   </div>
+                 ))}
+                 <Button onClick={addBanner} variant="outline" className="w-full h-8 border-dashed border-slate-600 font-bold uppercase text-[9px] bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-500">
+                   <Plus size={12} className="mr-1.5"/> Add Banner
+                 </Button>
+              </div>
+           </EditorSection>
         </div>
 
-        {/* FOOTER */}
-        <div className="mt-auto py-6 flex justify-center border-t border-slate-50 bg-slate-50/50">
-          <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-300 flex items-center gap-1.5">
-            <Globe size={10} /> {config?.nome_loja || "Criarte"}
-          </p>
+        {/* FOOTER DESKTOP ONLY */}
+        <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950 pointer-events-auto">
+           <Button onClick={copyBioLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-bold uppercase text-[9px] tracking-widest gap-2">
+             <Copy size={12} /> Copiar Link da Bio
+           </Button>
         </div>
-
       </div>
+
+      {/* ÁREA DE PREVIEW (LIVE) */}
+      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
+        
+        {/* BOTÃO SAIR NO MOBILE E DESKTOP FLUTUANTE */}
+        <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
+          <ArrowLeft size={18} />
+        </button>
+
+        {/* MÁSCARA ESCURA QUANDO PAINEL MOBILE ESTÁ ABERTO */}
+        {openSection && <div onClick={() => setOpenSection('')} className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] transition-opacity pointer-events-auto" />}
+
+        <LivePreview />
+
+        {/* BARRA FIXA DE NAVEGAÇÃO NO MOBILE DO EDITOR (Isso já existia no código, é do próprio editor do admin) */}
+        <div className="lg:hidden fixed bottom-0 inset-x-0 h-[64px] bg-slate-950 border-t border-slate-800 flex items-center justify-around z-[160] px-1 pointer-events-auto">
+          {[
+            { id: 'textos', icon: LayoutTemplate, label: 'Perfil' },
+            { id: 'layout', icon: Grid, label: 'Loja' },
+            { id: 'cores', icon: Palette, label: 'Cores' },
+            { id: 'links', icon: LinkIcon, label: 'Links' },
+            { id: 'banners', icon: ImageIcon, label: 'Banners' }
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setOpenSection(openSection === tab.id ? '' : tab.id)} className={`flex flex-col items-center justify-center flex-1 h-full gap-1.5 transition-colors ${openSection === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+               <tab.icon size={18} className={openSection === tab.id ? 'animate-pulse' : ''} />
+               <span className="text-[7px] font-bold uppercase tracking-wider">{tab.label}</span>
+            </button>
+          ))}
+          <div className="w-[1px] h-8 bg-slate-800 mx-1"></div>
+          <button onClick={handleSave} className="flex flex-col items-center justify-center w-14 h-full gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors">
+             {saved ? <Check size={20} /> : <Save size={20} />}
+             <span className="text-[7px] font-bold uppercase tracking-wider">Salvar</span>
+          </button>
+        </div>
+      </div>
+
+      {/* OVERLAY DE CARREGAMENTO GLOBAL DE IMAGENS */}
+      {isUploadingGlobal && (
+        <div className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto">
+          <Loader2 className="animate-spin text-white w-12 h-12 mb-4" />
+          <p className="text-white font-bold uppercase tracking-widest text-xs animate-pulse">Enviando Imagem...</p>
+        </div>
+      )}
     </div>
   );
 }
