@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import TaskItem from "@/components/tasks/TaskItem";
 import EmptyState from "@/components/tasks/EmptyState";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Producao({ 
   activeTab, 
@@ -14,113 +15,173 @@ export default function Producao({
   handleDelete, 
   handleEditOrder 
 }) {
+  
+  // Estado para controlar quais colunas estão recolhidas (sanfona)
+  const [isCollapsed, setIsCollapsed] = useState({
+    hoje: false,
+    amanha: false,
+    proximos: false,
+    agPagamento: false
+  });
+
+  const toggleCol = (col) => {
+    setIsCollapsed(prev => ({ ...prev, [col]: !prev[col] }));
+  };
+
   return (
     <>
       {activeTab === "pendentes" && (
         <div className="w-full">
           {(pendingTasks.length === 0 && agPagamentoTasks?.length === 0) ? <EmptyState type="pending" /> : (
-            /* AQUI: Grid inteligente e fluido que se adapta ao tamanho da tela */
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 items-start">
               
-              {/* COLUNA 1: HOJE / ATRASADOS */}
-              <div className="flex flex-col gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 min-h-[150px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 px-1 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">● Hoje / Atrasados</span>
-                  <div className="h-px flex-1 bg-rose-200/50"></div>
-                  <span className="text-[9px] font-bold text-rose-500 bg-white border border-rose-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
-                    {gruposPendentes.hoje.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <AnimatePresence mode="popLayout">
-                    {gruposPendentes.hoje.map((t) => (
-                      <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                        <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+              {/* COLUNA 1: HOJE / ATRASADOS (Só aparece se tiver itens) */}
+              {gruposPendentes.hoje.length > 0 && (
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                  <div 
+                    onClick={() => toggleCol('hoje')}
+                    className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
+                    title="Ocultar/Mostrar Pedidos"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">● Hoje / Atrasados</span>
+                    <div className="h-px flex-1 bg-rose-200/50 group-hover:bg-rose-300/50 transition-colors"></div>
+                    <span className="text-[9px] font-bold text-rose-500 bg-white border border-rose-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+                      {gruposPendentes.hoje.length}
+                    </span>
+                    {isCollapsed.hoje ? <ChevronDown size={14} className="text-rose-400" /> : <ChevronUp size={14} className="text-rose-400" />}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {!isCollapsed.hoje && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: 'auto', opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }}
+                        className="flex flex-col gap-2.5 overflow-hidden"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {gruposPendentes.hoje.map((t) => (
+                            <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                              <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                       </motion.div>
-                    ))}
+                    )}
                   </AnimatePresence>
-                  {gruposPendentes.hoje.length === 0 && (
-                    <div className="text-center py-8 text-[9px] font-bold uppercase tracking-widest text-slate-300 border-2 border-dashed border-slate-200 rounded-lg bg-white/50">
-                      Livre
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* COLUNA 2: AMANHÃ */}
-              <div className="flex flex-col gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 min-h-[150px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 px-1 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">○ Amanhã</span>
-                  <div className="h-px flex-1 bg-amber-200/50"></div>
-                  <span className="text-[9px] font-bold text-amber-500 bg-white border border-amber-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
-                    {gruposPendentes.amanha.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <AnimatePresence mode="popLayout">
-                    {gruposPendentes.amanha.map((t) => (
-                      <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                        <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+              {/* COLUNA 2: AMANHÃ (Só aparece se tiver itens) */}
+              {gruposPendentes.amanha.length > 0 && (
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                  <div 
+                    onClick={() => toggleCol('amanha')}
+                    className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
+                    title="Ocultar/Mostrar Pedidos"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">○ Amanhã</span>
+                    <div className="h-px flex-1 bg-amber-200/50 group-hover:bg-amber-300/50 transition-colors"></div>
+                    <span className="text-[9px] font-bold text-amber-500 bg-white border border-amber-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+                      {gruposPendentes.amanha.length}
+                    </span>
+                    {isCollapsed.amanha ? <ChevronDown size={14} className="text-amber-400" /> : <ChevronUp size={14} className="text-amber-400" />}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {!isCollapsed.amanha && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: 'auto', opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }}
+                        className="flex flex-col gap-2.5 overflow-hidden"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {gruposPendentes.amanha.map((t) => (
+                            <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                              <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                       </motion.div>
-                    ))}
+                    )}
                   </AnimatePresence>
-                  {gruposPendentes.amanha.length === 0 && (
-                    <div className="text-center py-8 text-[9px] font-bold uppercase tracking-widest text-slate-300 border-2 border-dashed border-slate-200 rounded-lg bg-white/50">
-                      Livre
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* COLUNA 3: PRÓXIMOS */}
-              <div className="flex flex-col gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 min-h-[150px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 px-1 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500">📅 Próximos</span>
-                  <div className="h-px flex-1 bg-blue-200/50"></div>
-                  <span className="text-[9px] font-bold text-blue-500 bg-white border border-blue-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
-                    {gruposPendentes.proximos.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <AnimatePresence mode="popLayout">
-                    {gruposPendentes.proximos.map((t) => (
-                      <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                        <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+              {/* COLUNA 3: PRÓXIMOS (Só aparece se tiver itens) */}
+              {gruposPendentes.proximos.length > 0 && (
+                <div className="flex flex-col bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                  <div 
+                    onClick={() => toggleCol('proximos')}
+                    className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
+                    title="Ocultar/Mostrar Pedidos"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-blue-500">📅 Próximos</span>
+                    <div className="h-px flex-1 bg-blue-200/50 group-hover:bg-blue-300/50 transition-colors"></div>
+                    <span className="text-[9px] font-bold text-blue-500 bg-white border border-blue-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+                      {gruposPendentes.proximos.length}
+                    </span>
+                    {isCollapsed.proximos ? <ChevronDown size={14} className="text-blue-400" /> : <ChevronUp size={14} className="text-blue-400" />}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {!isCollapsed.proximos && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: 'auto', opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }}
+                        className="flex flex-col gap-2.5 overflow-hidden"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {gruposPendentes.proximos.map((t) => (
+                            <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                              <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                       </motion.div>
-                    ))}
+                    )}
                   </AnimatePresence>
-                  {gruposPendentes.proximos.length === 0 && (
-                    <div className="text-center py-8 text-[9px] font-bold uppercase tracking-widest text-slate-300 border-2 border-dashed border-slate-200 rounded-lg bg-white/50">
-                      Livre
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* COLUNA 4: AG. PAGAMENTO */}
-              <div className="flex flex-col gap-3 bg-orange-50/40 p-2.5 rounded-xl border border-orange-200/60 min-h-[150px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
-                <div className="flex items-center gap-2 px-1 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">⏳ Ag. Pagto</span>
-                  <div className="h-px flex-1 bg-orange-200/50"></div>
-                  <span className="text-[9px] font-bold text-orange-500 bg-white border border-orange-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
-                    {agPagamentoTasks?.length || 0}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <AnimatePresence mode="popLayout">
-                    {agPagamentoTasks?.map((t) => (
-                      <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                        <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+              {/* COLUNA 4: AG. PAGAMENTO (Só aparece se tiver itens) */}
+              {agPagamentoTasks?.length > 0 && (
+                <div className="flex flex-col bg-orange-50/40 p-2.5 rounded-xl border border-orange-200/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] h-fit">
+                  <div 
+                    onClick={() => toggleCol('agPagamento')}
+                    className="flex items-center gap-2 px-1 pb-1 mb-2 cursor-pointer group"
+                    title="Ocultar/Mostrar Pedidos"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">⏳ Ag. Pagto</span>
+                    <div className="h-px flex-1 bg-orange-200/50 group-hover:bg-orange-300/50 transition-colors"></div>
+                    <span className="text-[9px] font-bold text-orange-500 bg-white border border-orange-100 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+                      {agPagamentoTasks.length}
+                    </span>
+                    {isCollapsed.agPagamento ? <ChevronDown size={14} className="text-orange-400" /> : <ChevronUp size={14} className="text-orange-400" />}
+                  </div>
+                  
+                  <AnimatePresence>
+                    {!isCollapsed.agPagamento && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }} 
+                        animate={{ height: 'auto', opacity: 1 }} 
+                        exit={{ height: 0, opacity: 0 }}
+                        className="flex flex-col gap-2.5 overflow-hidden"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {agPagamentoTasks.map((t) => (
+                            <motion.div key={t.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                              <TaskItem task={t} onToggle={handleToggle} onUpdate={handleUpdate} onDelete={handleDelete} onEdit={handleEditOrder} />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                       </motion.div>
-                    ))}
+                    )}
                   </AnimatePresence>
-                  {agPagamentoTasks?.length === 0 && (
-                    <div className="text-center py-8 text-[9px] font-bold uppercase tracking-widest text-orange-300 border-2 border-dashed border-orange-200 rounded-lg bg-white/50">
-                      Livre
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
             </div>
           )}
