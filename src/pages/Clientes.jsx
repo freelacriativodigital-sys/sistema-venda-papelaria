@@ -88,7 +88,6 @@ export default function Clientes() {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  // Calcula o que o cliente mais pede
   const getMaisPedido = (clientTasks) => {
     if (clientTasks.length === 0) return 'Nenhum pedido';
     const contagem = {};
@@ -144,7 +143,6 @@ export default function Clientes() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 w-full pb-24 md:pb-20 relative">
       
-      {/* HEADER FIXO */}
       <div className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
           
@@ -246,7 +244,7 @@ export default function Clientes() {
                       </div>
                     </div>
 
-                    {/* Contato (Escondido em telas muito pequenas) */}
+                    {/* Contato */}
                     <div className="hidden sm:flex flex-col gap-1 w-full md:w-1/4">
                       {cliente.whatsapp && (
                         <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
@@ -260,7 +258,7 @@ export default function Clientes() {
                       )}
                     </div>
 
-                    {/* Valores Financeiros e Ações na mesma linha no Mobile */}
+                    {/* Valores Financeiros e Ações */}
                     <div className="flex items-center justify-between w-full md:w-auto gap-2">
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="flex flex-col bg-rose-50 px-2 py-0.5 rounded border border-rose-100 min-w-[60px] md:min-w-[80px] text-center md:text-left md:items-center md:justify-center">
@@ -273,7 +271,7 @@ export default function Clientes() {
                         </div>
                       </div>
 
-                      {/* Botões de Ação Rápida */}
+                      {/* Botões de Ação */}
                       <div className="flex items-center gap-1 shrink-0 justify-end">
                         {cliente.whatsapp ? (
                           <a href={`https://wa.me/55${(cliente.whatsapp || '').replace(/\D/g, '')}`} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
@@ -291,7 +289,7 @@ export default function Clientes() {
                     </div>
                   </div>
 
-                  {/* Resumo do Histórico - Informação visual para o cliente clicar */}
+                  {/* Resumo do Histórico */}
                   <div className="bg-slate-50/80 p-2 md:p-2.5 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-[9px] text-slate-500 group-hover:bg-blue-50/50 group-hover:border-blue-100 transition-colors">
                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                         <span><strong className="text-slate-700 uppercase">Último pedido:</strong> {ultimoPedidoData}</span>
@@ -356,11 +354,17 @@ export default function Clientes() {
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
                     <Input value={editingClient?.whatsapp || ''} onChange={e => setEditingClient(prev => ({...prev, whatsapp: e.target.value}))} className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" />
                   </div>
+                  {/* MAGIA DO CSS: Esconde o ícone nativo do navegador mas deixa toda a área clicável */}
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
                     <div className="relative">
                       <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                      <Input type="date" value={editingClient?.aniversario || ''} onChange={e => setEditingClient(prev => ({...prev, aniversario: e.target.value}))} className="h-9 pl-8 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600 w-full" />
+                      <Input 
+                        type="date" 
+                        value={editingClient?.aniversario || ''} 
+                        onChange={e => setEditingClient(prev => ({...prev, aniversario: e.target.value}))} 
+                        className="h-9 pl-8 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs text-slate-600 w-full relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer" 
+                      />
                     </div>
                   </div>
                 </div>
