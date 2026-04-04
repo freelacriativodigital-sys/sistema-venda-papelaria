@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Settings, Plus, Trash2, X, Loader2, Tag } from "lucide-react";
+import { Settings, Plus, Trash2, X, Loader2, Tag, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
@@ -9,6 +9,11 @@ import { AnimatePresence, motion } from "framer-motion";
 export default function SeletorCategoria({ contexto, value, onChange }) {
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [novaCategoria, setNovaCategoria] = useState('');
+  
+  // Estados para edição
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
   const queryClient = useQueryClient();
 
   const { data: categorias = [], isLoading } = useQuery({
@@ -31,15 +36,39 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
       const { error } = await supabase
         .from('categorias')
         .insert([{ nome: nome.trim(), contexto }]);
-      if (error) throw error; // Lança o erro para o onError capturar
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sistema-categorias', contexto] });
       setNovaCategoria('');
     },
-    // SE DER ERRO NO BANCO DE DADOS, AVISA NA TELA!
     onError: (error) => {
       alert(`Erro ao salvar no banco de dados: ${error.message}`);
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: async ({ id, novoNome }) => {
+      const { error } = await supabase
+        .from('categorias')
+        .update({ nome: novoNome.trim() })
+        .eq('id', id);
+      if (error) throw error;
+      return { id, novoNome: novoNome.trim() };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sistema-categorias', contexto] });
+      setEditingId(null);
+      setEditValue('');
+      
+      // Se a categoria editada for a que está atualmente selecionada, atualiza o valor do input!
+      const categoriaAntiga = categorias.find(c => c.id === data.id);
+      if (categoriaAntiga && value === categoriaAntiga.nome) {
+        onChange(data.novoNome);
+      }
+    },
+    onError: (error) => {
+      alert(`Erro ao editar categoria: ${error.message}`);
     }
   });
 
@@ -56,6 +85,16 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
   const handleAdd = () => {
     if (!novaCategoria.trim()) return;
     addMutation.mutate(novaCategoria);
+  };
+
+  const handleStartEdit = (cat) => {
+    setEditingId(cat.id);
+    setEditValue(cat.nome);
+  };
+
+  const handleSaveEdit = (id) => {
+    if (!editValue.trim()) return;
+    editMutation.mutate({ id, novoNome: editValue });
   };
 
   return (
@@ -130,13 +169,51 @@ export default function SeletorCategoria({ contexto, value, onChange }) {
                 ) : (
                   categorias.map(cat => (
                     <div key={cat.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-md hover:border-slate-200 transition-colors group">
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{cat.nome}</span>
-                      <button 
-                        onClick={() => { if(window.confirm("Apagar esta categoria?")) deleteMutation.mutate(cat.id); }}
-                        className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      
+                      {editingId === cat.id ? (
+                        <div className="flex items-center gap-2 w-full">
+                          <Input
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveEdit(cat.id)}
+                            autoFocus
+                            className="h-7 bg-white border-slate-200 text-xs font-bold text-slate-800 px-2"
+                          />
+                          <button
+                            onClick={() => handleSaveEdit(cat.id)}
+                            disabled={editMutation.isPending}
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded p-1.5 transition-colors"
+                          >
+                            {editMutation.isPending && editingId === cat.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded p-1.5 transition-colors"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{cat.nome}</span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => handleStartEdit(cat)}
+                              className="text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded p-1.5 transition-colors"
+                              title="Editar Categoria"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button 
+                              onClick={() => { if(window.confirm("Apagar esta categoria?")) deleteMutation.mutate(cat.id); }}
+                              className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded p-1.5 transition-colors"
+                              title="Excluir Categoria"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
