@@ -3,28 +3,43 @@ import { supabase } from "../lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, Search, Plus, MessageCircle, Trash2, Edit3, 
-  CheckCircle2, AlertCircle, X, Loader2, Save, Gift, 
+  CheckCircle2, AlertCircle, X, Loader2, Palette, Gift, Save, 
   ScrollText, ChevronRight, CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import SeletorData from "@/components/SeletorData"; // IMPORTANDO O NOVO COMPONENTE
+import SeletorData from "@/components/SeletorData";
 
-// Função global para formatar o telefone
-const formatPhoneInit = (val) => {
+// --- MÁSCARA INTELIGENTE DO WHATSAPP ---
+const formatWhatsApp = (val) => {
   if (!val) return '';
   let nums = val.replace(/\D/g, '');
-  // Verifica se a pessoa já digitou o 55 e possui mais de 11 dígitos no total
-  if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
+  
+  // Se já começa com 55 (Brasil) e tem tamanho suficiente para ser um número com DDD (12 ou 13 dígitos)
+  if (nums.startsWith('55') && nums.length >= 12) {
+    nums = nums.slice(2);
+  }
+  
+  // Limita a 11 dígitos no máximo (DDD + 9 dígitos)
+  if (nums.length > 11) nums = nums.slice(0, 11);
   if (nums.length === 0) return '';
   
   let formatted = '+55 ';
   if (nums.length > 0) formatted += nums.slice(0, 2);
   if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
   if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
+  
   return formatted;
+};
+
+// Corrige o link do wa.me para nunca duplicar o 55
+const getWhatsAppLink = (val) => {
+  if (!val) return '';
+  let nums = val.replace(/\D/g, '');
+  if (nums.startsWith('55') && nums.length >= 12) return nums;
+  return `55${nums}`;
 };
 
 export default function Clientes() {
@@ -166,20 +181,6 @@ export default function Clientes() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
-  // --- MÁSCARA INTELIGENTE DO WHATSAPP ---
-  const handleWhatsappEdit = (val) => {
-    if (!val) { setEditingClient(prev => ({...prev, whatsapp: ''})); return; }
-    let nums = val.replace(/\D/g, '');
-    if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
-    if (nums.length === 0) { setEditingClient(prev => ({...prev, whatsapp: ''})); return; }
-    
-    let formatted = '+55 ';
-    if (nums.length > 0) formatted += nums.slice(0, 2);
-    if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
-    if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
-    setEditingClient(prev => ({...prev, whatsapp: formatted}));
-  };
-
   const isLoading = isLoadingClientes || isLoadingTasks;
 
   return (
@@ -288,7 +289,7 @@ export default function Clientes() {
                     <div className="hidden sm:flex flex-col gap-1 w-full md:w-1/4">
                       {cliente.whatsapp && (
                         <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[10px]">
-                          <MessageCircle className="w-3 h-3 text-emerald-500" /> {cliente.whatsapp}
+                          <MessageCircle className="w-3 h-3 text-emerald-500" /> {formatWhatsApp(cliente.whatsapp)}
                         </div>
                       )}
                       {cliente.aniversario && (
@@ -312,7 +313,7 @@ export default function Clientes() {
 
                       <div className="flex items-center gap-1 shrink-0 justify-end">
                         {cliente.whatsapp ? (
-                          <a href={`https://wa.me/55${(cliente.whatsapp || '').replace(/\D/g, '')}`} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                          <a href={`https://wa.me/${getWhatsAppLink(cliente.whatsapp)}`} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer" className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-colors">
                             <MessageCircle size={14} />
                           </a>
                         ) : (
@@ -323,7 +324,7 @@ export default function Clientes() {
                         <div className="h-4 w-px bg-slate-200 mx-0.5 hidden sm:block"></div>
                         <button onClick={(e) => { 
                           e.stopPropagation(); 
-                          setEditingClient({...cliente, whatsapp: formatPhoneInit(cliente.whatsapp)}); 
+                          setEditingClient({...cliente, whatsapp: formatWhatsApp(cliente.whatsapp)}); 
                           setEditingClientTotals({pago: totalGastoReal, pendente: totalPendenteReal}); 
                           setIsModalOpen(true); 
                         }} className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit3 size={14} /></button>
@@ -395,15 +396,13 @@ export default function Clientes() {
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">WhatsApp</label>
                     <Input 
                       value={editingClient?.whatsapp || ''} 
-                      onChange={e => handleWhatsappEdit(e.target.value)} 
+                      onChange={e => setEditingClient(prev => ({...prev, whatsapp: formatWhatsApp(e.target.value)}))} 
                       placeholder="+55 85 98765-4321"
                       className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" 
                     />
                   </div>
-                  
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
-                    {/* NOVO SELETOR DE DATA APLICADO AQUI */}
                     <SeletorData 
                       value={editingClient?.aniversario || ''} 
                       onChange={val => setEditingClient(prev => ({...prev, aniversario: val}))} 
