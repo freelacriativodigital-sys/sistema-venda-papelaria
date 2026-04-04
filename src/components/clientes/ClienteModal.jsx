@@ -4,7 +4,29 @@ import { X, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "../../lib/supabase";
-import SeletorData from "@/components/SeletorData"; // IMPORTANDO O NOVO COMPONENTE
+import SeletorData from "@/components/SeletorData";
+
+// --- MÁSCARA INTELIGENTE DO WHATSAPP ---
+const formatWhatsApp = (val) => {
+  if (!val) return '';
+
+  let cleanVal = val.replace(/^\+?\s*55\s*/, '');
+  let nums = cleanVal.replace(/\D/g, '');
+
+  if (nums.length >= 12 && nums.startsWith('55')) {
+    nums = nums.slice(2);
+  }
+
+  if (nums.length > 11) nums = nums.slice(0, 11);
+  if (nums.length === 0) return '';
+
+  let formatted = '+55 ';
+  if (nums.length > 0) formatted += nums.slice(0, 2);
+  if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
+  if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
+
+  return formatted;
+};
 
 export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onSuccess }) {
   const [nome, setNome] = useState("");
@@ -14,7 +36,6 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
   const [pago, setPago] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Preenche o nome automaticamente se vier da tela de pedidos
   useEffect(() => {
     if (isOpen) {
       setNome(clienteInicial);
@@ -49,20 +70,6 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
     }
   };
 
-  // --- MÁSCARA INTELIGENTE DO WHATSAPP ---
-  const handleWhatsappEdit = (val) => {
-    if (!val) { setWhatsapp(''); return; }
-    let nums = val.replace(/\D/g, '');
-    if (nums.startsWith('55') && nums.length >= 12) nums = nums.slice(2);
-    if (nums.length === 0) { setWhatsapp(''); return; }
-    
-    let formatted = '+55 ';
-    if (nums.length > 0) formatted += nums.slice(0, 2);
-    if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
-    if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
-    setWhatsapp(formatted);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -94,14 +101,13 @@ export default function ClienteModal({ isOpen, onClose, clienteInicial = "", onS
                 <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">WhatsApp</label>
                 <Input 
                   value={whatsapp} 
-                  onChange={e => handleWhatsappEdit(e.target.value)} 
+                  onChange={e => setWhatsapp(formatWhatsApp(e.target.value))} 
                   placeholder="+55 85 98765-4321"
                   className="h-9 text-xs font-medium" 
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Aniversário</label>
-                {/* NOVO SELETOR DE DATA APLICADO AQUI */}
                 <SeletorData 
                   value={aniversario} 
                   onChange={val => setAniversario(val)} 

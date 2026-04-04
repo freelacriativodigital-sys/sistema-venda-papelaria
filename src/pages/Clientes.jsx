@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, Search, Plus, MessageCircle, Trash2, Edit3, 
   CheckCircle2, AlertCircle, X, Loader2, Palette, Gift, Save, 
-  ScrollText, ChevronRight, CalendarDays
+  ScrollText, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,26 +15,32 @@ import SeletorData from "@/components/SeletorData";
 // --- MÁSCARA INTELIGENTE DO WHATSAPP ---
 const formatWhatsApp = (val) => {
   if (!val) return '';
-  let nums = val.replace(/\D/g, '');
-  
-  // Se já começa com 55 (Brasil) e tem tamanho suficiente para ser um número com DDD (12 ou 13 dígitos)
-  if (nums.startsWith('55') && nums.length >= 12) {
+
+  // Remove o prefixo +55 ou 55 inicial (se houver) para evitar duplicação no loop
+  let cleanVal = val.replace(/^\+?\s*55\s*/, '');
+
+  // Extrai apenas os números
+  let nums = cleanVal.replace(/\D/g, '');
+
+  // Caso o usuário cole um número que comece com 55 (ex: 5585991928470) sem o sinal de +
+  // DDI 55 + 10 ou 11 dígitos = 12 ou 13 dígitos
+  if (nums.length >= 12 && nums.startsWith('55')) {
     nums = nums.slice(2);
   }
-  
+
   // Limita a 11 dígitos no máximo (DDD + 9 dígitos)
   if (nums.length > 11) nums = nums.slice(0, 11);
   if (nums.length === 0) return '';
-  
+
   let formatted = '+55 ';
   if (nums.length > 0) formatted += nums.slice(0, 2);
   if (nums.length > 2) formatted += ' ' + nums.slice(2, 7);
   if (nums.length > 7) formatted += '-' + nums.slice(7, 11);
-  
+
   return formatted;
 };
 
-// Corrige o link do wa.me para nunca duplicar o 55
+// Formata para o link do WhatsApp (wa.me)
 const getWhatsAppLink = (val) => {
   if (!val) return '';
   let nums = val.replace(/\D/g, '');
@@ -401,6 +407,7 @@ export default function Clientes() {
                       className="h-9 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-xs" 
                     />
                   </div>
+                  
                   <div className="space-y-1">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Aniversário</label>
                     <SeletorData 
