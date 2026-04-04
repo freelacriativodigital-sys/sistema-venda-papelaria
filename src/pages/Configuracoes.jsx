@@ -3,7 +3,7 @@ import { Building2, MessageSquare, Wallet, ShieldCheck, Loader2, Save, Check } f
 import { Button } from "@/components/ui/button";
 import { supabase } from "../lib/supabase";
 
-// Vamos importar as abas que criaremos nos próximos passos
+// Importações dos componentes das abas (que criaremos depois)
 import TabEmpresa from '../components/Configuracoes/TabEmpresa';
 import TabAtendimento from '../components/Configuracoes/TabAtendimento';
 import TabOperacao from '../components/Configuracoes/TabOperacao';
@@ -48,64 +48,63 @@ export default function Configuracoes() {
   };
 
   const tabs = [
-    { id: 'empresa', label: 'Dados da Empresa', icon: Building2, desc: 'Logo, nome e endereço' },
-    { id: 'atendimento', label: 'Atendimento & Redes', icon: MessageSquare, desc: 'WhatsApp e mídias sociais' },
-    { id: 'operacao', label: 'Regras de Venda', icon: Wallet, desc: 'PIX e pedidos' },
-    { id: 'seguranca', label: 'Segurança', icon: ShieldCheck, desc: 'Acesso da conta' }
+    { id: 'empresa', label: 'Empresa', icon: Building2, desc: 'Logo e endereço' },
+    { id: 'atendimento', label: 'Contato', icon: MessageSquare, desc: 'Redes e WhatsApp' },
+    { id: 'operacao', label: 'Vendas', icon: Wallet, desc: 'PIX e regras' },
+    { id: 'seguranca', label: 'Acesso', icon: ShieldCheck, desc: 'Senhas' }
   ];
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-slate-50">
-        <Loader2 className="animate-spin text-slate-300" size={48} />
+      <div className="flex h-full min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-blue-600" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto w-full pb-20 md:pb-10">
-      
-      {/* HEADER DA PÁGINA */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Configurações Gerais</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">Gerencie os dados centrais, redes sociais e regras do seu negócio.</p>
-        </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-widest text-[11px] px-8 shadow-md transition-all flex items-center gap-2"
-        >
-          {saving ? <Loader2 size={16} className="animate-spin" /> : (saved ? <Check size={16} className="text-emerald-400" /> : <Save size={16} />)}
-          {saved ? "Salvo com sucesso!" : "Salvar Alterações"}
-        </Button>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-8">
+    <div className="min-h-screen bg-slate-50 pb-24 md:pb-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 animate-in fade-in">
         
-        {/* NAVEGAÇÃO DAS ABAS (MOBILE E DESKTOP) */}
-        <div className="w-full md:w-72 shrink-0">
-          <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 no-scrollbar snap-x">
+        {/* HEADER DA PÁGINA (COMPACTO) */}
+        <div className="flex items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-3">
+          <div>
+            <h1 className="text-sm md:text-lg font-semibold text-slate-800 uppercase tracking-tight">Configurações Gerais</h1>
+            <p className="text-[9px] font-medium text-slate-500 uppercase tracking-widest mt-0.5">Gerencie os dados do seu negócio</p>
+          </div>
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            className="h-8 md:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold uppercase tracking-widest text-[9px] px-4 md:px-6 shadow-sm transition-all flex items-center gap-1.5"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : (saved ? <Check size={14} className="text-white" /> : <Save size={14} />)}
+            <span className="hidden md:inline">{saved ? "Salvo com sucesso" : "Salvar Alterações"}</span>
+            <span className="md:hidden">{saved ? "Salvo" : "Salvar"}</span>
+          </Button>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          
+          {/* NAVEGAÇÃO DESKTOP (SIDEBAR VERTICAL) */}
+          <div className="hidden md:flex flex-col w-48 shrink-0 space-y-1">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-start gap-4 p-4 rounded-2xl transition-all text-left snap-start shrink-0 w-[240px] md:w-full border ${
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all text-left w-full border ${
                     isActive 
-                      ? 'bg-white border-slate-200 shadow-sm' 
-                      : 'bg-transparent border-transparent hover:bg-slate-200/50'
+                      ? 'bg-white border-slate-200 shadow-sm text-blue-600' 
+                      : 'bg-transparent border-transparent hover:bg-slate-200/50 text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  <div className={`p-2.5 rounded-xl shrink-0 ${isActive ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
-                    <tab.icon size={20} />
-                  </div>
+                  <tab.icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
                   <div className="flex flex-col">
-                    <span className={`text-sm font-bold ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">
                       {tab.label}
                     </span>
-                    <span className="text-[11px] font-medium text-slate-400 mt-0.5">
+                    <span className="text-[9px] font-medium text-slate-400">
                       {tab.desc}
                     </span>
                   </div>
@@ -113,25 +112,50 @@ export default function Configuracoes() {
               )
             })}
           </div>
-        </div>
 
-        {/* ÁREA DE CONTEÚDO (ONDE AS ABAS VÃO APARECER) */}
-        <div className="flex-1 min-w-0 bg-white border border-slate-200 rounded-3xl p-6 md:p-10 shadow-sm">
-           {/* Deixei comentado temporariamente até criarmos os arquivos nos próximos passos */}
-           
-          {activeTab === 'empresa' && <TabEmpresa st={st} setSt={setSt} />}
-          {activeTab === 'atendimento' && <TabAtendimento st={st} setSt={setSt} />}
-          {activeTab === 'operacao' && <TabOperacao st={st} setSt={setSt} />}
-          {activeTab === 'seguranca' && <TabSeguranca />}
-           
-           <div className="h-40 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl">
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                Aba "{activeTab}" selecionada (Conteúdo em construção)
-              </p>
-           </div>
+          {/* ÁREA DE CONTEÚDO */}
+          <div className="flex-1 w-full bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm min-h-[400px]">
+             
+            {activeTab === 'empresa' && <TabEmpresa st={st} setSt={setSt} />}
+            {activeTab === 'atendimento' && <TabAtendimento st={st} setSt={setSt} />}
+            {activeTab === 'operacao' && <TabOperacao st={st} setSt={setSt} />}
+            {activeTab === 'seguranca' && <TabSeguranca />}
+             
+             {/* PLACEHOLDER TEMPORÁRIO (Caso os componentes acima não existam ainda) */}
+             <div className="h-32 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg bg-slate-50 mt-4">
+                <Settings2 className="w-6 h-6 text-slate-300 mb-2" />
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                  Aba {activeTab} em construção
+                </p>
+             </div>
+          </div>
         </div>
-
       </div>
+
+      {/* BOTTOM NAVIGATION (MOBILE FIXO NA BASE) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-around items-center px-2 py-2 z-[90] shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center justify-center gap-1 w-full py-2 px-1 rounded-md transition-colors ${
+                isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <tab.icon size={18} className={`transition-transform ${isActive ? 'scale-110' : ''}`} />
+              <span className={`text-[8px] uppercase tracking-widest whitespace-nowrap ${isActive ? 'font-bold' : 'font-semibold'}`}>
+                {tab.label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
     </div>
   );
 }
+
+// Ícone usado no placeholder
+import { Settings2 } from 'lucide-react';
