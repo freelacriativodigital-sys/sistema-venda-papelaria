@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 
+// IMPORTANDO OS NOSSOS MÓDULOS PADRÃO
+import SeletorData from "@/components/SeletorData";
+import SeletorCategoria from "@/components/SeletorCategoria";
+
 export default function Despesas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('pendentes'); // 'todas', 'pendentes', 'pagas'
@@ -117,7 +121,7 @@ export default function Despesas() {
       valor: '',
       valor_pago: 0,
       vencimento: new Date().toISOString().split('T')[0],
-      categoria: 'Insumos',
+      categoria: '',
       status: 'pendente'
     });
     setIsFormOpen(true);
@@ -465,31 +469,23 @@ export default function Despesas() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Vencimento</label>
-                    <Input 
-                      type="date" 
+                    {/* AQUI ESTÁ O NOVO SELETOR DE DATA */}
+                    <SeletorData 
                       value={editingExpense?.vencimento || ''} 
-                      onChange={e => setEditingExpense({...editingExpense, vencimento: e.target.value})} 
-                      className="h-10 border-slate-200 bg-slate-50 focus:bg-white rounded-md font-medium text-slate-800 text-sm" 
+                      onChange={val => setEditingExpense({...editingExpense, vencimento: val})} 
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 relative">
                     <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
-                    <select 
-                      value={editingExpense?.categoria || 'Insumos'} 
-                      onChange={e => setEditingExpense({...editingExpense, categoria: e.target.value})}
-                      className="w-full h-10 border border-slate-200 rounded-md px-3 text-[10px] font-semibold uppercase tracking-widest outline-none bg-slate-50 focus:bg-white text-slate-700"
-                    >
-                      <option value="Fornecedores">Fornecedores</option>
-                      <option value="Insumos">Insumos</option>
-                      <option value="Aluguel">Aluguel / Fixo</option>
-                      <option value="Impostos">Impostos</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Ferramentas">Sistemas / Ferramentas</option>
-                      <option value="Outros">Outros</option>
-                    </select>
+                    {/* AQUI ESTÁ O NOVO SELETOR DE CATEGORIA LIGADO AO BANCO */}
+                    <SeletorCategoria 
+                      contexto="despesa" 
+                      value={editingExpense?.categoria || ''} 
+                      onChange={val => setEditingExpense({...editingExpense, categoria: val})} 
+                    />
                   </div>
                   
                   <div className="space-y-1.5">
