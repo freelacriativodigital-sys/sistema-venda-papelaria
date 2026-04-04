@@ -483,7 +483,7 @@ export default function Assinantes() {
                     onClick={() => setModalStep(prev => prev + 1)} 
                     className="font-bold uppercase text-[10px] tracking-widest w-32 bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    Próximo <ChevronRight className=\"w-4 h-4 ml-1\" />
+                    Próximo <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 ) : (
                   <Button 
