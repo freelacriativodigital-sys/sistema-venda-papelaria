@@ -121,6 +121,33 @@ export default function LinkBio({ isPublic = false }) {
     loadData();
   }, []);
 
+  // === RADAR INTELIGENTE DE IFRAME ===
+  // Verifica constantemente se o usuário clicou em um produto dentro do catálogo
+  useEffect(() => {
+    let intervalId;
+    if (activeTab === 'catalogo') {
+      intervalId = setInterval(() => {
+        try {
+          const iframe = document.getElementById('iframe-catalogo');
+          if (iframe && iframe.contentWindow) {
+            const url = iframe.contentWindow.location.href;
+            if (url.includes('?produto=')) {
+              if (isPublic) {
+                // Tira o cliente da Bio e joga ele na tela oficial do Produto
+                window.top.location.href = url;
+              }
+            }
+          }
+        } catch (err) {
+          // Ignora erros de cross-origin silenciosamente
+        }
+      }, 500); // Checa a cada meio segundo
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeTab, isPublic]);
+
   const handleSave = async () => {
     const { error } = await supabase.from('bio_config').update(config).eq('id', 1);
     if (!error) {
@@ -215,12 +242,12 @@ export default function LinkBio({ isPublic = false }) {
   const LivePreview = () => {
     const isCatalogo = activeTab === 'catalogo';
 
-    // === COMPONENTE DA BARRA DE NAVEGAÇÃO REUTILIZÁVEL ===
+    // === COMPONENTE DA BARRA DE NAVEGAÇÃO ===
     const BottomNavBar = () => {
       if (!config.mostrar_loja) return null;
       return (
         <div 
-          className={`z-[90] flex justify-around items-center px-4 py-2 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-safe md:rounded-full md:bottom-6 md:w-[320px] md:left-1/2 md:-translate-x-1/2 ${isPublic ? 'fixed bottom-0 inset-x-0' : 'absolute bottom-0 inset-x-0 lg:rounded-b-[2rem] lg:w-full lg:left-0 lg:translate-x-0 lg:bottom-0'}`} 
+          className={`z-[90] flex justify-around items-center px-4 py-2 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-safe md:rounded-full md:bottom-6 md:w-[320px] md:left-1/2 md:-translate-x-1/2 ${isPublic ? 'fixed bottom-0 inset-x-0' : 'absolute bottom-0 inset-x-0 lg:rounded-b-[2.5rem] lg:w-full lg:left-0 lg:translate-x-0 lg:bottom-0'}`} 
           style={{ backgroundColor: `${config.cor_fundo}FA`, borderTop: `1px solid ${config.cor_texto}15` }}
         >
           <button
@@ -250,7 +277,6 @@ export default function LinkBio({ isPublic = false }) {
       );
     };
 
-    // === MODO TELA CHEIA (CATÁLOGO OCUDA TUDO, A BIO SOME) ===
     if (isCatalogo) {
       return (
         <div className={`flex flex-col animate-in fade-in duration-300 bg-slate-50 ${isPublic ? 'fixed inset-0 z-50' : 'absolute inset-0 z-50 lg:rounded-[2.5rem] overflow-hidden'}`}>
@@ -260,17 +286,15 @@ export default function LinkBio({ isPublic = false }) {
           </div>
 
           <iframe 
+             id="iframe-catalogo"
              src="/vitrine" 
              className="w-full h-full absolute inset-0 z-10 bg-transparent border-0"
              title="Catálogo Integrado"
              onLoad={(e) => {
                try {
                  const iframeUrl = e.target.contentWindow.location.href;
-                 // MÁGICA: Se clicou num produto, o iframe "estoura" e o site carrega na aba principal!
-                 if (iframeUrl.includes('?produto=')) {
-                   if (isPublic) {
-                     window.top.location.href = iframeUrl;
-                   }
+                 if (iframeUrl.includes('?produto=') && isPublic) {
+                   window.top.location.href = iframeUrl;
                  }
                } catch (err) {}
              }}
@@ -285,7 +309,8 @@ export default function LinkBio({ isPublic = false }) {
     return (
       <div className={`w-full flex flex-col items-center transition-colors duration-500 bg-slate-100 ${isPublic ? 'min-h-screen overflow-x-hidden lg:py-10' : 'h-full overflow-y-auto'}`}>
         
-        <div className={`w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl overflow-hidden pb-28 lg:pb-24 ${isPublic ? 'lg:max-w-[420px] min-h-screen lg:min-h-[800px] lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800' : 'lg:max-w-full min-h-full lg:rounded-[2.5rem]'}`} style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
+        {/* Removemos o pb-28 do wrapper principal, a margem de fundo agora é dada pela Logo Organize */}
+        <div className={`w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl overflow-hidden ${isPublic ? 'lg:max-w-[420px] min-h-screen lg:min-h-[800px] lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800' : 'lg:max-w-full min-h-full lg:rounded-[2.5rem]'}`} style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
           
           <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
              {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
@@ -334,13 +359,13 @@ export default function LinkBio({ isPublic = false }) {
              </div>
           </div>
 
-          {/* === LOGO ORGANIZE: FIXADA NA BASE DOS LINKS === */}
-          <div className="mt-auto pt-10 pb-28 opacity-40 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 w-full">
-             <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: config.cor_texto }}>Tecnologia</span>
+          {/* === LOGO ORGANIZE: FIXADA E ANCORADA NO FUNDO COM PADDING CORRETO === */}
+          <div className="mt-auto pt-16 pb-32 md:pb-24 opacity-50 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 w-full">
+             <span className="text-[8px] font-bold uppercase tracking-[0.2em]" style={{ color: config.cor_texto }}>Tecnologia</span>
              <img 
                 src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
                 alt="Organize" 
-                className="h-3.5 object-contain grayscale transition-all duration-300 hover:grayscale-0" 
+                className="h-5 md:h-6 object-contain grayscale transition-all duration-300 hover:grayscale-0" 
              />
           </div>
 
