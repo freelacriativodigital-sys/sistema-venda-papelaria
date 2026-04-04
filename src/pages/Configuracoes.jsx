@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, MessageSquare, Wallet, ShieldCheck, Loader2, Save, Check } from "lucide-react";
+import { Building2, MessageSquare, Wallet, ShieldCheck, Loader2, Save, Check, Megaphone, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "../lib/supabase";
 
-// Importações dos componentes das abas (que criaremos depois)
+// Importações dos componentes das abas
 import TabEmpresa from '../components/Configuracoes/TabEmpresa';
 import TabAtendimento from '../components/Configuracoes/TabAtendimento';
 import TabOperacao from '../components/Configuracoes/TabOperacao';
 import TabSeguranca from '../components/Configuracoes/TabSeguranca';
+import TabMarketing from '../components/Configuracoes/TabMarketing'; // NOSSA NOVA ABA
 
 export default function Configuracoes() {
   const [activeTab, setActiveTab] = useState('empresa');
@@ -51,6 +52,7 @@ export default function Configuracoes() {
     { id: 'empresa', label: 'Empresa', icon: Building2, desc: 'Logo e endereço' },
     { id: 'atendimento', label: 'Contato', icon: MessageSquare, desc: 'Redes e WhatsApp' },
     { id: 'operacao', label: 'Vendas', icon: Wallet, desc: 'PIX e regras' },
+    { id: 'marketing', label: 'Marketing', icon: Megaphone, desc: 'Pixel e SEO' },
     { id: 'seguranca', label: 'Acesso', icon: ShieldCheck, desc: 'Senhas' }
   ];
 
@@ -116,18 +118,20 @@ export default function Configuracoes() {
           {/* ÁREA DE CONTEÚDO */}
           <div className="flex-1 w-full bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm min-h-[400px]">
              
-            {activeTab === 'empresa' && <TabEmpresa st={st} setSt={setSt} />}
-            {activeTab === 'atendimento' && <TabAtendimento st={st} setSt={setSt} />}
-            {activeTab === 'operacao' && <TabOperacao st={st} setSt={setSt} />}
-            {activeTab === 'seguranca' && <TabSeguranca />}
+            {activeTab === 'empresa' && TabEmpresa && <TabEmpresa st={st} setSt={setSt} />}
+            {activeTab === 'atendimento' && TabAtendimento && <TabAtendimento st={st} setSt={setSt} />}
+            {activeTab === 'operacao' && TabOperacao && <TabOperacao st={st} setSt={setSt} />}
+            {activeTab === 'marketing' && <TabMarketing st={st} setSt={setSt} />}
+            {activeTab === 'seguranca' && TabSeguranca && <TabSeguranca />}
              
-             {/* PLACEHOLDER TEMPORÁRIO (Caso os componentes acima não existam ainda) */}
-             <div className="h-32 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg bg-slate-50 mt-4">
-                <Settings2 className="w-6 h-6 text-slate-300 mb-2" />
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                  Aba {activeTab} em construção
-                </p>
-             </div>
+             {!['empresa', 'atendimento', 'operacao', 'marketing', 'seguranca'].includes(activeTab) && (
+               <div className="h-32 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-lg bg-slate-50 mt-4">
+                  <Settings2 className="w-6 h-6 text-slate-300 mb-2" />
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    Aba {activeTab} em construção
+                  </p>
+               </div>
+             )}
           </div>
         </div>
       </div>
@@ -156,6 +160,3 @@ export default function Configuracoes() {
     </div>
   );
 }
-
-// Ícone usado no placeholder
-import { Settings2 } from 'lucide-react';

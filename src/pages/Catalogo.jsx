@@ -74,6 +74,44 @@ export default function Catalogo({ isPublic = false }) {
     fetchData();
   }, []);
 
+  // --- NOVA LÓGICA: SEO (GOOGLE) & META PIXEL ---
+  useEffect(() => {
+    if (st) {
+      // 1. Controle do Google (SEO)
+      let metaRobots = document.getElementById('seo-robots');
+      if (!metaRobots) {
+        metaRobots = document.createElement('meta');
+        metaRobots.name = 'robots';
+        metaRobots.id = 'seo-robots';
+        document.head.appendChild(metaRobots);
+      }
+
+      // Só indexa se o utilizador permitiu E se for a visualização pública (Vitrine)
+      if (st.indexar_google !== false && isPublic) {
+        metaRobots.setAttribute("content", "index, follow");
+      } else {
+        metaRobots.setAttribute("content", "noindex, nofollow");
+      }
+
+      // 2. Meta Pixel
+      // Injeta o script apenas se houver um ID, se for a visão pública e se ainda não foi carregado
+      if (st.meta_pixel_id && isPublic && !window.fbq) {
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        
+        window.fbq('init', st.meta_pixel_id);
+        window.fbq('track', 'PageView');
+      }
+    }
+  }, [st, isPublic]);
+  // ----------------------------------------------
+
   const displayCategories = useMemo(() => {
     if (categoriasRaw.length === 0) return [];
     let orderedCats = [...categoriasRaw];
@@ -119,6 +157,17 @@ export default function Catalogo({ isPublic = false }) {
     params.set('produto', prod.id);
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Dispara evento no Meta Pixel (se existir) para rastrear qual produto foi visto
+    if (st?.meta_pixel_id && isPublic && window.fbq) {
+      window.fbq('track', 'ViewContent', {
+        content_name: prod.nome,
+        content_ids: [prod.id],
+        content_type: 'product',
+        value: prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco,
+        currency: 'BRL'
+      });
+    }
   };
 
   const voltarParaGrid = () => {
@@ -286,6 +335,15 @@ export default function Catalogo({ isPublic = false }) {
     dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
     zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
 
+    // Dispara evento no Meta Pixel (se configurado) para a compra finalizada (InitiateCheckout)
+    if (st?.meta_pixel_id && isPublic && window.fbq) {
+      window.fbq('track', 'InitiateCheckout', {
+        value: totalGeral,
+        currency: 'BRL',
+        num_items: carrinho.length
+      });
+    }
+
     supabase.from('pedidos').insert([{
        title: `Catálogo: Pedido de ${carrinho.length} item(s)`,
        description: dbDesc,
@@ -370,6 +428,17 @@ export default function Catalogo({ isPublic = false }) {
           respostasPersonalizadas,
           activeImage
         };
+
+        // Dispara evento no Meta Pixel para adição ao carrinho
+        if (st?.meta_pixel_id && isPublic && window.fbq) {
+          window.fbq('track', 'AddToCart', {
+            content_name: selectedProduct.nome,
+            content_ids: [selectedProduct.id],
+            content_type: 'product',
+            value: precoTotal,
+            currency: 'BRL'
+          });
+        }
 
         setCarrinho(prev => [...prev, novoItem]);
         setIsCartOpen(true); 
