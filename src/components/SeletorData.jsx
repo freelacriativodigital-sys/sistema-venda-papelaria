@@ -1,7 +1,7 @@
 import React from 'react';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,11 @@ export default function SeletorData({
   onChange, 
   className = ""
 }) {
-  // Converte a string 'YYYY-MM-DD' que vem do banco para uma Data real do React
   const dataFormatada = value ? parseISO(value) : undefined;
 
   const handleSelect = (date) => {
     if (date) {
-      onChange(format(date, 'yyyy-MM-dd')); // Devolve pro formulário no formato do Banco
+      onChange(format(date, 'yyyy-MM-dd')); 
     } else {
       onChange('');
     }
@@ -26,24 +25,23 @@ export default function SeletorData({
   return (
     <div className={`space-y-1.5 w-full flex flex-col ${className}`}>
       {label && (
-        <label className="text-[9px] font-bold uppercase text-slate-500 tracking-widest ml-1">
+        <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">
           {label}
         </label>
       )}
-      {/* A MÁGICA ESTÁ AQUI: modal={true} impede que ele voe pela tela */}
       <Popover modal={true}>
         <PopoverTrigger asChild>
+          {/* CSS PADRONIZADO PARA FICAR IGUAL AOS OUTROS SELETORES */}
           <Button
             variant={"outline"}
             type="button"
-            className={`h-10 w-full justify-between rounded-md border border-slate-200 bg-white px-3 text-xs font-bold uppercase transition-colors hover:bg-slate-50 focus:ring-2 focus:ring-slate-400 focus:border-transparent ${!dataFormatada ? "text-slate-400" : "text-slate-600"}`}
+            className={`h-10 w-full justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-[10px] font-semibold uppercase tracking-widest transition-colors hover:bg-white focus:bg-white focus:border-blue-400 focus:ring-0 ${!dataFormatada ? "text-slate-400" : "text-slate-700"}`}
           >
             {dataFormatada ? format(dataFormatada, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar Data"}
             <CalendarDays className="h-4 w-4 text-slate-400 shrink-0" />
           </Button>
         </PopoverTrigger>
         
-        {/* sideOffset e align travam ele grudado no botão */}
         <PopoverContent 
           className="w-auto p-0 rounded-xl border border-slate-200 shadow-2xl" 
           align="start" 
@@ -51,13 +49,20 @@ export default function SeletorData({
           sideOffset={4}
           style={{ zIndex: 99999 }}
         >
+          <div className="flex justify-between items-center p-2.5 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-2">Calendário</span>
+            <PopoverTrigger asChild>
+               <button className="p-1 hover:bg-slate-200 rounded text-slate-400 transition-colors"><X size={14}/></button>
+            </PopoverTrigger>
+          </div>
+
           <Calendar
             mode="single"
             selected={dataFormatada}
             onSelect={handleSelect}
             locale={ptBR}
             initialFocus
-            className="p-3 bg-white rounded-xl"
+            className="p-3 bg-white rounded-b-xl"
             classNames={{
               head_cell: "text-slate-500 rounded-md w-9 font-normal text-[11px] uppercase tracking-wider",
               cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected])]:bg-slate-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",

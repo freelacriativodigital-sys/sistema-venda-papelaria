@@ -102,10 +102,10 @@ export default function EditTaskModal({ task, onClose, onSave }) {
                   className="w-full"
                 />
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest ml-1">Prioridade</label>
+                <div className="space-y-1.5 w-full">
+                  <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
                   <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                    <SelectTrigger className="h-10 text-xs font-bold uppercase bg-white border-slate-200 rounded-md data-[placeholder]:text-slate-400">
+                    <SelectTrigger className="h-10 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white focus:ring-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -118,8 +118,8 @@ export default function EditTaskModal({ task, onClose, onSave }) {
                 </div>
                 
                 {/* MÓDULO CENTRAL DE CATEGORIA */}
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <label className="text-[10px] font-bold text-slate-500 mb-1.5 block uppercase tracking-widest ml-1">Categoria</label>
+                <div className="space-y-1.5 w-full">
+                  <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
                   <SeletorCategoria 
                     contexto="pedido" 
                     value={form.category} 

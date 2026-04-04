@@ -202,10 +202,10 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 className="w-full"
               />
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-full">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
                 <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                  <SelectTrigger className="h-10 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                  <SelectTrigger className="h-10 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ zIndex: 9999 }}>
@@ -218,7 +218,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
               </div>
 
               {/* MÓDULO CENTRAL DE CATEGORIA */}
-              <div className="space-y-1.5 flex flex-col justify-end">
+              <div className="space-y-1.5 w-full">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
                 <SeletorCategoria 
                   contexto="pedido" 
