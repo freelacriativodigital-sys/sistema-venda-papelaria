@@ -94,7 +94,7 @@ export default function LinkBio({ isPublic = false }) {
   const [saved, setSaved] = useState(false);
   const [isUploadingGlobal, setIsUploadingGlobal] = useState(false);
   const [openSection, setOpenSection] = useState('');
-  const [activeTab, setActiveTab] = useState('links'); // 'links' | 'catalogo'
+  const [activeTab, setActiveTab] = useState('links'); 
 
   useEffect(() => {
     async function loadData() {
@@ -215,141 +215,136 @@ export default function LinkBio({ isPublic = false }) {
   const LivePreview = () => {
     const isCatalogo = activeTab === 'catalogo';
 
+    // === COMPONENTE DA BARRA DE NAVEGAÇÃO REUTILIZÁVEL ===
+    const BottomNavBar = () => {
+      if (!config.mostrar_loja) return null;
+      return (
+        <div 
+          className={`z-[90] flex justify-around items-center px-4 py-2 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] pb-safe md:rounded-full md:bottom-6 md:w-[320px] md:left-1/2 md:-translate-x-1/2 ${isPublic ? 'fixed bottom-0 inset-x-0' : 'absolute bottom-0 inset-x-0 lg:rounded-b-[2rem] lg:w-full lg:left-0 lg:translate-x-0 lg:bottom-0'}`} 
+          style={{ backgroundColor: `${config.cor_fundo}FA`, borderTop: `1px solid ${config.cor_texto}15` }}
+        >
+          <button
+            onClick={() => setActiveTab('links')}
+            className="flex flex-col md:flex-row items-center justify-center gap-1.5 w-24 md:w-auto md:px-4 py-1.5 transition-all relative group"
+            style={{ color: activeTab === 'links' ? config.cor_botoes : `${config.cor_texto}70` }}
+          >
+            {activeTab === 'links' && <div className="absolute -top-3 md:-top-1.5 w-10 md:w-full h-1 md:h-0.5 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
+            <LinkIcon size={20} className={`transition-transform duration-300 ${activeTab === 'links' ? '-translate-y-1' : ''}`} />
+            <span className={`text-[8px] md:text-[10px] uppercase tracking-widest ${activeTab === 'links' ? 'font-black' : 'font-semibold'}`}>
+              LINKS
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('catalogo')}
+            className="flex flex-col md:flex-row items-center justify-center gap-1.5 w-24 md:w-auto md:px-4 py-1.5 transition-all relative group"
+            style={{ color: activeTab === 'catalogo' ? config.cor_botoes : `${config.cor_texto}70` }}
+          >
+            {activeTab === 'catalogo' && <div className="absolute -top-3 md:-top-1.5 w-10 md:w-full h-1 md:h-0.5 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
+            <LayoutGrid size={20} className={`transition-transform duration-300 ${activeTab === 'catalogo' ? '-translate-y-1' : ''}`} />
+            <span className={`text-[8px] md:text-[10px] uppercase tracking-widest ${activeTab === 'catalogo' ? 'font-black' : 'font-semibold'}`}>
+              CATÁLOGO
+            </span>
+          </button>
+        </div>
+      );
+    };
+
+    // === MODO TELA CHEIA (CATÁLOGO OCUDA TUDO, A BIO SOME) ===
+    if (isCatalogo) {
+      return (
+        <div className={`flex flex-col animate-in fade-in duration-300 bg-slate-50 ${isPublic ? 'fixed inset-0 z-50' : 'absolute inset-0 z-50 lg:rounded-[2.5rem] overflow-hidden'}`}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 z-0">
+             <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+             <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Carregando Site...</span>
+          </div>
+
+          <iframe 
+             src="/vitrine" 
+             className="w-full h-full absolute inset-0 z-10 bg-transparent border-0"
+             title="Catálogo Integrado"
+             onLoad={(e) => {
+               try {
+                 const iframeUrl = e.target.contentWindow.location.href;
+                 // MÁGICA: Se clicou num produto, o iframe "estoura" e o site carrega na aba principal!
+                 if (iframeUrl.includes('?produto=')) {
+                   if (isPublic) {
+                     window.top.location.href = iframeUrl;
+                   }
+                 }
+               } catch (err) {}
+             }}
+          />
+
+          <BottomNavBar />
+        </div>
+      );
+    }
+
+    // === MODO NORMAL (BIO E LINKS) ===
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-start transition-colors duration-500 overflow-x-hidden bg-slate-100 lg:py-10">
+      <div className={`w-full flex flex-col items-center transition-colors duration-500 bg-slate-100 ${isPublic ? 'min-h-screen overflow-x-hidden lg:py-10' : 'h-full overflow-y-auto'}`}>
         
-        <div className={`w-full lg:max-w-[420px] flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl min-h-screen lg:min-h-[800px] lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800 overflow-hidden ${isCatalogo ? '' : 'pb-28 lg:pb-10'}`} style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
+        <div className={`w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 relative bg-white shadow-2xl overflow-hidden pb-28 lg:pb-24 ${isPublic ? 'lg:max-w-[420px] min-h-screen lg:min-h-[800px] lg:rounded-[2.5rem] lg:border-[6px] lg:border-slate-800' : 'lg:max-w-full min-h-full lg:rounded-[2.5rem]'}`} style={{ backgroundColor: config.cor_fundo, borderColor: `${config.cor_texto}10` }}>
           
-          {isCatalogo ? (
-             // TELA CHEIA: CATÁLOGO INTEGRADO
-             <>
-               {/* Menu Flutuante Desktop (Apenas Visível no PC para voltar pros links) */}
-               {config.mostrar_loja && (
-                 <div className="hidden md:flex absolute top-6 inset-x-6 z-50 bg-black/50 backdrop-blur-md p-1.5 rounded-full items-center shadow-2xl border border-white/10">
-                   <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
-                        style={{ backgroundColor: config.cor_botoes, left: 'calc(50% + 2px)' }} />
-                   <button onClick={() => setActiveTab('links')} className="flex-1 py-2 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors text-white hover:text-white/80">Links Rápidos</button>
-                   <button onClick={() => setActiveTab('catalogo')} className="flex-1 py-2 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: config.cor_texto_botoes }}>Catálogo</button>
-                 </div>
-               )}
+          <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
+             {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
+          </div>
+          
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 md:-mt-14 bg-white flex items-center justify-center" style={{ borderColor: config.cor_fundo }}>
+            {logoLoja ? <img src={logoLoja} className="w-full h-full object-contain p-1 bg-white" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
+          </div>
+          
+          <div className="px-4 mt-3 md:mt-5 flex flex-col items-center w-full">
+             <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
+             {config.descricao && <p className="text-center text-sm md:text-[15px] font-medium mb-6 md:mb-8 opacity-80 leading-relaxed max-w-sm" style={{ color: config.cor_texto }}>{config.descricao}</p>}
 
-               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 z-0 bg-slate-50">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Carregando Site...</span>
-               </div>
-
-               <iframe 
-                 src="/vitrine" 
-                 className="w-full h-full absolute inset-0 z-10 bg-transparent border-0"
-                 title="Catálogo Integrado"
-                 onLoad={(e) => {
-                   try {
-                     const iframeUrl = e.target.contentWindow.location.href;
-                     // MÁGICA: Se o cliente clicou em um produto, a Bio desaparece e ele vai pra tela oficial de compra!
-                     if (iframeUrl.includes('?produto=')) {
-                       window.top.location.href = iframeUrl;
-                     }
-                   } catch (err) {}
-                 }}
-               />
-             </>
-          ) : (
-             // TELA NORMAL: BIO E LINKS
-             <>
-                <div className={`w-full h-32 md:h-40 overflow-hidden shadow-sm relative shrink-0 transition-colors ${config.capa_url ? 'block lg:hidden' : 'block'}`} style={{ backgroundColor: config.cor_capa || '#cbd5e1' }}>
-                   {config.capa_url && <><img src={config.capa_url} className="w-full h-full object-cover block lg:hidden" /><div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent block lg:hidden"></div></>}
-                </div>
-                
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-[4px] shadow-lg relative z-10 shrink-0 -mt-12 md:-mt-14 bg-white flex items-center justify-center" style={{ borderColor: config.cor_fundo }}>
-                  {logoLoja ? <img src={logoLoja} className="w-full h-full object-contain p-1 bg-white" alt={config.titulo} /> : <div className="w-full h-full bg-slate-200"></div>}
-                </div>
-                
-                <div className="px-4 mt-3 md:mt-5 flex flex-col items-center w-full">
-                   <h1 className="text-xl md:text-2xl font-black text-center mb-2" style={{ color: config.cor_texto }}>{config.titulo}</h1>
-                   {config.descricao && <p className="text-center text-sm md:text-[15px] font-medium mb-6 md:mb-8 opacity-80 leading-relaxed max-w-sm" style={{ color: config.cor_texto }}>{config.descricao}</p>}
-
-                   {config.mostrar_loja && (
-                     <div className="hidden md:flex w-full max-w-[280px] bg-black/5 p-1.5 rounded-full items-center mb-6 relative border border-black/5" style={{ borderColor: `${config.cor_texto}15` }}>
-                       <div className="absolute inset-y-1.5 w-[calc(50%-4px)] rounded-full transition-all duration-300 ease-out" 
-                            style={{ backgroundColor: config.cor_botoes, left: '6px' }} />
-                       <button onClick={() => setActiveTab('links')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: config.cor_texto_botoes }}>Links</button>
-                       <button onClick={() => setActiveTab('catalogo')} className="flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest relative z-10 transition-colors" style={{ color: config.cor_texto }}>Catálogo</button>
-                     </div>
-                   )}
-
-                   <div className="w-full max-w-sm animate-in fade-in duration-300">
-                     {config.banners?.length > 0 && (
-                       <div className="w-full flex flex-col gap-6 mb-6">
-                         {config.banners.map(banner => {
-                           if (!banner.imagem_url) return null;
-                           return (
-                           <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
-                             <img src={banner.imagem_url} className="w-full object-cover" alt="Banner Promo" />
-                             {(banner.descricao || banner.link) && (
-                                <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
-                                  {banner.descricao && <p className="text-[13px] md:text-sm font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
-                                  {banner.link && (
-                                     <a href={banner.link} target="_blank" rel="noreferrer" className="w-full py-3 md:py-4 rounded-xl text-center font-bold text-[11px] md:text-xs uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
-                                        {banner.botao_texto || 'Acessar Link'}
-                                     </a>
-                                  )}
-                                </div>
+             <div className="w-full max-w-sm animate-in fade-in duration-300 z-10">
+                {config.banners?.length > 0 && (
+                  <div className="w-full flex flex-col gap-6 mb-6">
+                    {config.banners.map(banner => {
+                      if (!banner.imagem_url) return null;
+                      return (
+                      <div key={banner.id} className="w-full rounded-2xl overflow-hidden shadow-lg flex flex-col bg-white/5 border border-black/5" style={{ borderColor: `${config.cor_texto}20`}}>
+                        <img src={banner.imagem_url} className="w-full object-cover" alt="Banner Promo" />
+                        {(banner.descricao || banner.link) && (
+                           <div className="p-5 flex flex-col gap-4 items-center" style={{ backgroundColor: `${config.cor_botoes}15` }}>
+                             {banner.descricao && <p className="text-[13px] md:text-sm font-medium text-center leading-relaxed" style={{ color: config.cor_texto }}>{banner.descricao}</p>}
+                             {banner.link && (
+                                <a href={banner.link} target="_blank" rel="noreferrer" className="w-full py-3 md:py-4 rounded-xl text-center font-bold text-[11px] md:text-xs uppercase tracking-widest shadow-md hover:scale-[1.02] active:scale-95 transition-transform" style={{ backgroundColor: config.cor_botoes, color: config.cor_texto_botoes }}>
+                                   {banner.botao_texto || 'Acessar Link'}
+                                </a>
                              )}
                            </div>
-                         )})}
-                       </div>
-                     )}
+                        )}
+                      </div>
+                    )})}
+                  </div>
+                )}
 
-                     <div className="w-full flex flex-col gap-4">
-                       {config.links?.map((link, i) => (
-                         <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
-                           {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
-                           <span className="flex-1 text-center text-[12px] md:text-[13px] uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
-                           <div className="w-10 h-10" /> 
-                         </a>
-                       ))}
-                     </div>
-                   </div>
+                <div className="w-full flex flex-col gap-4">
+                  {config.links?.map((link, i) => (
+                    <a key={link.id || i} href={link.url} target="_blank" rel="noreferrer" className="w-full py-4 px-6 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group flex justify-between items-center border border-black/5" style={{ backgroundColor: link.cor_fundo || config.cor_botoes, color: link.cor_texto || config.cor_texto_botoes }}>
+                      {link.imagem_icone ? <img src={link.imagem_icone} className="w-10 h-10 object-contain drop-shadow-sm" alt="" /> : <div className="w-10 h-10" /> }
+                      <span className="flex-1 text-center text-[12px] md:text-[13px] uppercase tracking-wide drop-shadow-sm">{link.titulo}</span>
+                      <div className="w-10 h-10" /> 
+                    </a>
+                  ))}
                 </div>
+             </div>
+          </div>
 
-                <div className="mt-auto opacity-40 flex items-center justify-center gap-1.5 pt-10" style={{ color: config.cor_texto }}>
-                   <Globe size={12} />
-                   <span className="text-[9px] font-bold uppercase tracking-widest">{config.titulo || 'Portal Criarte'}</span>
-                </div>
-             </>
-          )}
+          {/* === LOGO ORGANIZE: FIXADA NA BASE DOS LINKS === */}
+          <div className="mt-auto pt-10 pb-28 opacity-40 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 w-full">
+             <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: config.cor_texto }}>Tecnologia</span>
+             <img 
+                src="https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/LOGO%20ORGANIZE.png" 
+                alt="Organize" 
+                className="h-3.5 object-contain grayscale transition-all duration-300 hover:grayscale-0" 
+             />
+          </div>
 
-          {/* NAVEGAÇÃO FIXA DE APP PREMIUM (MOBILE ONLY) SEMPRE VISÍVEL SOBRE O IFRAME */}
-          {config.mostrar_loja && (
-            <div 
-              className="md:hidden fixed bottom-0 inset-x-0 z-[90] flex justify-around items-center px-4 py-2 backdrop-blur-xl shadow-[0_-10px_30px_rgba(0,0,0,0.06)] pb-safe" 
-              style={{ backgroundColor: `${config.cor_fundo}E6`, borderTop: `1px solid ${config.cor_texto}15` }}
-            >
-              <button
-                onClick={() => setActiveTab('links')}
-                className="flex flex-col items-center justify-center gap-1 w-24 py-1 transition-all relative group"
-                style={{ color: activeTab === 'links' ? config.cor_botoes : `${config.cor_texto}70` }}
-              >
-                {activeTab === 'links' && <div className="absolute -top-3 w-10 h-1 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
-                <LinkIcon size={22} className={`transition-transform duration-300 ${activeTab === 'links' ? '-translate-y-1' : ''}`} />
-                <span className={`text-[9px] uppercase tracking-widest ${activeTab === 'links' ? 'font-black' : 'font-semibold'}`}>
-                  LINKS
-                </span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('catalogo')}
-                className="flex flex-col items-center justify-center gap-1 w-24 py-1 transition-all relative group"
-                style={{ color: activeTab === 'catalogo' ? config.cor_botoes : `${config.cor_texto}70` }}
-              >
-                {activeTab === 'catalogo' && <div className="absolute -top-3 w-10 h-1 rounded-full animate-in fade-in" style={{ backgroundColor: config.cor_botoes }}></div>}
-                <LayoutGrid size={22} className={`transition-transform duration-300 ${activeTab === 'catalogo' ? '-translate-y-1' : ''}`} />
-                <span className={`text-[9px] uppercase tracking-widest ${activeTab === 'catalogo' ? 'font-black' : 'font-semibold'}`}>
-                  CATÁLOGO
-                </span>
-              </button>
-            </div>
-          )}
+          <BottomNavBar />
 
         </div>
       </div>
@@ -413,7 +408,7 @@ export default function LinkBio({ isPublic = false }) {
                      <div className={`w-3 h-3 bg-white rounded-full transition-transform ${config.mostrar_loja ? 'translate-x-4' : 'translate-x-0'}`} />
                    </button>
                  </div>
-                 <p className="text-[9px] text-slate-400 font-medium leading-relaxed">A aba "Catálogo" exibirá o seu site/vitrine completo integrado diretamente na sua página de Bio. Os clientes poderão navegar livremente por lá!</p>
+                 <p className="text-[9px] text-slate-400 font-medium leading-relaxed">A aba "Catálogo" exibirá o seu site/vitrine completo integrado diretamente na sua página de Bio em tela cheia.</p>
               </div>
            </EditorSection>
 
@@ -529,7 +524,7 @@ export default function LinkBio({ isPublic = false }) {
       </div>
 
       {/* ÁREA DE PREVIEW (LIVE) */}
-      <div className="flex-1 h-full overflow-y-auto relative bg-[#f8fafc] pb-[70px] lg:pb-0 z-10">
+      <div className="flex-1 h-full relative bg-[#f8fafc] z-10 overflow-hidden">
         
         {/* BOTÃO SAIR NO MOBILE E DESKTOP FLUTUANTE */}
         <button onClick={() => navigate('/app')} className="lg:hidden fixed top-4 left-4 z-[150] w-10 h-10 bg-slate-900/90 backdrop-blur text-white rounded-full flex items-center justify-center shadow-lg border border-slate-700">
