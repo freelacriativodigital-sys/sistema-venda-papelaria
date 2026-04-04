@@ -17,7 +17,6 @@ export default function Home() {
   const [depreciacaoTotal, setDepreciacaoTotal] = useState(0);
   const [isAdjusting, setIsAdjusting] = useState(false);
 
-  // Estados para controlar o Modal de Lançamento na Home
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState('entrada');
 
@@ -26,7 +25,6 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
-  // --- ESTADOS DO SALDO BANCÁRIO ---
   const [saldoBancario, setSaldoBancario] = useState(() => {
     const saved = localStorage.getItem('@sistema_saldo');
     return saved ? saved : '';
@@ -242,10 +240,8 @@ export default function Home() {
   }
 
   return (
-    // Padding bottom aumentado no mobile (pb-[100px]) para não ficar por baixo da barra fixa
     <div className="max-w-5xl mx-auto space-y-4 animate-in fade-in duration-500 pb-[100px] md:pb-20 pt-4 md:pt-5 px-4 md:px-0 relative">
       
-      {/* HEADER DA PÁGINA COM BOTÕES NO DESKTOP */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-3">
         <div>
           <h1 className="text-lg md:text-xl font-semibold uppercase text-slate-800 tracking-tight flex items-center gap-2">
@@ -254,7 +250,6 @@ export default function Home() {
           <p className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Resumo financeiro e métricas</p>
         </div>
         
-        {/* BOTÕES ESCONDIDOS NO MOBILE (Aparecem só no Desktop) */}
         <div className="hidden md:flex gap-2 w-auto mt-2 md:mt-0">
           <Button onClick={() => handleOpenModal('entrada')} className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-4 font-semibold text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm rounded-md transition-all">
             <ArrowUpCircle size={14} /> Entrada
@@ -265,7 +260,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* NOTIFICAÇÕES DE CONTAS */}
       {alertasDespesas.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {alertasDespesas.map(alerta => {
@@ -287,41 +281,38 @@ export default function Home() {
         </div>
       )}
 
-      {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS COMPACTOS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-         <div className="bg-emerald-600 rounded-xl p-3 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
-           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={70}/></div>
-           <div className="flex items-center justify-between mb-1.5 relative z-10">
-             <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-100/90">Dinheiro Real</span>
-             <TrendingUp size={14} className="text-emerald-100" />
+      {/* CAMADA 1: CARTÕES PRINCIPAIS COLORIDOS COMPACTOS (3 NA MESMA LINHA) */}
+      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-4">
+         <div className="bg-emerald-600 rounded-xl p-2.5 md:p-4 border border-emerald-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[75px] md:min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><CheckCircle size={60} className="md:w-[70px] md:h-[70px]"/></div>
+           <div className="flex items-center justify-between mb-1 relative z-10">
+             <span className="text-[7.5px] md:text-[9px] font-semibold uppercase tracking-widest text-emerald-100/90 truncate">Dinheiro Real</span>
+             <TrendingUp size={12} className="text-emerald-100 hidden sm:block" />
            </div>
-           <div className="relative z-10">
-             <p className="text-[8px] font-medium text-emerald-100/80 uppercase tracking-widest mb-0.5">Faturamento Real Entrado</p>
-             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(faturamentoRealEntrado)}</h3>
-           </div>
-         </div>
-
-         <div className="bg-rose-600 rounded-xl p-3 md:p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[90px]">
-           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={70}/></div>
-           <div className="flex items-center justify-between mb-1.5 relative z-10">
-             <span className="text-[9px] font-semibold uppercase tracking-widest text-rose-100/90">Contas Pagas</span>
-             <ArrowDownRight size={14} className="text-rose-100" />
-           </div>
-           <div className="relative z-10">
-             <p className="text-[8px] font-medium text-rose-100/80 uppercase tracking-widest mb-0.5">Total das Despesas Pagas</p>
-             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(data.despesas.pagas)}</h3>
+           <div className="relative z-10 mt-auto">
+             <h3 className="text-xs sm:text-sm md:text-2xl font-semibold text-white tracking-tight truncate">{formatCurrency(faturamentoRealEntrado)}</h3>
            </div>
          </div>
 
-         <Link to="/pedidos" className="bg-blue-600 rounded-xl p-3 md:p-4 border border-blue-700 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer min-h-[90px]">
-           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Palette size={70}/></div>
-           <div className="flex items-center justify-between mb-1.5 relative z-10">
-             <span className="text-[9px] font-semibold uppercase tracking-widest text-blue-100/90">Pedidos Pendentes</span>
-             <Users size={14} className="text-blue-100" />
+         <div className="bg-rose-600 rounded-xl p-2.5 md:p-4 border border-rose-700 shadow-md flex flex-col justify-between group overflow-hidden relative min-h-[75px] md:min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><ShoppingCart size={60} className="md:w-[70px] md:h-[70px]"/></div>
+           <div className="flex items-center justify-between mb-1 relative z-10">
+             <span className="text-[7.5px] md:text-[9px] font-semibold uppercase tracking-widest text-rose-100/90 truncate">Contas Pagas</span>
+             <ArrowDownRight size={12} className="text-rose-100 hidden sm:block" />
            </div>
-           <div className="relative z-10">
-             <p className="text-[8px] font-medium text-blue-100/80 uppercase tracking-widest mb-0.5">A Receber (Trabalhos)</p>
-             <h3 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{formatCurrency(pedidosPendentesValor)}</h3>
+           <div className="relative z-10 mt-auto">
+             <h3 className="text-xs sm:text-sm md:text-2xl font-semibold text-white tracking-tight truncate">{formatCurrency(data.despesas.pagas)}</h3>
+           </div>
+         </div>
+
+         <Link to="/pedidos" className="bg-blue-600 rounded-xl p-2.5 md:p-4 border border-blue-700 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group overflow-hidden relative cursor-pointer min-h-[75px] md:min-h-[90px]">
+           <div className="absolute -top-2 -right-2 p-2 opacity-10 group-hover:scale-110 transition-transform"><Palette size={60} className="md:w-[70px] md:h-[70px]"/></div>
+           <div className="flex items-center justify-between mb-1 relative z-10">
+             <span className="text-[7.5px] md:text-[9px] font-semibold uppercase tracking-widest text-blue-100/90 truncate">A Receber</span>
+             <Users size={12} className="text-blue-100 hidden sm:block" />
+           </div>
+           <div className="relative z-10 mt-auto">
+             <h3 className="text-xs sm:text-sm md:text-2xl font-semibold text-white tracking-tight truncate">{formatCurrency(pedidosPendentesValor)}</h3>
            </div>
          </Link>
       </div>
@@ -349,6 +340,11 @@ export default function Home() {
                  </p>
                  
                  <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-2.5">
+                   {/* TEXTO DESCRITIVO ADICIONADO */}
+                   <p className="text-[8.5px] font-medium text-slate-400 leading-relaxed mb-3 pr-2">
+                     Insira o saldo atual do seu banco físico. Se houver divergência com o sistema, você pode registrar a diferença com um único clique.
+                   </p>
+
                    <div className="flex items-center justify-between gap-2">
                      <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-1 whitespace-nowrap"><Target size={10}/> Banco Real</label>
                      <div className="relative flex-1 max-w-[140px]">
@@ -419,7 +415,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* --- BARRA FIXA MOBILE (Apenas no celular, colada na base da tela: bottom-0) --- */}
       <div className="md:hidden fixed bottom-0 inset-x-0 bg-white p-4 pb-6 border-t border-slate-200 shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] z-[40]">
          <div className="flex gap-3 max-w-md mx-auto">
            <Button onClick={() => handleOpenModal('entrada')} className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm rounded-lg transition-all">
@@ -431,7 +426,6 @@ export default function Home() {
          </div>
       </div>
 
-      {/* MODAL GLOBAL DE LANÇAMENTO (Componente Reutilizável) */}
       <LancamentoModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
