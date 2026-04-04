@@ -5,7 +5,7 @@ import { queryClientInstance } from '@/lib/query-client';
 import { pagesConfig } from './pages.config';
 import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import RedirectLink from '@/components/Links/RedirectLink'; // <-- IMPORTAÇÃO DO REDIRECIONADOR
+import RedirectLink from '@/components/Links/RedirectLink'; 
 
 import Login from '@/components/tasks/Login';
 
@@ -17,6 +17,18 @@ import {
 
 import { supabase } from "./lib/supabase";
 import BriefingPublico from './pages/BriefingPublico';
+
+// === FUNÇÃO PARA TROCAR O ÍCONE DA ABA DO NAVEGADOR DINAMICAMENTE ===
+function updateFavicon(url) {
+  if (!url) return;
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = url;
+}
 
 const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconColor }) => {
   return (
@@ -230,6 +242,21 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const isBio = pathNormalizado === '/bio';
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
+  // === MÁGICA DO NOME E FAVICON DINÂMICO AQUI ===
+  useEffect(() => {
+    const isPublicRoute = isVitrine || isBriefingClient || isEntregaPortal || isBio;
+    const defaultIcon = "https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png";
+
+    if (isPublicRoute) {
+      document.title = st?.nomeLoja || 'Catálogo Online';
+      updateFavicon(st?.logoUrl || defaultIcon);
+    } else {
+      document.title = 'ORGANIZE';
+      updateFavicon(defaultIcon);
+    }
+  }, [pathNormalizado, st, isVitrine, isBriefingClient, isEntregaPortal, isBio]);
+  // ===============================================
+
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
   const MainPage = Pages[mainPageKey];
   const VitrinePage = Pages["catalogo"];
@@ -277,7 +304,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
         )
       ))}
 
-      {/* ROTA CORINGA: CAPTURA QUALQUER SLUG DE LINK ENCURTADO E VERIFICA NA BASE DE DADOS */}
       <Route path="/:slug" element={<RedirectLink />} />
 
       <Route path="*" element={<PageNotFound />} />
