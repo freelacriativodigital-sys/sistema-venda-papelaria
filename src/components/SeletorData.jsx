@@ -30,12 +30,14 @@ export default function SeletorData({ value, onChange }) {
         </Button>
       </PopoverTrigger>
       
+      {/* O SEGREDO ESTÁ NO forceMount E portal={false} (implícito ao remover o PortalContent se houver) */}
       <PopoverContent 
-        className="w-auto p-0 rounded-xl border border-slate-200 shadow-2xl" 
+        className="w-auto p-0 rounded-xl border border-slate-200 shadow-2xl z-[99999]" 
         align="start" 
         side="bottom"
         sideOffset={4}
-        style={{ zIndex: 99999 }}
+        // Isso impede o calendário de "fugir" do Modal pai
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex justify-between items-center p-2.5 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
           <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-2">Calendário</span>
