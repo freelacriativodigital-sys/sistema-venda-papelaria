@@ -5,6 +5,7 @@ import { queryClientInstance } from '@/lib/query-client';
 import { pagesConfig } from './pages.config';
 import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
+import RedirectLink from '@/components/RedirectLink'; // <-- IMPORTAÇÃO DO REDIRECIONADOR
 
 import Login from '@/components/tasks/Login';
 
@@ -29,7 +30,6 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconCol
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
     >
       <div className="flex items-center">
-        {/* Ícone no padrão compacto (16px) e colorido */}
         <Icon size={16} className={`shrink-0 transition-colors ${isActive ? '' : iconColor}`} />
         <span className={`ml-3.5 whitespace-nowrap md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${isActive ? '' : 'text-slate-500'}`}>
           {item.label}
@@ -109,15 +109,12 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           return (
             <div 
               key={idx} 
-              // A MÁGICA DOS ESPAÇOS: Se a gaveta tá fechada, a margem de cima é 'mt-1' para grudar os ícones.
-              // Quando o mouse passa por cima, ele injeta 'mt-6' para afastar os blocos lindamente.
               className={`flex flex-col transition-all duration-300 ${
                 isOpen 
                   ? (idx > 0 ? 'mt-6' : 'mt-0') 
                   : (idx > 0 ? 'mt-1 md:group-hover:mt-6' : 'mt-0')
               }`}
             >
-              {/* O título some e perde tamanho quando o menu encolhe, e reaparece quando expande */}
               <h4 className={`text-[8px] font-semibold text-slate-400 uppercase tracking-widest px-6 whitespace-nowrap overflow-hidden transition-all duration-300 ${
                 isOpen 
                   ? 'max-h-6 opacity-100 mb-1.5' 
@@ -146,7 +143,6 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
           );
         })}
 
-        {/* MÁGICA DOS ESPAÇOS TAMBÉM NOS LINKS EXTERNOS E DIVISÓRIA */}
         <div className={`border-t border-slate-100 space-y-1.5 flex flex-col transition-all duration-300 ${
           isOpen ? 'pt-4 mt-6' : 'pt-1 mt-1 md:group-hover:pt-4 md:group-hover:mt-6'
         }`}>
@@ -280,6 +276,9 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
           />
         )
       ))}
+
+      {/* ROTA CORINGA: CAPTURA QUALQUER SLUG DE LINK ENCURTADO E VERIFICA NA BASE DE DADOS */}
+      <Route path="/:slug" element={<RedirectLink />} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
