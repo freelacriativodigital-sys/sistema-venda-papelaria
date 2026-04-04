@@ -11,6 +11,7 @@ import SeletorCategoria from "@/components/SeletorCategoria";
 
 export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrada', editingData = null }) {
   const queryClient = useQueryClient();
+  
   const [tipoTransacao, setTipoTransacao] = useState(tipoInicial);
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
@@ -42,6 +43,7 @@ export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrad
   const saveTransactionMutation = useMutation({
     mutationFn: async () => {
       const valorNum = parseFloat(valor) || 0;
+      // Garante o formato ISO para o banco de dados
       const dataISO = new Date(`${dataTransacao}T12:00:00`).toISOString();
       const categoriaFinal = categoriaSelecionada || 'Outros';
 
@@ -103,9 +105,9 @@ export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrad
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-          <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-2xl relative z-[210] overflow-visible">
+          <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="bg-white w-full max-w-sm rounded-xl p-5 shadow-2xl relative z-10 overflow-visible">
             
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -132,10 +134,11 @@ export default function LancamentoModal({ isOpen, onClose, tipoInicial = 'entrad
                 <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Venda balcão..." className="h-9 border-slate-200 text-xs font-medium" autoFocus />
               </div>
 
+              {/* MÁGICA DA CATEGORIA AQUI: Muda o contexto dinamicamente com base no tipo de transação! */}
               <div className="space-y-1 relative">
                   <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-0.5">Categoria</label>
                   <SeletorCategoria 
-                    contexto={tipoTransacao === 'entrada' ? 'financeiro_entrada' : 'financeiro_saida'} 
+                    contexto={tipoTransacao === 'entrada' ? 'pedido' : 'despesa'} 
                     value={categoriaSelecionada} 
                     onChange={setCategoriaSelecionada} 
                   />
