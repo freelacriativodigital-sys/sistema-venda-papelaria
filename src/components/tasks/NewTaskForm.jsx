@@ -4,32 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 import { 
-  X, Save, DollarSign, TrendingUp, PercentCircle, CalendarDays, 
-  ChevronLeft, ChevronRight, UserSquare2, Loader2, UserPlus, ArrowLeft, Palette,
-  Trash2, Plus, ChevronDown
+  Save, DollarSign, TrendingUp, PercentCircle, 
+  UserSquare2, Loader2, UserPlus, ArrowLeft, Palette
 } from "lucide-react";
 import { supabase } from "../../lib/supabase"; 
 
 import ChecklistEditor from "./ChecklistEditor";
-import ClienteModal from "../clientes/ClienteModal"; // <-- IMPORTANDO O MODAL UNIVERSAL
-
-const DEFAULT_CATEGORIES = [
-  { name: "Ilustração", slug: "ilustracao" }
-];
+import ClienteModal from "../clientes/ClienteModal"; 
+import SeletorData from "@/components/SeletorData"; 
+import SeletorCategoria from "@/components/SeletorCategoria"; 
 
 export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
   const [form, setForm] = useState({ 
-    title: "", description: "", priority: "media", category: "ilustracao", 
+    title: "", description: "", priority: "media", category: "", 
     service_value: "", delivery_date: "", checklist: [], payment_status: "em_aberto", valor_pago: 0 
   });
-  
-  const [selectedDate, setSelectedDate] = useState(undefined);
   
   // --- ESTADOS DE CLIENTE ---
   const [clientes, setClientes] = useState([]);
@@ -37,45 +28,27 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [clienteId, setClienteId] = useState(null);
   
-  // Controle do Modal Universal de Clientes
   const [isClienteModalOpen, setIsClienteModalOpen] = useState(false);
-
-  // --- ESTADOS DE CATEGORIA ---
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [novaCategoria, setNovaCategoria] = useState("");
-  const [showCatManager, setShowCatManager] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       async function fetchData() {
         setCarregandoClientes(true);
-        const [resClientes, resCategorias] = await Promise.all([
-          supabase.from('clientes').select('*').order('nome'),
-          supabase.from('categorias').select('*').order('name')
-        ]);
-
-        if (resClientes.data) setClientes(resClientes.data);
-        if (resCategorias.data && resCategorias.data.length > 0) setCategories(resCategorias.data);
+        const { data } = await supabase.from('clientes').select('*').order('nome');
+        if (data) setClientes(data);
         setCarregandoClientes(false);
       }
       fetchData();
 
       if (taskToEdit) {
         setForm({ ...taskToEdit, checklist: taskToEdit.checklist || [], valor_pago: taskToEdit.valor_pago || 0 });
-        setSelectedDate(taskToEdit.delivery_date ? parseISO(taskToEdit.delivery_date) : undefined);
         setClienteId(taskToEdit.cliente_id || null);
       } else {
-        setForm({ title: "", description: "", priority: "media", category: "ilustracao", service_value: "", delivery_date: "", checklist: [], payment_status: "em_aberto", valor_pago: 0 });
-        setSelectedDate(undefined);
+        setForm({ title: "", description: "", priority: "media", category: "", service_value: "", delivery_date: "", checklist: [], payment_status: "em_aberto", valor_pago: 0 });
         setClienteId(null);
       }
     }
   }, [isOpen, taskToEdit]);
-
-  const handleDateSelect = (date) => {
-    setSelectedDate(date);
-    setForm(prev => ({ ...prev, delivery_date: date ? format(date, 'yyyy-MM-dd') : '' }));
-  };
 
   const selecionarCliente = (cli) => {
     setForm({ ...form, title: cli.nome });
@@ -83,7 +56,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
     setMostrarDropdownCliente(false);
   };
 
-  // Quando o Modal Universal salva com sucesso, ele devolve o cliente aqui:
   const handleClienteCriado = (novoCliente) => {
     setClientes([...clientes, novoCliente]);
     selecionarCliente(novoCliente);
@@ -95,7 +67,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
       const searchStr = String(form.title || '').toLowerCase().trim();
       const exists = clientes.some(c => String(c.nome || '').toLowerCase() === searchStr);
       
-      // Se deu Enter e o cliente não existe, abre o Modal Universal obrigando o cadastro
       if (!exists && searchStr.length > 0) {
         setIsClienteModalOpen(true);
         setMostrarDropdownCliente(false);
@@ -103,26 +74,9 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
     }
   };
 
-  const handleAddCategory = async () => {
-    if(!novaCategoria.trim()) return;
-    const slug = novaCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-    if (categories.find(c => c.slug === slug)) return setNovaCategoria("");
-    const novaCat = { name: novaCategoria, slug };
-    setCategories([...categories, novaCat]);
-    setForm({...form, category: slug});
-    setNovaCategoria("");
-    await supabase.from('categorias').insert([novaCat]);
-  };
-
-  const handleRemoveCategory = async (e, slug) => {
-    e.stopPropagation(); 
-    setCategories(categories.filter(c => c.slug !== slug));
-    if (form.category === slug) setForm({...form, category: ""});
-    await supabase.from('categorias').delete().eq('slug', slug);
-  };
-
   const handleSave = () => {
     if (!form.title.trim()) return alert("O título/cliente é obrigatório.");
+    
     const checklistTotal = (form.checklist || []).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
     const hasChecklist = form.checklist && form.checklist.length > 0;
     const displayValue = hasChecklist ? checklistTotal : (parseFloat(form.service_value) || 0);
@@ -138,7 +92,7 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
     onSubmit({
       ...form,
-      service_value: hasChecklist ? undefined : (parseFloat(form.service_value) || 0),
+      service_value: displayValue, // Salva o valor somado da checklist
       payment_status: finalStatus,
       valor_pago: finalValorPago,
       cliente_id: clienteId,
@@ -187,7 +141,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
         <div className="flex-1 w-full max-w-3xl mx-auto p-3 md:p-4 pb-20">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
             
-            {/* INPUT DE CLIENTE */}
             <div className="space-y-1 relative">
               <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Cliente / Título</label>
               <div className="relative z-40">
@@ -219,7 +172,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                        ))}
                      </div>
                      
-                     {/* BOTÃO QUE CHAMA O MODAL UNIVERSAL */}
                      {filteredClientes.length === 0 && (
                        <div className="p-1.5 bg-slate-50 rounded-md border border-slate-100 mt-1">
                           <div 
@@ -242,66 +194,37 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               
-              <div className="space-y-1">
-                <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Entrega</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={`h-9 w-full justify-between rounded-md border border-slate-200 bg-slate-50 px-3 text-[10px] font-semibold uppercase transition-colors hover:bg-white ${!selectedDate ? "text-slate-400" : "text-slate-700"}`}>
-                      {selectedDate ? format(selectedDate, "dd/MM/yy", { locale: ptBR }) : "Selecionar"}
-                      <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-xl border border-slate-200 shadow-xl" style={{ zIndex: 9999 }} align="start">
-                    <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} locale={ptBR} initialFocus className="p-2 bg-white scale-90 origin-top-left" />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {/* MÓDULO CENTRAL DE DATA */}
+              <SeletorData 
+                label="Entrega" 
+                value={form.delivery_date} 
+                onChange={(val) => setForm({ ...form, delivery_date: val })} 
+                className="w-full"
+              />
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Prioridade</label>
                 <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-                  <SelectTrigger className="h-9 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
+                  <SelectTrigger className="h-10 text-[10px] font-semibold uppercase tracking-widest bg-slate-50 border-slate-200 rounded-md text-slate-700 focus:bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent style={{ zIndex: 9999 }}>
-                    <SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-1">
+              {/* MÓDULO CENTRAL DE CATEGORIA */}
+              <div className="space-y-1.5 flex flex-col justify-end">
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Categoria</label>
-                <Popover open={showCatManager} onOpenChange={setShowCatManager}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 w-full justify-between bg-slate-50 text-slate-700 text-[10px] uppercase font-semibold border-slate-200 rounded-md hover:bg-white">
-                      {categories.find(c => c.slug === form.category)?.name || "Selecione"}
-                      <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2 bg-white rounded-xl shadow-xl border-slate-200" style={{ zIndex: 9999 }}>
-                     <div className="max-h-48 overflow-y-auto space-y-1 mb-2">
-                        {categories.map(cat => (
-                           <div key={cat.slug} className="flex items-center justify-between group p-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors" onClick={() => { setForm({...form, category: cat.slug}); setShowCatManager(false); }}>
-                              <span className="text-[10px] font-semibold text-slate-700 uppercase">{cat.name}</span>
-                              <Trash2 className="w-3.5 h-3.5 text-slate-300 hover:text-red-500 hidden group-hover:block transition-colors" onClick={(e) => handleRemoveCategory(e, cat.slug)} />
-                           </div>
-                        ))}
-                        {categories.length === 0 && <p className="text-[9px] text-slate-400 text-center p-2">Nenhuma categoria.</p>}
-                     </div>
-                     <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5">
-                        <Input 
-                          value={novaCategoria} 
-                          onChange={e => setNovaCategoria(e.target.value)} 
-                          placeholder="Nova categoria..." 
-                          className="h-7 text-[10px] bg-slate-50 focus:bg-white" 
-                          onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
-                        />
-                        <Button onClick={handleAddCategory} size="icon" className="h-7 w-7 bg-blue-600 hover:bg-blue-700 text-white shrink-0 rounded">
-                          <Plus size={14}/>
-                        </Button>
-                     </div>
-                  </PopoverContent>
-                </Popover>
+                <SeletorCategoria 
+                  contexto="pedido" 
+                  value={form.category} 
+                  onChange={(val) => setForm({ ...form, category: val })} 
+                />
               </div>
             </div>
 
@@ -310,9 +233,16 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
                 <label className="text-[9px] font-semibold uppercase text-slate-500 tracking-widest ml-1">Valor do Serviço (R$)</label>
                 <div className="relative max-w-xs">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">R$</span>
-                  <Input type="number" value={form.service_value || ""} onChange={(e) => setForm({ ...form, service_value: e.target.value })} className="bg-slate-50 border-slate-200 text-xs font-semibold text-slate-800 pl-7 h-9 focus:bg-white" disabled={hasChecklist} />
+                  {/* CAMPO BLOQUEADO (Apenas leitura do total) */}
+                  <Input 
+                    type="number" 
+                    value={displayValue || ""} 
+                    readOnly
+                    disabled
+                    className="bg-slate-100 border-slate-200 text-xs font-semibold text-slate-500 pl-7 h-9 cursor-not-allowed shadow-inner" 
+                  />
                 </div>
-                {hasChecklist && <p className="text-[8px] text-slate-400 mt-0.5 font-medium uppercase tracking-widest px-1">Valor automático pelo Checklist.</p>}
+                <p className="text-[8px] text-slate-400 mt-0.5 font-medium uppercase tracking-widest px-1">Valor calculado automaticamente pela soma dos serviços abaixo.</p>
               </div>
 
               <div>
@@ -363,7 +293,6 @@ export default function NewTaskForm({ isOpen, onClose, taskToEdit, onSubmit }) {
         </div>
       </motion.div>
 
-      {/* RENDERIZANDO O MODAL DE CLIENTES POR CIMA DE TUDO */}
       <ClienteModal 
         isOpen={isClienteModalOpen} 
         onClose={() => setIsClienteModalOpen(false)}
