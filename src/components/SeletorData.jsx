@@ -4,7 +4,6 @@ import { ptBR } from "date-fns/locale";
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
 
 export default function SeletorData({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +11,7 @@ export default function SeletorData({ value, onChange }) {
 
   // Sincroniza o valor que vem do banco de dados (YYYY-MM-DD) com o campo de texto (DD/MM/YYYY)
   useEffect(() => {
-    if (value) {
+    if (value && value.includes('-')) {
       const [year, month, day] = value.split('-');
       if (year && month && day) {
         setInputValue(`${day}/${month}/${year}`);
@@ -25,6 +24,8 @@ export default function SeletorData({ value, onChange }) {
   // Máscara Inteligente para digitar a data
   const handleInputChange = (e) => {
     let val = e.target.value.replace(/\D/g, '');
+    
+    // Limita a 8 dígitos numéricos
     if (val.length > 8) val = val.slice(0, 8);
 
     let masked = val;
@@ -36,19 +37,19 @@ export default function SeletorData({ value, onChange }) {
 
     setInputValue(masked);
 
-    // Quando terminar de digitar (10 caracteres), valida e salva
+    // Quando terminar de digitar (10 caracteres), valida e salva no banco (YYYY-MM-DD)
     if (masked.length === 10) {
       const [d, m, y] = masked.split('/');
       const day = parseInt(d, 10);
       const month = parseInt(m, 10);
       const year = parseInt(y, 10);
 
-      // Validação básica para evitar datas loucas tipo 35/14/1990
+      // Validação básica para evitar datas inválidas (ex: 35/14/1990)
       if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900 && year < 2100) {
-        onChange(`${year}-${m}-${d}`);
+        onChange(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
       }
     } else if (masked.length === 0) {
-      onChange(''); // Se apagar tudo, limpa a data
+      onChange(''); // Se apagar tudo, limpa a data no banco
     }
   };
 
@@ -63,17 +64,17 @@ export default function SeletorData({ value, onChange }) {
     }
   };
 
-  const dataFormatada = value ? parseISO(value) : undefined;
+  const dataFormatada = value && value.length >= 10 ? parseISO(value) : undefined;
 
   return (
     <div className="relative w-full">
-      <Input
+      <input
         type="text"
         placeholder="DD/MM/AAAA"
         value={inputValue}
         onChange={handleInputChange}
         maxLength={10}
-        className={`h-9 w-full rounded-md border border-slate-200 bg-white px-3 pr-10 text-xs font-semibold transition-colors hover:bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-0 shadow-sm ${!inputValue ? "text-slate-400" : "text-slate-700"}`}
+        className={`w-full h-9 border border-slate-200 bg-white rounded-md pl-3 pr-10 text-xs font-semibold outline-none focus:border-blue-400 focus:ring-0 transition-colors shadow-sm placeholder:text-slate-400 placeholder:uppercase placeholder:tracking-widest ${!inputValue ? "text-slate-400" : "text-slate-700"}`}
       />
       
       <Popover open={isOpen} onOpenChange={setIsOpen}>
