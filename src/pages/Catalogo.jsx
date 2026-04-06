@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, Tags, Image as ImageIcon, Globe, Box, Package, Layers, Sparkles, Copy } from "lucide-react";
+import { ChevronLeft, MessageCircle, Plus, Minus, Loader2, Star, Check, Save, ArrowLeft, ShoppingCart, ShoppingBag, X, Trash2, Palette, LayoutTemplate, Tags, Image as ImageIcon, Globe, Box, Package, Layers, Sparkles, Copy, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -17,7 +18,6 @@ import EditorForms from '../components/Catalogo/EditorForms';
 const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Reúne TODAS as imagens disponíveis do produto (Capa + Galeria + Variações)
   const images = useMemo(() => {
     const imgSet = new Set();
     if (prod.imagem_url) imgSet.add(prod.imagem_url);
@@ -34,13 +34,12 @@ const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
     return Array.from(imgSet);
   }, [prod]);
 
-  // NOVO: Autoplay (Movimentar sozinho) APENAS se o produto tem variações ativas
   useEffect(() => {
     let interval;
     if (prod.variacoes?.ativa && images.length > 1) {
       interval = setInterval(() => {
         setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-      }, 2500); // Troca de foto a cada 2.5 segundos
+      }, 2500); 
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -71,7 +70,6 @@ const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
       
       <img src={activeImg} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
       
-      {/* Setas e bolinhas aparecem apenas se houver mais de 1 foto */}
       {images.length > 1 && (
         <>
           <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 md:w-7 md:h-7 bg-white/90 text-slate-700 rounded-full flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-opacity z-20 shadow-md hover:bg-white"><ChevronLeft size={14}/></button>
@@ -149,10 +147,8 @@ export default function Catalogo({ isPublic = false }) {
     fetchData();
   }, []);
 
-  // --- NOVA LÓGICA: SEO (GOOGLE) & META PIXEL ---
   useEffect(() => {
     if (st) {
-      // 1. Controle do Google (SEO)
       let metaRobots = document.getElementById('seo-robots');
       if (!metaRobots) {
         metaRobots = document.createElement('meta');
@@ -167,7 +163,6 @@ export default function Catalogo({ isPublic = false }) {
         metaRobots.setAttribute("content", "noindex, nofollow");
       }
 
-      // 2. Meta Pixel
       if (st.meta_pixel_id && isPublic && !window.fbq) {
         !function(f,b,e,v,n,t,s)
         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -249,10 +244,28 @@ export default function Catalogo({ isPublic = false }) {
   };
 
   const setupDetalheProduto = (prod) => {
+    // 1. Descobre qual é a imagem principal
+    const mainImage = (prod.imagens && prod.imagens.length > 0) ? prod.imagens[0] : prod.imagem_url;
+    
     const iniciais = {};
+    let selectedImageForGallery = mainImage;
+
     if (prod.variacoes?.ativa && prod.variacoes.atributos) {
       prod.variacoes.atributos.forEach(atrib => {
-        if (atrib.opcoes?.length > 0) iniciais[atrib.nome] = atrib.opcoes[0];
+        // Tenta achar a opção que tem a imagem igual à imagem de destaque
+        let selectedOpcao = atrib.opcoes?.find(op => op.imagem && op.imagem === mainImage);
+        
+        // Se não achar, pega a primeira
+        if (!selectedOpcao && atrib.opcoes?.length > 0) {
+          selectedOpcao = atrib.opcoes[0];
+        }
+
+        if (selectedOpcao) {
+          iniciais[atrib.nome] = selectedOpcao;
+          if (selectedOpcao.imagem) {
+            selectedImageForGallery = selectedOpcao.imagem;
+          }
+        }
       });
     }
     
@@ -265,7 +278,9 @@ export default function Catalogo({ isPublic = false }) {
     
     const finalGallery = Array.from(imgSet);
     setGalleryImages(finalGallery);
-    setActiveImage(finalGallery[0] || `https://placehold.co/600x600?text=${encodeURIComponent(prod.nome)}`);
+    
+    // Abre já na imagem vinculada à variação (ou na principal)
+    setActiveImage(selectedImageForGallery || `https://placehold.co/600x600?text=${encodeURIComponent(prod.nome)}`);
     setSelecoes(iniciais);
     setRespostasPersonalizadas({}); 
     setQuantidade(prod.qtd_minima || 1);
@@ -380,24 +395,18 @@ export default function Catalogo({ isPublic = false }) {
        const textoVars = Object.entries(item.selecoes).map(([k, v]) => `▪️ *${k}:* ${v.nome}`).join('\n');
        
        let textoPersonalizado = '';
-       let textoPersonalizadoDb = '';
        
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
              const campo = item.produto.campos_personalizados?.find(c => c.id === k);
              return `▪️ ${campo?.titulo || k}: ${v}`;
           }).join('\n');
-          
-          textoPersonalizadoDb = 'Personalização:\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
-            const campo = item.produto.campos_personalizados?.find(c => c.id === k);
-            return `- ${campo?.titulo || k}: ${v}`;
-          }).join('\n');
        }
 
        const itemTotal = item.precoTotal;
        totalGeral += itemTotal;
 
-       const descItem = `🛍️ *${item.produto.nome}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
+       const descItem = `🛍️ *${item.tituloDinamico}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
        
        dbDesc += descItem;
        zapMsg += descItem;
@@ -476,6 +485,16 @@ export default function Catalogo({ isPublic = false }) {
       const descontoPercent = calcularDesconto(selectedProduct.preco, selectedProduct.preco_promocional);
       const relacionados = produtos.filter(p => p.categoria === selectedProduct.categoria && p.id !== selectedProduct.id).slice(0, 4);
 
+      // --- TÍTULO DINÂMICO ---
+      const variacoesSelecionadasStr = Object.values(selecoes)
+        .filter(Boolean)
+        .map(opcao => opcao.nome)
+        .join(' - ');
+      
+      const tituloDinamico = variacoesSelecionadasStr 
+        ? `${selectedProduct.nome} (${variacoesSelecionadasStr})` 
+        : selectedProduct.nome;
+
       const adicionarAoCarrinho = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
           const camposFaltando = selectedProduct.campos_personalizados.filter(
@@ -490,6 +509,7 @@ export default function Catalogo({ isPublic = false }) {
         const novoItem = {
           id_carrinho: Date.now() + Math.random(),
           produto: selectedProduct,
+          tituloDinamico, // Passa o título customizado para o carrinho
           quantidade: qtdSafe,
           unitPriceFinal,
           precoTotal,
@@ -501,7 +521,7 @@ export default function Catalogo({ isPublic = false }) {
 
         if (st?.meta_pixel_id && isPublic && window.fbq) {
           window.fbq('track', 'AddToCart', {
-            content_name: selectedProduct.nome,
+            content_name: tituloDinamico,
             content_ids: [selectedProduct.id],
             content_type: 'product',
             value: precoTotal,
@@ -538,6 +558,64 @@ export default function Catalogo({ isPublic = false }) {
         </div>
       ) : null;
 
+      // --- CAMPOS PERSONALIZADOS UI ---
+      const camposPersonalizadosJSX = selectedProduct.campos_personalizados?.length > 0 ? (
+        <div className="mb-6 space-y-3">
+          <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-1.5">
+            <FileText size={14} className="text-emerald-500"/> Personalização
+          </h3>
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 shadow-sm">
+            {selectedProduct.campos_personalizados.map(campo => (
+              <div key={campo.id} className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-slate-700 uppercase tracking-widest ml-0.5 flex items-center gap-1">
+                  {campo.titulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
+                </label>
+                {campo.tipo === 'texto_curto' && (
+                  <Input 
+                    value={respostasPersonalizadas[campo.id] || ''} 
+                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
+                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400" 
+                    placeholder="Digite sua resposta..."
+                  />
+                )}
+                {campo.tipo === 'texto_longo' && (
+                  <textarea 
+                    value={respostasPersonalizadas[campo.id] || ''} 
+                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
+                    className="w-full min-h-[80px] p-2.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-800 resize-none outline-none focus:border-emerald-400 transition-colors" 
+                    placeholder="Escreva os detalhes..."
+                  />
+                )}
+                {campo.tipo === 'data' && (
+                  <Input 
+                    type="date"
+                    value={respostasPersonalizadas[campo.id] || ''} 
+                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
+                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400 cursor-pointer" 
+                  />
+                )}
+                {campo.tipo === 'hora' && (
+                  <Input 
+                    type="time"
+                    value={respostasPersonalizadas[campo.id] || ''} 
+                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
+                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400 cursor-pointer" 
+                  />
+                )}
+                {campo.tipo === 'upload' && (
+                  <div className="bg-white border border-dashed border-slate-300 p-3 rounded-md text-center shadow-inner">
+                     <ImageIcon size={16} className="mx-auto text-slate-300 mb-1" />
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
+                       O envio da foto/arte será solicitado pelo WhatsApp após finalizar o pedido.
+                     </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null;
+
       let floatingCartBottom = 'bottom-6'; 
       if (view === 'detalhe') {
          floatingCartBottom = isPublic ? 'bottom-[140px]' : 'bottom-[200px]';
@@ -564,7 +642,7 @@ export default function Catalogo({ isPublic = false }) {
                         <Star size={12} fill="currentColor" /> Destaque
                       </div>
                    )}
-                   <img key={activeImage} src={activeImage} className="w-full h-full object-cover animate-in fade-in duration-300" alt={selectedProduct.nome} />
+                   <img key={activeImage} src={activeImage} className="w-full h-full object-cover animate-in fade-in duration-300" alt={tituloDinamico} />
                  </div>
                  {galleryImages.length > 1 && (
                    <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
@@ -601,7 +679,12 @@ export default function Catalogo({ isPublic = false }) {
                     <Package size={12}/> {selectedProduct.categoria}
                   </span>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 leading-tight">{selectedProduct.nome}</h1>
+                
+                {/* AQUI ESTÁ O SEU NOVO TÍTULO DINÂMICO */}
+                <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 leading-tight transition-all">
+                  {tituloDinamico}
+                </h1>
+                
                 <div className="mb-6 pb-6 border-b border-slate-100">
                    <div className="flex items-end gap-3 mb-1">
                      <span className="text-3xl md:text-4xl font-black transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {unitPriceFinal.toFixed(2)}</span>
@@ -615,6 +698,7 @@ export default function Catalogo({ isPublic = false }) {
                       </span>
                    )}
                 </div>
+                
                 <div className="hidden md:block">{variacoesJSX}</div>
                 
                 {atacadoData && (
@@ -645,6 +729,9 @@ export default function Catalogo({ isPublic = false }) {
                     </div>
                   </div>
                 )}
+
+                {/* AQUI ESTÃO OS CAMPOS PERSONALIZADOS */}
+                {camposPersonalizadosJSX}
                 
                 {/* BARRA DE COMPRA DESKTOP */}
                 <div className="hidden md:block mt-4">
@@ -666,7 +753,7 @@ export default function Catalogo({ isPublic = false }) {
                          <Button onClick={adicionarAoCarrinho} className="w-full h-12 md:h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
                            <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
                          </Button>
-                         <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais items para o pedido)*</p>
+                         <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
                        </div>
                      </div>
                    </div>
@@ -768,7 +855,7 @@ export default function Catalogo({ isPublic = false }) {
                                <img src={item.activeImage || item.produto.imagem_url} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex flex-col justify-center flex-1">
-                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.produto.nome}</h4>
+                               <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">{item.tituloDinamico || item.produto.nome}</h4>
                                <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
                                <p className="text-sm font-black text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
                             </div>
@@ -835,7 +922,6 @@ export default function Catalogo({ isPublic = false }) {
                     <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                       <span className="text-xl">🔥</span> Destaques
                     </h2>
-                    {/* Setinhas do Carrossel (Desktop) */}
                     <div className="hidden md:flex items-center gap-2">
                       <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: -300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm">
                         <ChevronLeft size={18} />
@@ -846,7 +932,6 @@ export default function Catalogo({ isPublic = false }) {
                     </div>
                   </div>
                   
-                  {/* Container do Carrossel */}
                   <div id="carrossel-destaques" className="flex overflow-x-auto gap-4 md:gap-5 pb-6 no-scrollbar snap-x items-stretch">
                     {filtered.filter(p => p.destaque).map(prod => {
                       const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
@@ -862,7 +947,6 @@ export default function Catalogo({ isPublic = false }) {
                             </div>
                             <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[36px]">{prod.nome}</h3>
                             
-                            {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
                             <div className="mt-auto pt-3 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
                                 {prod.preco_promocional > 0 ? (
@@ -892,7 +976,6 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
                   {filtered
                     .filter(prod => {
-                      // Se a tela for a inicial (Todas sem busca), não repete quem já está no carrossel de destaques
                       if (selectedCategory === 'Todas' && !searchTerm) {
                         return !prod.destaque;
                       }
@@ -914,7 +997,6 @@ export default function Catalogo({ isPublic = false }) {
                             
                             <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px]">{prod.nome}</h3>
                             
-                            {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
                             <div className="mt-auto pt-4 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
                                 {prod.preco_promocional > 0 ? (
@@ -952,7 +1034,6 @@ export default function Catalogo({ isPublic = false }) {
       {/* CONTAINER HÍBRIDO DO EDITOR */}
       <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
         
-        {/* HEADER DESKTOP ONLY */}
         <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
           <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={14} /> Sair
