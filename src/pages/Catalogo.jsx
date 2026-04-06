@@ -13,6 +13,7 @@ import BenefitsBar from '../components/Catalogo/BenefitsBar';
 import FooterSite from '../components/Catalogo/FooterSite';
 import EditorSection from '../components/Catalogo/EditorSection';
 import EditorForms from '../components/Catalogo/EditorForms';
+import SeletorData from '../components/SeletorData';
 
 // --- COMPONENTE DO CARROSSEL DE FOTOS DO CARD ---
 const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
@@ -587,11 +588,9 @@ export default function Catalogo({ isPublic = false }) {
                   />
                 )}
                 {campo.tipo === 'data' && (
-                  <Input 
-                    type="date"
+                  <SeletorData 
                     value={respostasPersonalizadas[campo.id] || ''} 
-                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
-                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400 cursor-pointer" 
+                    onChange={(val) => lidarRespostaPersonalizada(campo.id, val)} 
                   />
                 )}
                 {campo.tipo === 'hora' && (
