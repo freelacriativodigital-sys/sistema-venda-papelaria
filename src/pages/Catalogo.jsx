@@ -34,6 +34,19 @@ const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
     return Array.from(imgSet);
   }, [prod]);
 
+  // NOVO: Autoplay (Movimentar sozinho) APENAS se o produto tem variações ativas
+  useEffect(() => {
+    let interval;
+    if (prod.variacoes?.ativa && images.length > 1) {
+      interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+      }, 2500); // Troca de foto a cada 2.5 segundos
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [images.length, prod.variacoes?.ativa]);
+
   const nextSlide = (e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -148,7 +161,6 @@ export default function Catalogo({ isPublic = false }) {
         document.head.appendChild(metaRobots);
       }
 
-      // Só indexa se o utilizador permitiu E se for a visualização pública (Vitrine)
       if (st.indexar_google !== false && isPublic) {
         metaRobots.setAttribute("content", "index, follow");
       } else {
@@ -218,7 +230,6 @@ export default function Catalogo({ isPublic = false }) {
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Dispara evento no Meta Pixel
     if (st?.meta_pixel_id && isPublic && window.fbq) {
       window.fbq('track', 'ViewContent', {
         content_name: prod.nome,
@@ -395,7 +406,6 @@ export default function Catalogo({ isPublic = false }) {
     dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
     zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
 
-    // Dispara evento no Meta Pixel
     if (st?.meta_pixel_id && isPublic && window.fbq) {
       window.fbq('track', 'InitiateCheckout', {
         value: totalGeral,
@@ -656,7 +666,7 @@ export default function Catalogo({ isPublic = false }) {
                          <Button onClick={adicionarAoCarrinho} className="w-full h-12 md:h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold uppercase text-[11px] md:text-xs gap-2 shadow-md transition-all border-none active:scale-[0.98]">
                            <ShoppingCart size={20} fill="currentColor" /> Adicionar ao Carrinho
                          </Button>
-                         <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais itens para o pedido)*</p>
+                         <p className="text-[9px] text-center text-slate-400 font-semibold uppercase tracking-widest">*(Caso queira escolher mais items para o pedido)*</p>
                        </div>
                      </div>
                    </div>
@@ -880,38 +890,46 @@ export default function Catalogo({ isPublic = false }) {
                 </h2>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-                  {filtered.map(prod => {
-                    const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
-                    return (
-                      <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                        
-                        <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={false} />
+                  {filtered
+                    .filter(prod => {
+                      // Se a tela for a inicial (Todas sem busca), não repete quem já está no carrossel de destaques
+                      if (selectedCategory === 'Todas' && !searchTerm) {
+                        return !prod.destaque;
+                      }
+                      return true;
+                    })
+                    .map(prod => {
+                      const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
+                      return (
+                        <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
+                          
+                          <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={false} />
 
-                        <div className="flex flex-col flex-1 p-3 md:p-4">
-                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                            {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
-                            {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
-                            {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
-                          </div>
-                          
-                          <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px]">{prod.nome}</h3>
-                          
-                          {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
-                          <div className="mt-auto pt-4 flex flex-col gap-3 justify-end">
-                            <div className="flex flex-col">
-                              {prod.preco_promocional > 0 ? (
-                                <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
-                              ) : (
-                                <span className="text-base md:text-lg font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
-                              )}
+                          <div className="flex flex-col flex-1 p-3 md:p-4">
+                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                              {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
+                              {prod.atacado?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
+                              {prod.variacoes?.ativa && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
                             </div>
-                            <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
-                              Ver Detalhes
-                            </button>
+                            
+                            <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px]">{prod.nome}</h3>
+                            
+                            {/* CAIXA DE PREÇO + BOTÃO (Alinhados na base) */}
+                            <div className="mt-auto pt-4 flex flex-col gap-3 justify-end">
+                              <div className="flex flex-col">
+                                {prod.preco_promocional > 0 ? (
+                                  <><span className="text-[10px] text-slate-400 line-through font-bold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-bold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                                ) : (
+                                  <span className="text-base md:text-lg font-bold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                                )}
+                              </div>
+                              <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-bold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
+                                Ver Detalhes
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
+                      )
                   })}
                 </div>
               </div>
