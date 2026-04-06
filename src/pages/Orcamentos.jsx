@@ -48,7 +48,7 @@ export default function Orcamentos() {
     setLoading(true);
     const [resConf, resProd, resCli, resOrc] = await Promise.all([
       supabase.from('configuracoes').select('*').eq('id', 1).single(),
-      supabase.from('produtos').select('id, nome, preco, preco_promocional, imagem_url, variacoes, atacado').eq('status_online', true).order('nome'),
+      supabase.from('produtos').select('id, nome, preco, preco_promocional, imagem_url, variacoes, atacado').neq('arquivado', true).order('nome'),
       supabase.from('clientes').select('*').order('nome'),
       supabase.from('orcamentos').select('*').order('created_at', { ascending: false })
     ]);
