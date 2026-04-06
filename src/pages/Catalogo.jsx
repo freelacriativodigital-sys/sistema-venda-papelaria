@@ -100,7 +100,7 @@ export default function Catalogo({ isPublic = false }) {
   const [selecoes, setSelecoes] = useState({});
   const [respostasPersonalizadas, setRespostasPersonalizadas] = useState({});
   
-  // Controle da sanfona (accordion) de descrição no mobile
+  // Controle da sanfona (accordion) de descrição para mobile e desktop
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   const [activeImage, setActiveImage] = useState('');
@@ -630,7 +630,7 @@ export default function Catalogo({ isPublic = false }) {
             </button>
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
               
-              {/* LADO ESQUERDO */}
+              {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
                  <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
                    {selectedProduct.destaque && (
@@ -651,13 +651,20 @@ export default function Catalogo({ isPublic = false }) {
                  )}
                  <div className="block md:hidden mt-2">{variacoesJSX}</div>
                  
-                 {/* DESCRIÇÃO - DESKTOP (Lado esquerdo) */}
+                 {/* DESCRIÇÃO - DESKTOP (Lado esquerdo com sanfona) */}
                  {selectedProduct.descricao && (
                     <div className="hidden md:block mt-6 pt-6 border-t border-slate-100">
-                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4">Descrição do Produto</h3>
-                      <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-3">Descrição do Produto</h3>
+                      <div className={`text-sm text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
                         {selectedProduct.descricao}
                       </div>
+                      <button 
+                        onClick={() => setIsDescExpanded(!isDescExpanded)} 
+                        className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
+                      >
+                        {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
+                        <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
+                      </button>
                     </div>
                  )}
               </div>
@@ -698,7 +705,7 @@ export default function Catalogo({ isPublic = false }) {
                    )}
                 </div>
                 
-                {/* DESCRIÇÃO - MOBILE (Abaixo do Título e Valor) */}
+                {/* DESCRIÇÃO - MOBILE (Abaixo do Título e Valor com Sanfona) */}
                 {selectedProduct.descricao && (
                   <div className="block md:hidden mb-6 pb-6 border-b border-slate-100">
                     <h3 className="text-[11px] font-semibold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
@@ -707,7 +714,7 @@ export default function Catalogo({ isPublic = false }) {
                     </div>
                     <button 
                       onClick={() => setIsDescExpanded(!isDescExpanded)} 
-                      className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest"
+                      className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
                     >
                       {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
                       <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
