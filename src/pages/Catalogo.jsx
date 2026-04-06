@@ -398,8 +398,19 @@ export default function Catalogo({ isPublic = false }) {
        
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
-             const campo = item.produto.campos_personalizados?.find(c => c.id === k);
-             return `▪️ ${campo?.titulo || k}: ${v}`;
+             // CORREÇÃO: Comparando como String para evitar bug de ID numérico não bater com a chave string
+             const campo = item.produto.campos_personalizados?.find(c => String(c.id) === String(k));
+             
+             // BÔNUS: Se for data (YYYY-MM-DD), inverte para o padrão Brasil no Zap (DD/MM/YYYY)
+             let valorExibido = v;
+             if (campo?.tipo === 'data' && v.includes('-')) {
+                 const [year, month, day] = v.split('-');
+                 if (year && month && day) {
+                     valorExibido = `${day}/${month}/${year}`;
+                 }
+             }
+
+             return `▪️ *${campo?.titulo || k}:* ${valorExibido}`;
           }).join('\n');
        }
 
