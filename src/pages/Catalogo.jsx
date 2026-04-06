@@ -283,7 +283,7 @@ export default function Catalogo({ isPublic = false }) {
     setSelecoes(iniciais);
     setRespostasPersonalizadas({}); 
     setQuantidade(prod.qtd_minima || 1);
-    setIsDescExpanded(false); // Reseta a sanfona
+    setIsDescExpanded(false); // Reseta a sanfona ao abrir um novo produto
     setSelectedProduct(prod);
     setView('detalhe');
   };
@@ -651,20 +651,13 @@ export default function Catalogo({ isPublic = false }) {
                  )}
                  <div className="block md:hidden mt-2">{variacoesJSX}</div>
                  
-                 {/* DESCRIÇÃO - APARECE NO MOBILE COM SANFONA E DESKTOP COMPLETO */}
+                 {/* DESCRIÇÃO - DESKTOP (Lado esquerdo) */}
                  {selectedProduct.descricao && (
-                    <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-slate-100">
-                      <h3 className="text-[11px] md:text-xs font-semibold text-slate-800 uppercase tracking-widest mb-3 md:mb-4">Descrição do Produto</h3>
-                      <div className={`text-xs md:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4 md:line-clamp-none' : ''}`}>
+                    <div className="hidden md:block mt-6 pt-6 border-t border-slate-100">
+                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4">Descrição do Produto</h3>
+                      <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
                         {selectedProduct.descricao}
                       </div>
-                      <button 
-                        onClick={() => setIsDescExpanded(!isDescExpanded)} 
-                        className="md:hidden mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest"
-                      >
-                        {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
-                        <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
-                      </button>
                     </div>
                  )}
               </div>
@@ -704,6 +697,23 @@ export default function Catalogo({ isPublic = false }) {
                       </span>
                    )}
                 </div>
+                
+                {/* DESCRIÇÃO - MOBILE (Abaixo do Título e Valor) */}
+                {selectedProduct.descricao && (
+                  <div className="block md:hidden mb-6 pb-6 border-b border-slate-100">
+                    <h3 className="text-[11px] font-semibold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
+                    <div className={`text-xs text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
+                      {selectedProduct.descricao}
+                    </div>
+                    <button 
+                      onClick={() => setIsDescExpanded(!isDescExpanded)} 
+                      className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest"
+                    >
+                      {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
+                      <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
+                    </button>
+                  </div>
+                )}
                 
                 <div className="hidden md:block">{variacoesJSX}</div>
                 
