@@ -13,6 +13,68 @@ import FooterSite from '../components/Catalogo/FooterSite';
 import EditorSection from '../components/Catalogo/EditorSection';
 import EditorForms from '../components/Catalogo/EditorForms';
 
+// --- COMPONENTE DO CARROSSEL DE FOTOS DO CARD ---
+const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Reúne TODAS as imagens disponíveis do produto (Capa + Galeria + Variações)
+  const images = useMemo(() => {
+    const imgSet = new Set();
+    if (prod.imagem_url) imgSet.add(prod.imagem_url);
+    if (prod.imagens && Array.isArray(prod.imagens)) {
+      prod.imagens.forEach(img => imgSet.add(img));
+    }
+    if (prod.variacoes?.ativa && prod.variacoes.atributos) {
+      prod.variacoes.atributos.forEach(attr => {
+        attr.opcoes?.forEach(op => {
+          if (op.imagem) imgSet.add(op.imagem);
+        });
+      });
+    }
+    return Array.from(imgSet);
+  }, [prod]);
+
+  const nextSlide = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevSlide = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const activeImg = images[currentIndex] || `https://placehold.co/400`;
+
+  return (
+    <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative shrink-0 group/slider`}>
+      {prod.destaque && (
+        <span className={`absolute ${isDestaqueCarrossel ? 'top-2 left-2 text-[8px] px-1.5 py-0.5' : 'top-3 left-3 text-[9px] px-2 py-1'} z-10 text-white font-black rounded shadow-sm flex items-center gap-1 uppercase`} style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}>
+          <Star size={isDestaqueCarrossel ? 8 : 10} fill="currentColor" /> Destaque
+        </span>
+      )}
+      
+      <img src={activeImg} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
+      
+      {/* Setas e bolinhas aparecem apenas se houver mais de 1 foto */}
+      {images.length > 1 && (
+        <>
+          <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 md:w-7 md:h-7 bg-white/90 text-slate-700 rounded-full flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-opacity z-20 shadow-md hover:bg-white"><ChevronLeft size={14}/></button>
+          <button onClick={nextSlide} className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 md:w-7 md:h-7 bg-white/90 text-slate-700 rounded-full flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-opacity z-20 shadow-md hover:bg-white"><ChevronLeft size={14} className="rotate-180"/></button>
+          
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-20">
+            {images.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all shadow-sm ${i === currentIndex ? 'w-3 bg-white' : 'w-1.5 bg-white/60'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function Catalogo({ isPublic = false }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -94,7 +156,6 @@ export default function Catalogo({ isPublic = false }) {
       }
 
       // 2. Meta Pixel
-      // Injeta o script apenas se houver um ID, se for a visão pública e se ainda não foi carregado
       if (st.meta_pixel_id && isPublic && !window.fbq) {
         !function(f,b,e,v,n,t,s)
         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -110,7 +171,6 @@ export default function Catalogo({ isPublic = false }) {
       }
     }
   }, [st, isPublic]);
-  // ----------------------------------------------
 
   const displayCategories = useMemo(() => {
     if (categoriasRaw.length === 0) return [];
@@ -158,7 +218,7 @@ export default function Catalogo({ isPublic = false }) {
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Dispara evento no Meta Pixel (se existir) para rastrear qual produto foi visto
+    // Dispara evento no Meta Pixel
     if (st?.meta_pixel_id && isPublic && window.fbq) {
       window.fbq('track', 'ViewContent', {
         content_name: prod.nome,
@@ -335,7 +395,7 @@ export default function Catalogo({ isPublic = false }) {
     dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
     zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
 
-    // Dispara evento no Meta Pixel (se configurado) para a compra finalizada (InitiateCheckout)
+    // Dispara evento no Meta Pixel
     if (st?.meta_pixel_id && isPublic && window.fbq) {
       window.fbq('track', 'InitiateCheckout', {
         value: totalGeral,
@@ -429,7 +489,6 @@ export default function Catalogo({ isPublic = false }) {
           activeImage
         };
 
-        // Dispara evento no Meta Pixel para adição ao carrinho
         if (st?.meta_pixel_id && isPublic && window.fbq) {
           window.fbq('track', 'AddToCart', {
             content_name: selectedProduct.nome,
@@ -612,10 +671,7 @@ export default function Catalogo({ isPublic = false }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                   {relacionados.map(prod => (
                     <div key={prod.id} onClick={() => abrirDetalhe(prod)} className="group cursor-pointer flex flex-col h-full bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-300">
-                      <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative`}>
-                        {prod.destaque && <div className="absolute top-2 left-2 z-10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</div>}
-                        <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                      </div>
+                      <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={true} />
                       <div className="flex flex-col flex-1 p-3 md:p-4">
                         <h3 className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight mb-2 min-h-[32px] md:min-h-[36px]">{prod.nome}</h3>
                         <div className="mt-auto pt-3 flex flex-col gap-3">
@@ -786,10 +842,9 @@ export default function Catalogo({ isPublic = false }) {
                       const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
                       return (
                         <div key={prod.id} className="w-[160px] md:w-[220px] shrink-0 snap-start group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer" onClick={() => abrirDetalhe(prod)}>
-                          <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative shrink-0`}>
-                            <span className="absolute top-2 left-2 z-10 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={8} fill="currentColor" /> Destaque</span>
-                            <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
-                          </div>
+                          
+                          <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={true} />
+                          
                           <div className="flex flex-col flex-1 p-3">
                             <div className="flex flex-wrap items-center gap-1 mb-2">
                               {descontoPercent > 0 && <span className="text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}%</span>}
@@ -829,10 +884,9 @@ export default function Catalogo({ isPublic = false }) {
                     const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
                     return (
                       <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                        <div className={`${aspectClass} bg-slate-50 border-b border-slate-100 overflow-hidden relative shrink-0`}>
-                          {prod.destaque && <span className="absolute top-3 left-3 z-10 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1 uppercase" style={{ backgroundColor: st?.cor_etiqueta_destaque || '#fbbf24' }}><Star size={10} fill="currentColor" /> Destaque</span>}
-                          <img src={prod.imagem_url || `https://placehold.co/400`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={prod.nome} />
-                        </div>
+                        
+                        <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={false} />
+
                         <div className="flex flex-col flex-1 p-3 md:p-4">
                           <div className="flex flex-wrap items-center gap-1.5 mb-2">
                             {descontoPercent > 0 && <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
