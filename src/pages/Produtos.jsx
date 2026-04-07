@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Tag, CheckSquare, Square, Eye, EyeOff, Edit3, 
-  Star, Layers, FileText, Copy, Trash2, X, Lock, Plus, Loader2,
-  ArrowUpDown // <-- Adicionado o ícone para o botão de organizar
+  Star, StarOff, Layers, FileText, Copy, Trash2, X, Lock, Plus, Loader2,
+  ArrowUpDown, Package, ChevronDown, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,9 +12,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { deletarImagensDoProduto } from '../components/Produtos/produtosUtils';
 import CategoriaModal from '../components/Produtos/CategoriaModal';
 import ProdutoModal from '../components/Produtos/ProdutoModal';
-import ReordenarVitrine from '../components/Produtos/ReordenarVitrine'; // <-- Importando nosso novo módulo
+import ReordenarVitrine from '../components/Produtos/ReordenarVitrine';
 
-const LIMITE_PRODUTOS = 50;
+const LIMITE_TOTAL = 300;
+const LIMITE_ONLINE = 80;
 
 const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -24,7 +25,7 @@ export default function Produtos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
-  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false); // <-- Estado para o modal de reordenar
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -36,7 +37,10 @@ export default function Produtos() {
   const [promoType, setPromoType] = useState('value');
   const [promoPercent, setPromoPercent] = useState('');
 
-  // ESTADO DE CATEGORIAS (LIMPO DE FÁBRICA)
+  const [viewTab, setViewTab] = useState('online');
+
+  const [collapsedSections, setCollapsedSections] = useState({});
+
   const [categorias, setCategorias] = useState(() => {
     const saved = localStorage.getItem("sistema_categorias");
     return saved ? JSON.parse(saved) : ['Sem Categoria'];
@@ -46,7 +50,6 @@ export default function Produtos() {
     localStorage.setItem("sistema_categorias", JSON.stringify(categorias));
   }, [categorias]);
 
-  // BUSCA OS PRODUTOS (Agora ordenando pela coluna Ordem também)
   const { data: produtos = [], isLoading } = useQuery({
     queryKey: ["sistema-produtos"],
     queryFn: async () => {
@@ -54,14 +57,18 @@ export default function Produtos() {
         .from("produtos")
         .select("*")
         .neq('arquivado', true)
-        .order("ordem", { ascending: true }) // Respeita a ordem manual
-        .order("created_at", { ascending: false }); // Desempata pela data
+        .order("ordem", { ascending: true })
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
 
-  // SINCRONIZA AS CATEGORIAS DO BANCO DE DADOS (RECUPERA AS ANTIGAS)
+  const produtosOnlineCount = produtos.filter(p => p.status_online).length;
+  const produtosTotalCount = produtos.length;
+  const limiteOnlineAtingido = produtosOnlineCount >= LIMITE_ONLINE;
+  const limiteTotalAtingido = produtosTotalCount >= LIMITE_TOTAL;
+
   useEffect(() => {
     if (produtos && produtos.length > 0) {
       const catBanco = produtos.map(p => p.categoria).filter(c => c && c !== 'Sem Categoria');
@@ -95,7 +102,7 @@ export default function Produtos() {
         imagem_url: prod.imagens?.[0] || '',
         status_online: prod.statusOnline ?? true,
         destaque: prod.destaque ?? false,
-        ordem: prod.ordem ?? 999, // Mantém a ordem existente ou joga pro final
+        ordem: prod.ordem ?? 999,
         variacoes: prod.variacoes || { ativa: false, atributos: [] },
         atacado: prod.atacado || { ativa: false, regras: [] },
         campos_personalizados: prod.campos_personalizados || [],
@@ -122,7 +129,6 @@ export default function Produtos() {
     mutationFn: async (id) => {
       const prod = produtos.find(p => p.id === id);
       if (prod) await deletarImagensDoProduto(prod); 
-      
       const { error } = await supabase.from("produtos").delete().eq("id", id);
       if (error) throw error;
     },
@@ -149,14 +155,42 @@ export default function Produtos() {
 
   const bulkStatusMutation = useMutation({
     mutationFn: async (status) => {
+      if (status === true) {
+        const selectedOfflineCount = produtos.filter(p => selectedIds.includes(p.id) && !p.status_online).length;
+        if (produtosOnlineCount + selectedOfflineCount > LIMITE_ONLINE) {
+          throw new Error(`O limite de ${LIMITE_ONLINE} produtos online seria ultrapassado!`);
+        }
+      }
       const { error } = await supabase.from('produtos').update({ status_online: status }).in('id', selectedIds);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
       setSelectedIds([]);
-    }
+    },
+    onError: (err) => alert(err.message)
   });
+
+  const bulkDestaqueMutation = useMutation({
+    mutationFn: async (status) => {
+      const { error } = await supabase.from('produtos').update({ destaque: status }).in('id', selectedIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
+      setSelectedIds([]);
+    },
+    onError: (err) => alert(err.message)
+  });
+
+  const toggleOnlineStatus = async (prod) => {
+    const isTurningOnline = !prod.status_online;
+    if (isTurningOnline && limiteOnlineAtingido) {
+       return alert(`Limite de ${LIMITE_ONLINE} produtos online atingido! Desative algum antes.`);
+    }
+    const { error } = await supabase.from('produtos').update({ status_online: isTurningOnline }).eq('id', prod.id);
+    if (!error) queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] });
+  };
 
   const bulkCategoryMutation = useMutation({
     mutationFn: async (category) => {
@@ -178,7 +212,7 @@ export default function Produtos() {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`ATENÇÃO: Deseja excluir PERMANENTEMENTE os ${selectedIds.length} produtos e suas fotos? Essa ação não pode ser desfeita.`)) {
+    if (window.confirm(`ATENÇÃO: Deseja excluir PERMANENTEMENTE os ${selectedIds.length} produtos e suas fotos?`)) {
       bulkDeleteMutation.mutate();
     }
   };
@@ -198,22 +232,24 @@ export default function Produtos() {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("ATENÇÃO: Deseja excluir este produto PERMANENTEMENTE e remover as fotos dele do servidor?")) {
+    if (window.confirm("ATENÇÃO: Deseja excluir este produto PERMANENTEMENTE e remover as fotos dele?")) {
       deleteMutation.mutate(id);
     }
   };
 
   const handleDuplicate = (prod) => {
-    if (produtos.length >= LIMITE_PRODUTOS) return alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
+    if (limiteTotalAtingido) return alert(`Limite de ${LIMITE_TOTAL} produtos atingido.`);
+    const forceOffline = limiteOnlineAtingido;
     const { id, created_at, ...rest } = prod;
-    saveMutation.mutate({ ...rest, nome: `${prod.nome} (Cópia)`, sku: prod.sku ? `${prod.sku}-COPY` : '', ordem: 999 });
+    saveMutation.mutate({ ...rest, nome: `${prod.nome} (Cópia)`, statusOnline: !forceOffline, sku: prod.sku ? `${prod.sku}-COPY` : '', ordem: 999 });
   };
 
   const handleNewProduct = () => {
-    if (produtos.length >= LIMITE_PRODUTOS) return alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
+    if (limiteTotalAtingido) return alert(`Limite de ${LIMITE_TOTAL} produtos totais atingido.`);
+    const forceOffline = limiteOnlineAtingido;
     setEditingProduct({
       nome: '', preco: 0, preco_promocional: 0, custo: 0, qtd_minima: 1, sku: '',
-      imagens: [], categoria: 'Sem Categoria', statusOnline: true, destaque: false, ordem: 999,
+      imagens: [], categoria: 'Sem Categoria', statusOnline: !forceOffline, destaque: false, ordem: 999,
       variacoes: { ativa: false, atributos: [] }, atacado: { ativa: false, regras: [] }, campos_personalizados: [],
       receita: { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 }
     });
@@ -236,16 +272,87 @@ export default function Produtos() {
     saveMutation.mutate(editingProduct);
   };
 
+  const toggleSection = (sectionName) => {
+    setCollapsedSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
+  };
+
   const filteredProducts = produtos.filter(p => {
     const nomeSeguro = p.nome || '';
     const matchSearch = nomeSeguro.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCategory = selectedCategory === 'Todas' || p.categoria === selectedCategory;
-    return matchSearch && matchCategory;
+    const matchView = viewTab === 'online' ? p.status_online !== false : p.status_online === false;
+    return matchSearch && matchCategory && matchView;
   });
+
+  const destaques = filteredProducts.filter(p => p.destaque);
+  const normais = filteredProducts.filter(p => !p.destaque);
+  const categoriasExibidas = [...new Set(normais.map(p => p.categoria || 'Sem Categoria'))];
+
+  const prodSendoEditado = produtos.find(p => p.id === editingProduct?.id);
+  const bloquearOnline = (!prodSendoEditado || !prodSendoEditado.status_online) && limiteOnlineAtingido;
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-slate-400" size={40} /></div>;
 
-  const limiteAtingido = produtos.length >= LIMITE_PRODUTOS;
+  const renderProductCard = (prod) => {
+    const precoAtivo = prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco;
+    const lucroReal = precoAtivo - prod.custo;
+    const isOnline = prod.status_online !== false;
+    const isSelected = selectedIds.includes(prod.id);
+    
+    return (
+      <div key={prod.id} className={`bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col relative ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'}`}>
+        <button onClick={(e) => { e.stopPropagation(); toggleSelection(prod.id); }} className="absolute top-2 left-2 z-30 bg-white/90 backdrop-blur rounded-md p-1 shadow-sm hover:scale-105 transition-transform">
+          {isSelected ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} className="text-slate-400" />}
+        </button>
+        
+        <div 
+          onClick={(e) => { e.stopPropagation(); toggleOnlineStatus(prod); }}
+          title="Clique para ligar/desligar na vitrine"
+          className={`absolute top-2 right-2 z-30 text-white text-[8px] font-bold px-2 py-1 rounded-md uppercase flex items-center gap-1 shadow-sm cursor-pointer hover:scale-105 transition-all ${isOnline ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-400 hover:bg-slate-500'}`}
+        >
+          {isOnline ? <Eye size={10} /> : <EyeOff size={10} />} {isOnline ? 'Online' : 'Offline'}
+        </div>
+
+        <div className="aspect-square bg-slate-50 relative overflow-hidden group cursor-pointer border-b border-slate-100" onClick={() => handleEdit(prod)}>
+          <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 z-10">
+            <div className="bg-white text-slate-800 px-3 py-1.5 rounded-full font-semibold text-[10px] uppercase flex items-center gap-1.5 shadow-md"><Edit3 size={12} /> Editar</div>
+          </div>
+          <img src={prod.imagens?.[0] || `https://placehold.co/400x400/f8fafc/94a3b8?text=${(prod.nome || 'Produto').split(' ')[0]}`} alt={prod.nome || 'Produto'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        </div>
+        
+        <div className="p-3 md:p-4 flex flex-col flex-1">
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {prod.destaque && <span className="bg-amber-50 text-amber-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-amber-100"><Star size={8} fill="currentColor"/> Destaque</span>}
+            {prod.preco_promocional > 0 && <span className="bg-purple-50 text-purple-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-purple-100"><Tag size={8}/> Promo</span>}
+            {prod.variacoes?.ativa && <span className="bg-blue-50 text-blue-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-blue-100"><Layers size={8}/> Variações</span>}
+            {prod.campos_personalizados?.length > 0 && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-emerald-100"><FileText size={8}/> Pers.</span>}
+            {prod.qtd_minima > 1 && <span className="bg-slate-800 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1">Mín: {prod.qtd_minima} un.</span>}
+            <span className="bg-slate-50 text-slate-500 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase border border-slate-100">{prod.categoria}</span>
+          </div>
+
+          <h3 className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 h-8 mb-3">{prod.nome}</h3>
+          
+          <div className="mt-auto border-t border-slate-100 pt-3 flex items-end justify-between">
+            <div>
+              <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Venda</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm font-semibold text-slate-800 leading-none">R$ {Number(precoAtivo).toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="bg-emerald-50/50 text-emerald-600 px-2 py-1 rounded-md flex flex-col items-center border border-emerald-50">
+              <p className="text-[7px] font-semibold uppercase mb-0.5">Lucro</p>
+              <span className="text-[9px] font-semibold leading-none">+R$ {lucroReal.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-1.5 mt-3">
+            <button onClick={() => handleDuplicate(prod)} className="flex-1 h-8 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-md text-[9px] font-semibold uppercase flex items-center justify-center gap-1 transition-colors border border-slate-200"><Copy size={12}/> Duplicar</button>
+            <button onClick={() => handleDelete(prod.id)} className="flex-1 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-md text-[9px] font-semibold uppercase flex items-center justify-center gap-1 transition-colors border border-red-100"><Trash2 size={12}/> Excluir</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 relative text-slate-900 pb-32">
@@ -255,19 +362,28 @@ export default function Produtos() {
           <div>
              <h1 className="text-xl md:text-2xl font-semibold uppercase text-slate-800 tracking-tight">Gestão de Produtos</h1>
              <p className="text-[9px] md:text-[10px] font-medium text-slate-500 uppercase tracking-widest mt-1">
-               Gerencie seu catálogo • <span className={limiteAtingido ? "text-red-500 font-semibold" : "text-blue-500 font-semibold"}>{produtos.length}/{LIMITE_PRODUTOS}</span>
+               {produtosTotalCount}/{LIMITE_TOTAL} Cadastrados • <span className={limiteOnlineAtingido ? "text-red-500" : "text-emerald-500"}>{produtosOnlineCount}/{LIMITE_ONLINE} Online</span>
              </p>
           </div>
           
-          {/* --- BOTÕES DO TOPO --- */}
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
              <Button onClick={() => setIsReorderModalOpen(true)} variant="outline" className="h-9 border-slate-200 text-slate-700 hover:bg-slate-100 rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 transition-all w-full sm:w-auto shadow-sm">
                <ArrowUpDown size={14} /> Organizar Vitrine
              </Button>
-             <Button onClick={handleNewProduct} disabled={limiteAtingido} className={`h-9 text-white rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 shadow-sm transition-all w-full sm:w-auto ${limiteAtingido ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-               {limiteAtingido ? <Lock size={14} /> : <Plus size={14} />} <span className="inline">{limiteAtingido ? 'Limite Atingido' : 'Novo Produto'}</span>
+             <Button onClick={handleNewProduct} disabled={limiteTotalAtingido} className={`h-9 text-white rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 shadow-sm transition-all w-full sm:w-auto ${limiteTotalAtingido ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+               {limiteTotalAtingido ? <Lock size={14} /> : <Plus size={14} />} <span className="inline">{limiteTotalAtingido ? 'Limite Atingido' : 'Novo Produto'}</span>
              </Button>
           </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-100 p-3 md:p-4 rounded-xl shadow-sm flex items-start gap-3">
+           <Info className="text-blue-500 shrink-0 mt-0.5" size={18} />
+           <div>
+              <p className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Dica de Usabilidade</p>
+              <p className="text-[10px] text-blue-700/80 font-medium leading-relaxed">
+                Para manter sua vitrine sempre bonita, rápida e fácil para o cliente navegar, limitamos o catálogo a <strong className="text-blue-800">80 produtos online simultâneos</strong> (você pode ter até {LIMITE_TOTAL} cadastrados) e <strong className="text-blue-800">até 5 fotos</strong> por produto/variação. Foque em expor o que você tem de melhor!
+              </p>
+           </div>
         </div>
 
         <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -295,79 +411,109 @@ export default function Produtos() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-          {filteredProducts.map((prod) => {
-             const precoAtivo = prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco;
-             const lucroReal = precoAtivo - prod.custo;
-             const isOnline = prod.status_online !== false;
-             const isSelected = selectedIds.includes(prod.id);
-            
-             return (
-              <div key={prod.id} className={`bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col relative ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-200'}`}>
-                <button onClick={() => toggleSelection(prod.id)} className="absolute top-2 left-2 z-30 bg-white/90 backdrop-blur rounded-md p-1 shadow-sm hover:scale-105 transition-transform">
-                  {isSelected ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} className="text-slate-400" />}
-                </button>
-                <div className={`absolute top-2 right-2 z-20 text-white text-[8px] font-semibold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-sm ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`}>
-                  {isOnline ? <Eye size={10} /> : <EyeOff size={10} />} {isOnline ? 'Online' : 'Offline'}
-                </div>
-
-                <div className="aspect-square bg-slate-50 relative overflow-hidden group cursor-pointer border-b border-slate-100" onClick={() => handleEdit(prod)}>
-                  <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 z-10">
-                    <div className="bg-white text-slate-800 px-3 py-1.5 rounded-full font-semibold text-[10px] uppercase flex items-center gap-1.5 shadow-md"><Edit3 size={12} /> Editar</div>
-                  </div>
-                  <img src={prod.imagens?.[0] || `https://placehold.co/400x400/f8fafc/94a3b8?text=${(prod.nome || 'Produto').split(' ')[0]}`} alt={prod.nome || 'Produto'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                
-                <div className="p-3 md:p-4 flex flex-col flex-1">
-                  <div className="flex flex-wrap gap-1.5 mb-2.5">
-                    {prod.destaque && <span className="bg-amber-50 text-amber-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-amber-100"><Star size={8} fill="currentColor"/> Destaque</span>}
-                    {prod.preco_promocional > 0 && <span className="bg-purple-50 text-purple-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-purple-100"><Tag size={8}/> Promo</span>}
-                    {prod.variacoes?.ativa && <span className="bg-blue-50 text-blue-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-blue-100"><Layers size={8}/> Variações</span>}
-                    {prod.campos_personalizados?.length > 0 && <span className="bg-emerald-50 text-emerald-600 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-emerald-100"><FileText size={8}/> Pers.</span>}
-                    {prod.qtd_minima > 1 && <span className="bg-slate-800 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1">Mín: {prod.qtd_minima} un.</span>}
-                    <span className="bg-slate-50 text-slate-500 text-[8px] font-semibold px-1.5 py-0.5 rounded-full uppercase border border-slate-100">{prod.categoria}</span>
-                  </div>
-
-                  <h3 className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 h-8 mb-3">{prod.nome}</h3>
-                  
-                  <div className="mt-auto border-t border-slate-100 pt-3 flex items-end justify-between">
-                    <div>
-                      <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Venda</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm font-semibold text-slate-800 leading-none">R$ {Number(precoAtivo).toFixed(2)}</p>
-                      </div>
-                    </div>
-                    <div className="bg-emerald-50/50 text-emerald-600 px-2 py-1 rounded-md flex flex-col items-center border border-emerald-50">
-                      <p className="text-[7px] font-semibold uppercase mb-0.5">Lucro</p>
-                      <span className="text-[9px] font-semibold leading-none">+R$ {lucroReal.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-1.5 mt-3">
-                    <button onClick={() => handleDuplicate(prod)} className="flex-1 h-8 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-md text-[9px] font-semibold uppercase flex items-center justify-center gap-1 transition-colors border border-slate-200"><Copy size={12}/> Duplicar</button>
-                    <button onClick={() => handleDelete(prod.id)} className="flex-1 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-md text-[9px] font-semibold uppercase flex items-center justify-center gap-1 transition-colors border border-red-100"><Trash2 size={12}/> Excluir</button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex bg-slate-200/60 p-1.5 rounded-lg mb-6 border border-slate-200 shadow-sm w-full md:w-[320px]">
+           <button onClick={() => setViewTab('online')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${viewTab === 'online' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
+             Vitrine ({produtosOnlineCount})
+           </button>
+           <button onClick={() => setViewTab('offline')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${viewTab === 'offline' ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500 hover:text-slate-700'}`}>
+             Ocultos ({produtosTotalCount - produtosOnlineCount})
+           </button>
         </div>
+
+        {destaques.length > 0 && (
+           <div className="mb-10">
+             <div 
+               onClick={() => toggleSection('destaques')} 
+               className="flex items-center justify-between cursor-pointer border-b border-amber-100 pb-2 mb-4 group"
+             >
+               <h2 className="text-xs font-bold uppercase text-amber-600 flex items-center gap-1.5 transition-colors group-hover:text-amber-700">
+                 <Star size={14} fill="currentColor"/> Destaques da Vitrine ({destaques.length})
+               </h2>
+               <ChevronDown size={16} className={`text-amber-500 transition-transform duration-300 ${collapsedSections['destaques'] ? 'rotate-180' : ''}`} />
+             </div>
+             
+             <AnimatePresence>
+               {!collapsedSections['destaques'] && (
+                 <motion.div
+                   initial={{ height: 0, opacity: 0 }}
+                   animate={{ height: 'auto', opacity: 1 }}
+                   exit={{ height: 0, opacity: 0 }}
+                   className="overflow-hidden"
+                 >
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pt-1">
+                     {destaques.map(prod => renderProductCard(prod))}
+                   </div>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+           </div>
+        )}
+
+        {categoriasExibidas.length > 0 ? (
+           categoriasExibidas.map(cat => {
+             const prodsCat = normais.filter(p => (p.categoria || 'Sem Categoria') === cat);
+             if (prodsCat.length === 0) return null;
+             
+             const isCollapsed = collapsedSections[cat];
+
+             return (
+               <div key={cat} className="mb-10">
+                 <div 
+                   onClick={() => toggleSection(cat)}
+                   className="flex items-center justify-between cursor-pointer border-b border-slate-200 pb-2 mb-4 group"
+                 >
+                   <h2 className="text-xs font-bold uppercase text-slate-700 flex items-center gap-1.5 transition-colors group-hover:text-slate-900">
+                     <Layers size={14}/> Categoria: {cat} ({prodsCat.length})
+                   </h2>
+                   <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+                 </div>
+                 
+                 <AnimatePresence>
+                   {!isCollapsed && (
+                     <motion.div
+                       initial={{ height: 0, opacity: 0 }}
+                       animate={{ height: 'auto', opacity: 1 }}
+                       exit={{ height: 0, opacity: 0 }}
+                       className="overflow-hidden"
+                     >
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pt-1">
+                         {prodsCat.map(prod => renderProductCard(prod))}
+                       </div>
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+               </div>
+             );
+           })
+        ) : (
+           destaques.length === 0 && (
+              <div className="text-center py-20 bg-white border border-slate-200 rounded-xl shadow-sm">
+                 <Package size={40} className="mx-auto text-slate-300 mb-4" />
+                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Nenhum produto {viewTab === 'online' ? 'na vitrine' : 'oculto'} encontrado.</p>
+              </div>
+           )
+        )}
       </div>
 
       <AnimatePresence>
         {selectedIds.length > 0 && (
-          <motion.div initial={{ y: 150, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 150, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-slate-800 border border-slate-700 text-white p-3 rounded-2xl shadow-2xl z-50 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
+          <motion.div initial={{ y: 150, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 150, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-slate-800 border border-slate-700 text-white p-3 rounded-2xl shadow-2xl z-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 shrink-0">
               <div className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[10px]">{selectedIds.length}</div>
               <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-300">Selecionados</span>
             </div>
             
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 w-full">
               <button onClick={() => bulkStatusMutation.mutate(true)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><Eye size={12} className="text-emerald-400" /> Online</button>
               <button onClick={() => bulkStatusMutation.mutate(false)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><EyeOff size={12} className="text-slate-400" /> Offline</button>
-              <button onClick={() => setIsBulkCategoryModalOpen(true)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><Tag size={12} className="text-blue-400" /> Categoria</button>
+              
+              {/* NOVOS BOTÕES DE DESTAQUE EM MASSA */}
+              <button onClick={() => bulkDestaqueMutation.mutate(true)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><Star size={12} className="text-amber-400" fill="currentColor" /> Destacar</button>
+              <button onClick={() => bulkDestaqueMutation.mutate(false)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><StarOff size={12} className="text-slate-400" /> S/ Destaque</button>
+              
+              <button onClick={() => setIsBulkCategoryModalOpen(true)} className="px-3 h-8 bg-slate-700 hover:bg-slate-600 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-slate-600"><Tag size={12} className="text-blue-400" /> Cat.</button>
               <button onClick={handleBulkDelete} className="px-3 h-8 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full text-[9px] font-semibold uppercase flex items-center gap-1.5 transition-colors border border-red-500/20"><Trash2 size={12} /> Excluir</button>
-              <button onClick={() => setSelectedIds([])} className="p-1.5 text-slate-400 hover:text-white transition-colors"><X size={16} /></button>
+              <button onClick={() => setSelectedIds([])} className="p-1.5 text-slate-400 hover:text-white transition-colors ml-auto"><X size={16} /></button>
             </div>
           </motion.div>
         )}
@@ -421,20 +567,18 @@ export default function Produtos() {
             setPromoType={setPromoType}
             promoPercent={promoPercent}
             setPromoPercent={setPromoPercent}
+            bloquearOnline={bloquearOnline}
           />
         )}
       </AnimatePresence>
       
-      {/* RENDERIZANDO NOSSO NOVO MÓDULO DE REORDENAR */}
       <ReordenarVitrine 
          isOpen={isReorderModalOpen} 
          onClose={() => {
            setIsReorderModalOpen(false);
-           // Atualiza os dados assim que o modal fecha para refletir a nova ordem
            queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] }); 
          }} 
       />
-
     </div>
   );
 }

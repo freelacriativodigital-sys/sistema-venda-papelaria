@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "../lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 
-// --- IMPORTANDO OS SEUS NOVOS COMPONENTES (Cérebro e Visual) ---
 import { deletePhysicalFile, compressImageToBlob } from '../components/Catalogo/catalogoUtils';
 import { HeaderSite } from '../components/Catalogo/HeaderSite';
 import BenefitsBar from '../components/Catalogo/BenefitsBar';
@@ -15,7 +14,6 @@ import EditorSection from '../components/Catalogo/EditorSection';
 import EditorForms from '../components/Catalogo/EditorForms';
 import SeletorData from '../components/SeletorData';
 
-// --- COMPONENTE DO CARROSSEL DE FOTOS DO CARD ---
 const CardSlider = ({ prod, aspectClass, st, isDestaqueCarrossel }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -100,7 +98,6 @@ export default function Catalogo({ isPublic = false }) {
   const [selecoes, setSelecoes] = useState({});
   const [respostasPersonalizadas, setRespostasPersonalizadas] = useState({});
   
-  // Controle da sanfona (accordion) de descrição para mobile e desktop
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   const [activeImage, setActiveImage] = useState('');
@@ -139,7 +136,6 @@ export default function Catalogo({ isPublic = false }) {
         const { data: configData } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (configData) setSt(configData);
 
-        // CORREÇÃO: Buscando do banco de dados já ordenado pela coluna 'ordem'
         const { data: prodData } = await supabase
           .from('produtos')
           .select('*')
@@ -158,8 +154,10 @@ export default function Catalogo({ isPublic = false }) {
     fetchData();
   }, []);
 
+  // --- GERENCIADOR DE SEO, PIXEL E GOOGLE ANALYTICS ---
   useEffect(() => {
     if (st) {
+      // SEO
       let metaRobots = document.getElementById('seo-robots');
       if (!metaRobots) {
         metaRobots = document.createElement('meta');
@@ -174,6 +172,7 @@ export default function Catalogo({ isPublic = false }) {
         metaRobots.setAttribute("content", "noindex, nofollow");
       }
 
+      // Meta Pixel
       if (st.meta_pixel_id && isPublic && !window.fbq) {
         !function(f,b,e,v,n,t,s)
         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -186,6 +185,25 @@ export default function Catalogo({ isPublic = false }) {
         
         window.fbq('init', st.meta_pixel_id);
         window.fbq('track', 'PageView');
+      }
+
+      // --- NOVO: GOOGLE ANALYTICS (GA4) ---
+      if (st.google_analytics_id && isPublic && !window.gtag) {
+        const scriptUrl = `https://www.googletagmanager.com/gtag/js?id=${st.google_analytics_id}`;
+        
+        // Verifica se o script já não foi injetado acidentalmente
+        if (!document.querySelector(`script[src="${scriptUrl}"]`)) {
+           const script = document.createElement('script');
+           script.async = true;
+           script.src = scriptUrl;
+           document.head.appendChild(script);
+
+           window.dataLayer = window.dataLayer || [];
+           function gtag(){window.dataLayer.push(arguments);}
+           window.gtag = gtag; // Anexa ao Window para não quebrar
+           gtag('js', new Date());
+           gtag('config', st.google_analytics_id);
+        }
       }
     }
   }, [st, isPublic]);
@@ -236,6 +254,7 @@ export default function Catalogo({ isPublic = false }) {
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // Dispara evento do Pixel ao ver produto
     if (st?.meta_pixel_id && isPublic && window.fbq) {
       window.fbq('track', 'ViewContent', {
         content_name: prod.nome,
@@ -243,6 +262,15 @@ export default function Catalogo({ isPublic = false }) {
         content_type: 'product',
         value: prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco,
         currency: 'BRL'
+      });
+    }
+
+    // Dispara evento pro Google Analytics
+    if (st?.google_analytics_id && isPublic && window.gtag) {
+      window.gtag('event', 'view_item', {
+        currency: 'BRL',
+        value: prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco,
+        items: [{ item_id: prod.id, item_name: prod.nome, item_category: prod.categoria }]
       });
     }
   };
@@ -290,7 +318,7 @@ export default function Catalogo({ isPublic = false }) {
     setSelecoes(iniciais);
     setRespostasPersonalizadas({}); 
     setQuantidade(prod.qtd_minima || 1);
-    setIsDescExpanded(false); // Reseta a sanfona ao abrir um novo produto
+    setIsDescExpanded(false); 
     setSelectedProduct(prod);
     setView('detalhe');
   };
@@ -341,7 +369,6 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
-  // CORREÇÃO: Aplicando a regra de ordenação visual do catálogo
   const filtered = produtos
     .filter(p => {
       const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -351,18 +378,14 @@ export default function Catalogo({ isPublic = false }) {
       return matchSearch && matchCategory;
     })
     .sort((a, b) => {
-      // 1. Destaques primeiro
       if (a.destaque && !b.destaque) return -1;
       if (!a.destaque && b.destaque) return 1;
       
-      // 2. Ordenação manual escolhida no cadastro (menor número = aparece antes)
       const ordemA = a.ordem || 999;
       const ordemB = b.ordem || 999;
       if (ordemA !== ordemB) {
         return ordemA - ordemB;
       }
-      
-      // 3. Desempate pela data de criação (mais novos primeiro)
       return new Date(b.created_at) - new Date(a.created_at);
     });
 
@@ -417,7 +440,6 @@ export default function Catalogo({ isPublic = false }) {
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
              const campo = item.produto.campos_personalizados?.find(c => String(c.id) === String(k));
-             
              let valorExibido = v;
              if (campo?.tipo === 'data' && v.includes('-')) {
                  const [year, month, day] = v.split('-');
@@ -425,7 +447,6 @@ export default function Catalogo({ isPublic = false }) {
                      valorExibido = `${day}/${month}/${year}`;
                  }
              }
-
              return `▪️ *${campo?.titulo || k}:* ${valorExibido}`;
           }).join('\n');
        }
@@ -442,12 +463,12 @@ export default function Catalogo({ isPublic = false }) {
     dbDesc += `\n*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
     zapMsg += `*TOTAL DO PEDIDO:* R$ ${totalGeral.toFixed(2)}`;
 
+    // EVENTOS DE CHECKOUT
     if (st?.meta_pixel_id && isPublic && window.fbq) {
-      window.fbq('track', 'InitiateCheckout', {
-        value: totalGeral,
-        currency: 'BRL',
-        num_items: carrinho.length
-      });
+      window.fbq('track', 'InitiateCheckout', { value: totalGeral, currency: 'BRL', num_items: carrinho.length });
+    }
+    if (st?.google_analytics_id && isPublic && window.gtag) {
+      window.gtag('event', 'begin_checkout', { currency: 'BRL', value: totalGeral });
     }
 
     supabase.from('pedidos').insert([{
@@ -512,14 +533,8 @@ export default function Catalogo({ isPublic = false }) {
       const descontoPercent = calcularDesconto(selectedProduct.preco, selectedProduct.preco_promocional);
       const relacionados = produtos.filter(p => p.categoria === selectedProduct.categoria && p.id !== selectedProduct.id).slice(0, 4);
 
-      const variacoesSelecionadasStr = Object.values(selecoes)
-        .filter(Boolean)
-        .map(opcao => opcao.nome)
-        .join(' - ');
-      
-      const tituloDinamico = variacoesSelecionadasStr 
-        ? `${selectedProduct.nome} (${variacoesSelecionadasStr})` 
-        : selectedProduct.nome;
+      const variacoesSelecionadasStr = Object.values(selecoes).filter(Boolean).map(opcao => opcao.nome).join(' - ');
+      const tituloDinamico = variacoesSelecionadasStr ? `${selectedProduct.nome} (${variacoesSelecionadasStr})` : selectedProduct.nome;
 
       const adicionarAoCarrinho = () => {
         if (selectedProduct.campos_personalizados?.length > 0) {
@@ -546,13 +561,10 @@ export default function Catalogo({ isPublic = false }) {
         };
 
         if (st?.meta_pixel_id && isPublic && window.fbq) {
-          window.fbq('track', 'AddToCart', {
-            content_name: tituloDinamico,
-            content_ids: [selectedProduct.id],
-            content_type: 'product',
-            value: precoTotal,
-            currency: 'BRL'
-          });
+          window.fbq('track', 'AddToCart', { content_name: tituloDinamico, content_ids: [selectedProduct.id], content_type: 'product', value: precoTotal, currency: 'BRL' });
+        }
+        if (st?.google_analytics_id && isPublic && window.gtag) {
+          window.gtag('event', 'add_to_cart', { currency: 'BRL', value: precoTotal, items: [{ item_id: selectedProduct.id, item_name: tituloDinamico, quantity: qtdSafe }] });
         }
 
         setCarrinho(prev => [...prev, novoItem]);
@@ -568,11 +580,7 @@ export default function Catalogo({ isPublic = false }) {
                 {atrib.opcoes.map(opcao => {
                   const isSelected = selecoes[atrib.nome]?.id === opcao.id;
                   return (
-                    <button
-                      key={opcao.id}
-                      onClick={() => selecionarOpcao(atrib.nome, opcao)}
-                      className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-semibold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
-                    >
+                    <button key={opcao.id} onClick={() => selecionarOpcao(atrib.nome, opcao)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-semibold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
                       {opcao.imagem && <div className="w-7 h-7 md:w-5 md:h-5 rounded-full overflow-hidden shrink-0 bg-white"><img src={opcao.imagem} className="w-full h-full object-cover"/></div>}
                       {opcao.nome}
                     </button>
@@ -595,44 +603,11 @@ export default function Catalogo({ isPublic = false }) {
                 <label className="text-[10px] font-semibold text-slate-700 uppercase tracking-widest ml-0.5 flex items-center gap-1">
                   {campo.titulo} {campo.obrigatorio && <span className="text-red-500">*</span>}
                 </label>
-                {campo.tipo === 'texto_curto' && (
-                  <Input 
-                    value={respostasPersonalizadas[campo.id] || ''} 
-                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
-                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400" 
-                    placeholder="Digite sua resposta..."
-                  />
-                )}
-                {campo.tipo === 'texto_longo' && (
-                  <textarea 
-                    value={respostasPersonalizadas[campo.id] || ''} 
-                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
-                    className="w-full min-h-[80px] p-2.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-800 resize-none outline-none focus:border-emerald-400 transition-colors" 
-                    placeholder="Escreva os detalhes..."
-                  />
-                )}
-                {campo.tipo === 'data' && (
-                  <SeletorData 
-                    value={respostasPersonalizadas[campo.id] || ''} 
-                    onChange={(val) => lidarRespostaPersonalizada(campo.id, val)} 
-                  />
-                )}
-                {campo.tipo === 'hora' && (
-                  <Input 
-                    type="time"
-                    value={respostasPersonalizadas[campo.id] || ''} 
-                    onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} 
-                    className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400 cursor-pointer" 
-                  />
-                )}
-                {campo.tipo === 'upload' && (
-                  <div className="bg-white border border-dashed border-slate-300 p-3 rounded-md text-center shadow-inner">
-                     <ImageIcon size={16} className="mx-auto text-slate-300 mb-1" />
-                     <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest leading-tight">
-                       O envio da foto/arte será solicitado pelo WhatsApp após finalizar o pedido.
-                     </p>
-                  </div>
-                )}
+                {campo.tipo === 'texto_curto' && <Input value={respostasPersonalizadas[campo.id] || ''} onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400" placeholder="Digite sua resposta..."/>}
+                {campo.tipo === 'texto_longo' && <textarea value={respostasPersonalizadas[campo.id] || ''} onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} className="w-full min-h-[80px] p-2.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-800 resize-none outline-none focus:border-emerald-400 transition-colors" placeholder="Escreva os detalhes..."/>}
+                {campo.tipo === 'data' && <SeletorData value={respostasPersonalizadas[campo.id] || ''} onChange={(val) => lidarRespostaPersonalizada(campo.id, val)} />}
+                {campo.tipo === 'hora' && <Input type="time" value={respostasPersonalizadas[campo.id] || ''} onChange={(e) => lidarRespostaPersonalizada(campo.id, e.target.value)} className="h-9 bg-white border-slate-200 text-xs font-medium text-slate-800 focus:border-emerald-400 cursor-pointer" />}
+                {campo.tipo === 'upload' && <div className="bg-white border border-dashed border-slate-300 p-3 rounded-md text-center shadow-inner"><ImageIcon size={16} className="mx-auto text-slate-300 mb-1" /><p className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest leading-tight">O envio da foto/arte será solicitado pelo WhatsApp após finalizar o pedido.</p></div>}
               </div>
             ))}
           </div>
@@ -657,7 +632,7 @@ export default function Catalogo({ isPublic = false }) {
             </button>
             <div className="flex flex-col md:flex-row gap-8 lg:gap-12" ref={imageRef}>
               
-              {/* LADO ESQUERDO (Imagens e Descrição no Desktop) */}
+              {/* LADO ESQUERDO */}
               <div className="w-full md:w-[45%] flex flex-col gap-4">
                  <div className={`${aspectClass} rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm relative group`}>
                    {selectedProduct.destaque && (
@@ -678,19 +653,14 @@ export default function Catalogo({ isPublic = false }) {
                  )}
                  <div className="block md:hidden mt-2">{variacoesJSX}</div>
                  
-                 {/* DESCRIÇÃO - DESKTOP (Lado esquerdo com sanfona) */}
                  {selectedProduct.descricao && (
                     <div className="hidden md:block mt-6 pt-6 border-t border-slate-100">
                       <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-3">Descrição do Produto</h3>
                       <div className={`text-sm text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
                         {selectedProduct.descricao}
                       </div>
-                      <button 
-                        onClick={() => setIsDescExpanded(!isDescExpanded)} 
-                        className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
-                      >
-                        {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
-                        <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
+                      <button onClick={() => setIsDescExpanded(!isDescExpanded)} className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors">
+                        {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
                       </button>
                     </div>
                  )}
@@ -700,51 +670,28 @@ export default function Catalogo({ isPublic = false }) {
               <div className="w-full md:w-[55%] flex flex-col">
                 <div className="flex flex-wrap gap-2 mb-3">
                   {descontoPercent > 0 && !wholesaleApplied && !hasVariationPrice && (
-                    <span className="text-white text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>
-                      -{descontoPercent}% OFF
-                    </span>
+                    <span className="text-white text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>
                   )}
-                  {selectedProduct.qtd_minima > 1 && (
-                    <span className="bg-slate-800 text-white text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm">
-                      Pedido Mín. {selectedProduct.qtd_minima} un.
-                    </span>
-                  )}
-                  <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm flex items-center gap-1">
-                    <Package size={12}/> {selectedProduct.categoria}
-                  </span>
+                  {selectedProduct.qtd_minima > 1 && <span className="bg-slate-800 text-white text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm">Pedido Mín. {selectedProduct.qtd_minima} un.</span>}
+                  <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-semibold px-2 py-1 rounded-full uppercase shadow-sm flex items-center gap-1"><Package size={12}/> {selectedProduct.categoria}</span>
                 </div>
                 
-                <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-4 leading-tight transition-all">
-                  {tituloDinamico}
-                </h1>
+                <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-4 leading-tight transition-all">{tituloDinamico}</h1>
                 
                 <div className="mb-6 pb-6 border-b border-slate-100">
                    <div className="flex items-end gap-3 mb-1">
                      <span className="text-3xl md:text-4xl font-semibold transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {unitPriceFinal.toFixed(2)}</span>
-                     {selectedProduct.preco_promocional > 0 && !wholesaleApplied && !hasVariationPrice && (
-                       <span className="text-sm text-slate-400 line-through font-medium mb-1.5">R$ {selectedProduct.preco.toFixed(2)}</span>
-                     )}
+                     {selectedProduct.preco_promocional > 0 && !wholesaleApplied && !hasVariationPrice && <span className="text-sm text-slate-400 line-through font-medium mb-1.5">R$ {selectedProduct.preco.toFixed(2)}</span>}
                    </div>
-                   {wholesaleApplied && (
-                      <span className="font-semibold text-[10px] uppercase flex items-center gap-1 mt-1" style={{ color: st?.cor_etiqueta_atacado || '#fb923c' }}>
-                        <Box size={12}/> Preço de Atacado Aplicado
-                      </span>
-                   )}
+                   {wholesaleApplied && <span className="font-semibold text-[10px] uppercase flex items-center gap-1 mt-1" style={{ color: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={12}/> Preço de Atacado Aplicado</span>}
                 </div>
                 
-                {/* DESCRIÇÃO - MOBILE (Abaixo do Título e Valor com Sanfona) */}
                 {selectedProduct.descricao && (
                   <div className="block md:hidden mb-6 pb-6 border-b border-slate-100">
-                    <h3 className="text-[11px] md:text-xs font-semibold text-slate-800 uppercase tracking-widest mb-2 md:mb-3">Descrição do Produto</h3>
-                    <div className={`text-xs md:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
-                      {selectedProduct.descricao}
-                    </div>
-                    <button 
-                      onClick={() => setIsDescExpanded(!isDescExpanded)} 
-                      className="mt-2 flex items-center gap-1 text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
-                    >
-                      {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
-                      <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
+                    <h3 className="text-[11px] font-semibold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
+                    <div className={`text-xs text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>{selectedProduct.descricao}</div>
+                    <button onClick={() => setIsDescExpanded(!isDescExpanded)} className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors">
+                      {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />
                     </button>
                   </div>
                 )}
@@ -756,15 +703,11 @@ export default function Catalogo({ isPublic = false }) {
                     <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Box size={14}/> Descontos por Quantidade</h3>
                     {atacadoData.nextRule ? (
                       <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                         <p className="text-[11px] font-medium text-slate-600 mb-2">
-                           🔥 Faltam só <span className="font-semibold text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-semibold text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span>
-                         </p>
+                         <p className="text-[11px] font-medium text-slate-600 mb-2">🔥 Faltam só <span className="font-semibold text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-semibold text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span></p>
                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1"><div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
                       </div>
                     ) : (
-                      <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 text-amber-700">
-                        <Sparkles size={16} className="text-amber-500" /><span className="text-[11px] font-semibold uppercase tracking-widest">Desconto Máximo Atingido!</span>
-                      </div>
+                      <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center gap-2 text-amber-700"><Sparkles size={16} className="text-amber-500" /><span className="text-[11px] font-semibold uppercase tracking-widest">Desconto Máximo Atingido!</span></div>
                     )}
                     <div className="flex flex-col gap-1.5">
                       {atacadoData.rules.map((r, i) => {
@@ -782,7 +725,6 @@ export default function Catalogo({ isPublic = false }) {
 
                 {camposPersonalizadosJSX}
                 
-                {/* BARRA DE COMPRA DESKTOP */}
                 <div className="hidden md:block mt-4">
                    <div className="flex flex-col w-full max-w-6xl mx-auto">
                      <div className={`flex flex-row items-center gap-3 md:gap-4 w-full`}>
@@ -836,17 +778,12 @@ export default function Catalogo({ isPublic = false }) {
           
           <FooterSite st={st} />
 
-          {/* BARRA FIXA MOBILE */}
           <div className={`block md:hidden fixed inset-x-0 ${isPublic ? 'bottom-0' : 'bottom-[64px]'} bg-white p-4 pb-5 border-t border-slate-200 shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)] z-[100]`}>
              <div className="flex flex-col w-full max-w-6xl mx-auto">
                {atacadoData && atacadoData.nextRule && (
                  <div className="flex flex-col gap-1.5 mb-3 px-1">
-                    <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest text-center">
-                      🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un
-                    </p>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                       <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div>
-                    </div>
+                    <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest text-center">🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</p>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"><div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
                  </div>
                )}
 
@@ -872,7 +809,6 @@ export default function Catalogo({ isPublic = false }) {
              </div>
           </div>
 
-          {/* GAVETA DO CARRINHO */}
           <AnimatePresence>
             {isCartOpen && (
               <>
@@ -932,19 +868,12 @@ export default function Catalogo({ isPublic = false }) {
             )}
           </AnimatePresence>
 
-          {/* BOTÃO FLUTUANTE DO CARRINHO */}
           {carrinho.length > 0 && !isCartOpen && (
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${floatingCartBottom}`}
-            >
+            <button onClick={() => setIsCartOpen(true)} className={`fixed right-4 md:right-10 z-[100] w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-95 md:bottom-10 ${floatingCartBottom}`}>
               <ShoppingCart size={24} />
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-semibold rounded-full flex items-center justify-center shadow-sm">
-                {carrinho.length}
-              </span>
+              <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[11px] font-semibold rounded-full flex items-center justify-center shadow-sm">{carrinho.length}</span>
             </button>
           )}
-
         </div>
       );
     }
@@ -963,21 +892,13 @@ export default function Catalogo({ isPublic = false }) {
              </div>
           ) : (
             <div className="space-y-12">
-              
-              {/* --- 1. SESSÃO DE DESTAQUES (Carrossel Horizontal) --- */}
               {selectedCategory === 'Todas' && !searchTerm && filtered.filter(p => p.destaque).length > 0 && (
                 <div className="w-full">
                   <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                    <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-                      <span className="text-xl">🔥</span> Destaques
-                    </h2>
+                    <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2"><span className="text-xl">🔥</span> Destaques</h2>
                     <div className="hidden md:flex items-center gap-2">
-                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: -300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm">
-                        <ChevronLeft size={18} />
-                      </button>
-                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: 300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm">
-                        <ChevronLeft size={18} className="rotate-180" />
-                      </button>
+                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: -300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm"><ChevronLeft size={18} /></button>
+                      <button onClick={() => { document.getElementById('carrossel-destaques').scrollBy({ left: 300, behavior: 'smooth' }) }} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors border border-slate-200 shadow-sm"><ChevronLeft size={18} className="rotate-180" /></button>
                     </div>
                   </div>
                   
@@ -986,16 +907,13 @@ export default function Catalogo({ isPublic = false }) {
                       const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
                       return (
                         <div key={prod.id} className="w-[160px] md:w-[220px] shrink-0 snap-start group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer" onClick={() => abrirDetalhe(prod)}>
-                          
                           <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={true} />
-                          
                           <div className="flex flex-col flex-1 p-3">
                             <div className="flex flex-wrap items-center gap-1 mb-2">
                               {descontoPercent > 0 && <span className="text-white text-[8px] font-semibold px-1 py-0.5 rounded-full uppercase" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}%</span>}
                               {prod.atacado?.ativa && <span className="text-white text-[8px] font-semibold px-1 py-0.5 rounded-full uppercase" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}>Atacado</span>}
                             </div>
                             <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[36px]">{prod.nome}</h3>
-                            
                             <div className="mt-auto pt-3 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
                                 {prod.preco_promocional > 0 ? (
@@ -1004,9 +922,7 @@ export default function Catalogo({ isPublic = false }) {
                                   <span className="text-sm font-semibold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
                                 )}
                               </div>
-                              <button className="w-full h-8 rounded-lg text-white text-[10px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
-                                Ver Detalhes
-                              </button>
+                              <button className="w-full h-8 rounded-lg text-white text-[10px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>Ver Detalhes</button>
                             </div>
                           </div>
                         </div>
@@ -1016,36 +932,21 @@ export default function Catalogo({ isPublic = false }) {
                 </div>
               )}
 
-              {/* --- 2. SESSÃO PRINCIPAL DA GRADE (Todos ou Categoria) --- */}
               <div className="w-full">
-                <h2 className="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-6">
-                  {selectedCategory === 'Todas' ? 'Todos os Produtos' : selectedCategory}
-                </h2>
-                
+                <h2 className="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-6">{selectedCategory === 'Todas' ? 'Todos os Produtos' : selectedCategory}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
-                  {filtered
-                    .filter(prod => {
-                      if (selectedCategory === 'Todas' && !searchTerm) {
-                        return !prod.destaque;
-                      }
-                      return true;
-                    })
-                    .map(prod => {
+                  {filtered.filter(prod => { if (selectedCategory === 'Todas' && !searchTerm) return !prod.destaque; return true; }).map(prod => {
                       const descontoPercent = calcularDesconto(prod.preco, prod.preco_promocional);
                       return (
                         <div key={prod.id} className="group bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col h-full cursor-pointer animate-in fade-in" onClick={() => abrirDetalhe(prod)}>
-                          
                           <CardSlider prod={prod} aspectClass={aspectClass} st={st} isDestaqueCarrossel={false} />
-
                           <div className="flex flex-col flex-1 p-3 md:p-4">
                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                               {descontoPercent > 0 && <span className="text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase shadow-sm" style={{ backgroundColor: st?.cor_etiqueta_promo || '#f43f5e' }}>-{descontoPercent}% OFF</span>}
                               {prod.atacado?.ativa && <span className="text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={10} /> Atacado</span>}
                               {prod.variacoes?.ativa && <span className="text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase shadow-sm flex items-center gap-0.5" style={{ backgroundColor: st?.cor_etiqueta_variacao || '#60a5fa' }}><Layers size={10} /> Var.</span>}
                             </div>
-                            
                             <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px]">{prod.nome}</h3>
-                            
                             <div className="mt-auto pt-4 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
                                 {prod.preco_promocional > 0 ? (
@@ -1054,9 +955,7 @@ export default function Catalogo({ isPublic = false }) {
                                   <span className="text-base md:text-lg font-semibold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
                                 )}
                               </div>
-                              <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>
-                                Ver Detalhes
-                              </button>
+                              <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>Ver Detalhes</button>
                             </div>
                           </div>
                         </div>
@@ -1064,7 +963,6 @@ export default function Catalogo({ isPublic = false }) {
                   })}
                 </div>
               </div>
-
             </div>
           )}
         </main>
@@ -1082,38 +980,21 @@ export default function Catalogo({ isPublic = false }) {
       
       {/* CONTAINER HÍBRIDO DO EDITOR */}
       <div className="absolute lg:relative inset-y-0 left-0 w-full lg:w-[320px] flex flex-col bg-transparent lg:bg-slate-900 lg:border-r lg:border-slate-800 lg:shadow-2xl z-[140] lg:z-20 pointer-events-none lg:pointer-events-auto">
-        
         <div className="hidden lg:flex p-4 border-b border-slate-800 items-center justify-between bg-slate-950">
-          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft size={14} /> Sair
-          </button>
-          <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-semibold uppercase tracking-widest transition-all">
-            {saved ? <Check size={14} /> : "Salvar"}
-          </Button>
+          <button onClick={() => navigate('/app')} className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400 hover:text-white transition-colors"><ArrowLeft size={14} /> Sair</button>
+          <Button onClick={handleSave} className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[10px] font-semibold uppercase tracking-widest transition-all">{saved ? <Check size={14} /> : "Salvar"}</Button>
         </div>
 
         <div className="flex-1 lg:overflow-y-auto no-scrollbar lg:pb-10 pointer-events-none lg:pointer-events-auto">
-           <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}>
-              <EditorForms section="identidade" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} displayCategories={displayCategories} />
-           </EditorSection>
-           <EditorSection id="layout" title="Estrutura" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}>
-              <EditorForms section="layout" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} displayCategories={displayCategories} />
-           </EditorSection>
-           <EditorSection id="etiquetas" title="Etiquetas" icon={Tags} openSection={openSection} setOpenSection={setOpenSection}>
-              <EditorForms section="etiquetas" st={st} setSt={setSt} />
-           </EditorSection>
-           <EditorSection id="banners" title="Banner Principal" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}>
-              <EditorForms section="banner" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} />
-           </EditorSection>
-           <EditorSection id="rodape" title="Rodapé" icon={Globe} openSection={openSection} setOpenSection={setOpenSection}>
-              <EditorForms section="rodape" st={st} setSt={setSt} />
-           </EditorSection>
+           <EditorSection id="identidade" title="Visual & Logo" icon={Palette} openSection={openSection} setOpenSection={setOpenSection}><EditorForms section="identidade" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} displayCategories={displayCategories} /></EditorSection>
+           <EditorSection id="layout" title="Estrutura" icon={LayoutTemplate} openSection={openSection} setOpenSection={setOpenSection}><EditorForms section="layout" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} displayCategories={displayCategories} /></EditorSection>
+           <EditorSection id="etiquetas" title="Etiquetas" icon={Tags} openSection={openSection} setOpenSection={setOpenSection}><EditorForms section="etiquetas" st={st} setSt={setSt} /></EditorSection>
+           <EditorSection id="banners" title="Banner Principal" icon={ImageIcon} openSection={openSection} setOpenSection={setOpenSection}><EditorForms section="banner" st={st} setSt={setSt} handleImageUpload={handleImageUpload} removeImageAndStorage={removeImageAndStorage} /></EditorSection>
+           <EditorSection id="rodape" title="Rodapé" icon={Globe} openSection={openSection} setOpenSection={setOpenSection}><EditorForms section="rodape" st={st} setSt={setSt} /></EditorSection>
         </div>
 
         <div className="hidden lg:block p-4 border-t border-slate-800 bg-slate-950">
-           <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-semibold uppercase text-[9px] tracking-widest gap-2">
-             <Copy size={12} /> Copiar Link da Loja
-           </Button>
+           <Button onClick={copyVitrineLink} variant="outline" className="w-full h-8 bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 font-semibold uppercase text-[9px] tracking-widest gap-2"><Copy size={12} /> Copiar Link da Loja</Button>
         </div>
       </div>
 

@@ -23,6 +23,7 @@ export default function BriefingPublico() {
   const [config, setConfig] = useState(null);
   
   const [clienteNome, setClienteNome] = useState('');
+  const [clienteWhatsapp, setClienteWhatsapp] = useState('');
   const [respostas, setRespostas] = useState({});
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function BriefingPublico() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!clienteNome) return alert("Por favor, preencha o seu nome.");
+    if (!clienteWhatsapp) return alert("Por favor, preencha o seu WhatsApp.");
     
     const camposObrigatoriosVazios = template.campos.filter(c => c.obrigatorio && !respostas[c.id]);
     if (camposObrigatoriosVazios.length > 0) {
@@ -68,7 +70,9 @@ export default function BriefingPublico() {
     const payload = {
       template_id: template.id,
       cliente_nome: clienteNome,
-      dados: respostas
+      cliente_whatsapp: clienteWhatsapp,
+      dados: respostas,
+      lida: false
     };
 
     const { data: authData } = await supabase.auth.getUser();
@@ -127,7 +131,6 @@ export default function BriefingPublico() {
       <div className={`max-w-2xl mx-auto px-4 ${template.banner_url ? '-mt-10' : 'pt-10'} pb-20 relative z-10`}>
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           
-          {/* CABEÇALHO DO FORM */}
           <div className="p-5 md:p-8 border-b border-slate-100 text-center">
              {config?.logo_url && (
                <img src={config.logo_url} alt="Logo" className="h-14 w-14 object-contain mx-auto mb-3 rounded-lg shadow-sm border border-slate-100" />
@@ -138,24 +141,41 @@ export default function BriefingPublico() {
              )}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-5 md:p-8 space-y-5">
+          <form onSubmit={handleSubmit} className="p-5 md:p-8">
             
-            {/* DADOS DO CLIENTE */}
-            <div className="space-y-3 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
-              <div className="space-y-1">
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-600 ml-1 block">Seu Nome Completo <span className="text-rose-500">*</span></label>
+            <div className="space-y-4">
+              
+              {/* NOME DO CLIENTE */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-700 ml-1 block leading-tight">
+                  Seu Nome Completo <span className="text-rose-500">*</span>
+                </label>
                 <Input 
                   required 
                   value={clienteNome} 
                   onChange={e => setClienteNome(e.target.value)} 
                   placeholder="Como devemos te chamar?" 
-                  className="h-9 bg-white border-slate-200 focus:border-blue-400 rounded-md text-xs font-medium text-slate-800" 
+                  className="h-9 bg-slate-50 border-slate-200 focus:bg-white rounded-md text-xs font-medium text-slate-800" 
                 />
               </div>
-            </div>
 
-            {/* PERGUNTAS DINÂMICAS */}
-            <div className="space-y-4">
+              {/* WHATSAPP DO CLIENTE */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-700 ml-1 block leading-tight">
+                  Seu WhatsApp <span className="text-rose-500">*</span>
+                </label>
+                <Input 
+                  required 
+                  value={clienteWhatsapp} 
+                  onChange={e => setClienteWhatsapp(e.target.value)} 
+                  placeholder="(00) 00000-0000" 
+                  className="h-9 bg-slate-50 border-slate-200 focus:bg-white rounded-md text-xs font-medium text-slate-800" 
+                />
+              </div>
+
+              <div className="h-px w-full bg-slate-100 my-4"></div>
+
+              {/* PERGUNTAS DINÂMICAS */}
               {template.campos.map((campo, index) => (
                 <div key={campo.id} className="space-y-1.5">
                   <label className="text-[9px] font-semibold uppercase tracking-widest text-slate-700 ml-1 block leading-tight">
@@ -188,7 +208,7 @@ export default function BriefingPublico() {
             <Button 
               type="submit" 
               disabled={enviando}
-              className="w-full h-10 rounded-md text-white font-semibold uppercase text-[10px] tracking-widest shadow-sm transition-transform active:scale-[0.98] mt-4"
+              className="w-full h-10 rounded-md text-white font-semibold uppercase text-[10px] tracking-widest shadow-sm transition-transform active:scale-[0.98] mt-6"
               style={{ backgroundColor: corPrincipal }}
             >
               {enviando ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : <><Send size={14} className="mr-2" /> Enviar Respostas</>}

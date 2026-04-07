@@ -21,14 +21,13 @@ const calcularDescontoAtacado = (precoAtacado, precoBase) => {
 export default function ProdutoModal({
   isModalOpen, setIsModalOpen, editingProduct, setEditingProduct,
   handleSave, categorias, setIsCategoryModalOpen, promoType,
-  setPromoType, promoPercent, setPromoPercent
+  setPromoType, promoPercent, setPromoPercent, bloquearOnline
 }) {
   const [drawerTab, setDrawerTab] = useState('dados');
   const [novoAtributoNome, setNovoAtributoNome] = useState('');
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const fileInputRef = useRef(null);
   
-  // Controle do seletor de imagens para variações
   const [imageSelectorTarget, setImageSelectorTarget] = useState(null);
 
   const { data: insumos = [] } = useQuery({ queryKey: ["insumos"], queryFn: async () => { const { data } = await supabase.from("insumos").select("*").order("nome"); return data || []; }});
@@ -77,7 +76,6 @@ export default function ProdutoModal({
   const lucroReal = precoBaseCalculo - (editingProduct?.custo || 0);
   const margemReal = precoBaseCalculo > 0 ? ((lucroReal / precoBaseCalculo) * 100).toFixed(1) : 0;
 
-  // FUNÇÃO: Definir imagem principal
   const makeMainImage = (index) => {
     if (index === 0) return;
     setEditingProduct(prev => {
@@ -99,6 +97,11 @@ export default function ProdutoModal({
   const adicionarCampoPersonalizado = () => { setEditingProduct(prev => ({ ...prev, campos_personalizados: [...(prev.campos_personalizados || []), { id: Date.now(), titulo: '', tipo: 'texto_curto', obrigatorio: true }] })); };
   const updateCampoPersonalizado = (id, field, value) => { setEditingProduct(prev => ({ ...prev, campos_personalizados: prev.campos_personalizados.map(c => c.id === id ? { ...c, [field]: value } : c) })); };
   const removerCampoPersonalizado = (id) => { setEditingProduct(prev => ({ ...prev, campos_personalizados: prev.campos_personalizados.filter(c => c.id !== id) })); };
+
+  // BLOQUEIO SE PASSAR DE 5 VARIAÇÕES
+  const totalVariaoes = editingProduct?.variacoes?.atributos?.reduce((acc, atrib) => acc + atrib.opcoes.length, 0) || 0;
+  const blockVariationPhotos = totalVariaoes > 5;
+  const limiteFotosAtingido = (editingProduct?.imagens?.length || 0) >= 5;
 
   const renderInfoReferencia = () => (
     <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
@@ -181,7 +184,6 @@ export default function ProdutoModal({
         </div>
       </div>
 
-      {/* VALORES REAIS NA LOJA */}
       <div className="space-y-3 pt-1">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
@@ -344,14 +346,16 @@ export default function ProdutoModal({
                </div>
 
                <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <h3 className="text-[11px] font-semibold uppercase text-slate-800 border-b border-slate-100 pb-2">2. Galeria de Fotos</h3>
+                  <h3 className="text-[11px] font-semibold uppercase text-slate-800 border-b border-slate-100 pb-2 flex items-center justify-between">
+                    <span>2. Galeria de Fotos</span>
+                    <span className="text-[9px] font-medium text-slate-500">{editingProduct?.imagens?.length || 0}/5</span>
+                  </h3>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {editingProduct?.imagens?.map((img, index) => (
                       <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-slate-200 group shadow-sm">
                         <img src={img} className="w-full h-full object-cover" />
                         <button onClick={() => setEditingProduct(prev => ({...prev, imagens: prev.imagens.filter((_, i) => i !== index)}))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-105"><X size={10} /></button>
                         
-                        {/* TAG DE PRINCIPAL OU BOTÃO PARA DEFINIR PRINCIPAL */}
                         {index === 0 ? (
                            <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[7px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-sm">Principal</span>
                         ) : (
@@ -364,8 +368,14 @@ export default function ProdutoModal({
                     
                     <input type="file" ref={fileInputRef} onChange={async (e) => {
                       const files = Array.from(e.target.files);
+                      const currentCount = editingProduct?.imagens?.length || 0;
+                      const available = 5 - currentCount;
+                      
+                      if (available <= 0) return alert("Limite máximo de 5 fotos atingido.");
+                      const filesToUpload = files.slice(0, available);
+                      
                       setIsUploadingImages(true);
-                      for (const file of files) {
+                      for (const file of filesToUpload) {
                         try {
                           const blob = await compressImageToBlob(file); 
                           const fileName = `produto-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
@@ -378,11 +388,11 @@ export default function ProdutoModal({
                       setIsUploadingImages(false);
                     }} className="hidden" multiple accept="image/*" />
                     
-                    <button disabled={isUploadingImages} onClick={() => fileInputRef.current.click()} className="aspect-square rounded-md border border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-blue-500 hover:bg-blue-50 hover:border-blue-300 transition-all bg-slate-50">
+                    <button disabled={isUploadingImages || limiteFotosAtingido} onClick={() => { if(!limiteFotosAtingido) fileInputRef.current.click() }} className={`aspect-square rounded-md border border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 transition-all bg-slate-50 ${limiteFotosAtingido ? 'opacity-50 cursor-not-allowed text-slate-400' : 'text-blue-500 hover:bg-blue-50 hover:border-blue-300'}`}>
                       {isUploadingImages ? (
                         <><Loader2 size={16} className="animate-spin text-blue-500" /><span className="text-[7px] font-semibold uppercase tracking-widest text-slate-400">Enviando</span></>
                       ) : (
-                        <><Plus size={20} /><span className="text-[7px] font-semibold uppercase tracking-widest text-slate-400">Add Foto</span></>
+                        <><Plus size={20} /><span className="text-[7px] font-semibold uppercase tracking-widest text-center leading-tight">{limiteFotosAtingido ? 'Limite\nAtingido' : 'Add Foto'}</span></>
                       )}
                     </button>
                   </div>
@@ -395,7 +405,12 @@ export default function ProdutoModal({
                        <p className="text-[10px] font-semibold uppercase text-slate-800 mb-0.5">Visível no Site</p>
                        <p className="text-[8px] text-slate-500 font-medium uppercase tracking-widest">Exibir na vitrine pública</p>
                     </div>
-                    <button onClick={() => setEditingProduct({...editingProduct, statusOnline: !editingProduct.statusOnline})} className={`w-10 h-5 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.statusOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                    <button onClick={() => {
+                        if (!editingProduct.statusOnline && bloquearOnline) {
+                           return alert("Limite de 80 produtos online atingido! Desative algum na vitrine primeiro.");
+                        }
+                        setEditingProduct({...editingProduct, statusOnline: !editingProduct.statusOnline})
+                    }} className={`w-10 h-5 rounded-full p-0.5 transition-all shadow-inner ${editingProduct?.statusOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}>
                       <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${editingProduct?.statusOnline ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
@@ -453,6 +468,14 @@ export default function ProdutoModal({
                
                {editingProduct?.variacoes?.ativa && (
                  <div className="space-y-4">
+                   
+                   {blockVariationPhotos && (
+                      <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4 flex items-start gap-2">
+                        <Star size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-amber-800 font-medium">Você tem mais de 5 variações cadastradas. Para economizar tráfego, a troca de fotos individuais foi desativada.</p>
+                      </div>
+                   )}
+
                    {editingProduct.variacoes.atributos?.map((atrib) => (
                      <div key={atrib.id} className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
@@ -492,13 +515,16 @@ export default function ProdutoModal({
                          {atrib.opcoes.map((opcao) => (
                            <div key={opcao.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm relative flex flex-col sm:flex-row items-center gap-4 group hover:border-blue-300 transition-colors">
                              
-                             {/* NOVO CLIQUE PARA ABRIR SELETOR DE IMAGENS */}
-                             <div 
-                               onClick={() => setImageSelectorTarget({ atribId: atrib.id, opcaoId: opcao.id })} 
-                               className="w-14 h-14 md:w-16 md:h-16 rounded-md bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0"
-                             >
-                               {opcao.imagem ? <img src={opcao.imagem} className="w-full h-full object-cover" /> : <><Image size={14} className="mb-0.5"/><span className="text-[7px] font-semibold uppercase tracking-widest text-center leading-tight">Escolher<br/>Foto</span></>}
-                             </div>
+                             {blockVariationPhotos ? (
+                                <div title="Bloqueado: Máximo de 5 variações para usar fotos" className="w-14 h-14 md:w-16 md:h-16 rounded-md bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 opacity-50 cursor-not-allowed shrink-0">
+                                   <Image size={14} className="mb-0.5"/>
+                                   <span className="text-[7px] font-semibold uppercase tracking-widest text-center leading-tight">Foto<br/>Bloqueada</span>
+                                </div>
+                             ) : (
+                                <div onClick={() => setImageSelectorTarget({ atribId: atrib.id, opcaoId: opcao.id })} className="w-14 h-14 md:w-16 md:h-16 rounded-md bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer overflow-hidden transition-all hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 shrink-0">
+                                  {opcao.imagem ? <img src={opcao.imagem} className="w-full h-full object-cover" /> : <><Image size={14} className="mb-0.5"/><span className="text-[7px] font-semibold uppercase tracking-widest text-center leading-tight">Escolher<br/>Foto</span></>}
+                                </div>
+                             )}
 
                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
                                <div className="space-y-1">
@@ -670,7 +696,6 @@ export default function ProdutoModal({
                            <select value={campo.tipo} onChange={(e) => updateCampoPersonalizado(campo.id, 'tipo', e.target.value)} className="w-full h-9 border border-slate-200 rounded-md text-[10px] font-semibold text-slate-700 px-2 bg-white outline-none focus:border-emerald-400">
                               <option value="texto_curto">Texto Curto (Nome, etc)</option>
                               <option value="texto_longo">Texto Longo (Mensagem)</option>
-                              <option value="upload">Upload de Arte/Foto</option>
                               <option value="data">Data (Evento)</option>
                               <option value="hora">Hora</option>
                            </select>
@@ -715,7 +740,6 @@ export default function ProdutoModal({
         ))}
       </div>
 
-      {/* --- NOVO MODAL SELETOR DE FOTOS PARA VARIAÇÕES --- */}
       <AnimatePresence>
         {imageSelectorTarget && (
            <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">

@@ -114,6 +114,9 @@ export default function Pedidos() {
 
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
   
+  // NOVA VARIÁVEL GLOBAL DE NOTIFICAÇÃO: Conta sempre, independentemente da aba que você esteja
+  const todasSolicitacoes = uniqueTasks.filter(t => t.status === "solicitacao");
+
   const currentTasks = useMemo(() => {
     return uniqueTasks.filter(t => getTipoPedido(t) === viewMode);
   }, [uniqueTasks, viewMode]);
@@ -225,9 +228,15 @@ export default function Pedidos() {
         <div className="hidden md:flex bg-slate-200/60 p-1 rounded-full w-full max-w-sm mx-auto mb-8">
           <button 
             onClick={() => handleViewModeChange("site")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           >
             <Store size={14} /> Pedidos do Site
+            {/* NOTIFICAÇÃO INTELIGENTE AQUI */}
+            {todasSolicitacoes.length > 0 && (
+               <span className="absolute -top-1 -right-2 bg-rose-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse shadow-sm">
+                 {todasSolicitacoes.length}
+               </span>
+            )}
           </button>
           <button 
             onClick={() => handleViewModeChange("producao")}
@@ -274,7 +283,7 @@ export default function Pedidos() {
             {viewMode === "site" && (
               <TabsTrigger value="solicitacoes" className="flex-1 text-[9px] md:text-[10px] gap-1.5 font-semibold uppercase tracking-widest rounded data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 relative">
                 <ShoppingBag className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Aguardando Aprovação</span><span className="xs:hidden">Aguardando</span>
-                {solicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse">{solicitacoes.length}</span>}
+                {todasSolicitacoes.length > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse shadow-sm">{todasSolicitacoes.length}</span>}
               </TabsTrigger>
             )}
             
@@ -334,9 +343,15 @@ export default function Pedidos() {
         <div className="flex bg-slate-100 p-1 rounded-xl w-full">
           <button 
             onClick={() => handleViewModeChange("site")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[9px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm border border-slate-200/50" : "text-slate-500"}`}
+            className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[9px] font-semibold uppercase tracking-widest transition-all ${viewMode === "site" ? "bg-white text-blue-600 shadow-sm border border-slate-200/50" : "text-slate-500"}`}
           >
             <Store size={14} /> Site
+            {/* NOTIFICAÇÃO INTELIGENTE AQUI (MOBILE) */}
+            {todasSolicitacoes.length > 0 && (
+               <span className="absolute -top-1 -right-1 bg-rose-500 text-white w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold animate-pulse shadow-sm">
+                 {todasSolicitacoes.length}
+               </span>
+            )}
           </button>
           <button 
             onClick={() => handleViewModeChange("producao")}

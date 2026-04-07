@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { queryClientInstance } from '@/lib/query-client';
 import { pagesConfig } from './pages.config';
 import { BrowserRouter as Router, Route, Routes, Link, useLocation, Navigate } from 'react-router-dom';
@@ -30,13 +30,13 @@ function updateFavicon(url) {
   link.href = url;
 }
 
-const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconColor }) => {
+const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconColor, badgeCount }) => {
   return (
     <Link
       to={path}
       onClick={onClick}
       title={item.label}
-      className={`flex items-center justify-between px-4 py-2.5 mx-3 rounded-lg font-semibold uppercase text-[9px] tracking-widest transition-all overflow-hidden ${
+      className={`relative flex items-center justify-between px-4 py-2.5 mx-3 rounded-lg font-semibold uppercase text-[9px] tracking-widest transition-all overflow-hidden ${
         isActive ? 'shadow-sm border' : 'hover:bg-slate-50 hover:text-slate-800'
       }`}
       style={isActive ? { color: colorPrincipal, backgroundColor: `${colorPrincipal}10`, borderColor: `${colorPrincipal}20` } : {}}
@@ -47,7 +47,16 @@ const MenuItem = ({ item, isActive, path, Icon, colorPrincipal, onClick, iconCol
           {item.label}
         </span>
       </div>
-      {isActive && <ChevronRight size={12} className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />}
+      
+      {/* NOTIFICAÇÃO (BADGE) E SETA */}
+      <div className="flex items-center gap-2">
+        {badgeCount > 0 && (
+          <span className="bg-rose-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold animate-pulse shadow-sm">
+            {badgeCount}
+          </span>
+        )}
+        {isActive && <ChevronRight size={12} className="shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />}
+      </div>
     </Link>
   );
 };
@@ -56,6 +65,36 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
   const location = useLocation();
   const categorias = pagesConfig.menuCategorias;
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
+
+  // --- NOTIFICAÇÕES INTELIGENTES (Puxa a cada 30 segundos) ---
+  const { data: ordersCount } = useQuery({
+    queryKey: ['notif-orders'],
+    queryFn: async () => {
+      const { count } = await supabase.from('pedidos').select('*', { count: 'exact', head: true }).eq('status', 'solicitacao');
+      return count || 0;
+    },
+    refetchInterval: 30000 // 30 segundos
+  });
+
+  const { data: expensesCount } = useQuery({
+    queryKey: ['notif-expenses'],
+    queryFn: async () => {
+      const hoje = new Date().toISOString().split('T')[0];
+      const { count } = await supabase.from('despesas').select('*', { count: 'exact', head: true }).neq('status', 'pago').lt('vencimento', hoje);
+      return count || 0;
+    },
+    refetchInterval: 30000 
+  });
+
+  const { data: briefingsCount } = useQuery({
+    queryKey: ['notif-briefings'],
+    queryFn: async () => {
+      const { count } = await supabase.from('briefing_respostas').select('*', { count: 'exact', head: true }).eq('lida', false);
+      return count || 0;
+    },
+    refetchInterval: 30000 
+  });
+  // -------------------------------------------------------------
 
   const getMenuMeta = (id) => {
     const meta = {
@@ -137,6 +176,13 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
               <div className="space-y-0.5">
                 {filteredItems.map((item) => {
                   const { path, icon, color } = getMenuMeta(item.id);
+                  
+                  // Distribui a notificação correta
+                  let badge = 0;
+                  if (item.id === 'pedidos') badge = ordersCount;
+                  if (item.id === 'despesas') badge = expensesCount;
+                  if (item.id === 'briefings') badge = briefingsCount;
+
                   return (
                     <MenuItem
                       key={item.id}
@@ -147,6 +193,7 @@ const Sidebar = ({ st, isOpen, setIsOpen }) => {
                       isActive={location.pathname === path}
                       colorPrincipal={st.corPrincipal}
                       onClick={() => setIsOpen && setIsOpen(false)}
+                      badgeCount={badge}
                     />
                   );
                 })}
@@ -242,7 +289,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
   const isBio = pathNormalizado === '/bio';
   const userRole = localStorage.getItem('sistema_user_role') || 'padrao';
 
-  // === MÁGICA DO NOME E FAVICON DINÂMICO AQUI ===
   useEffect(() => {
     const isPublicRoute = isVitrine || isBriefingClient || isEntregaPortal || isBio;
     const defaultIcon = "https://yjfvdmpsnpvrpskmqrjt.supabase.co/storage/v1/object/public/produtos/ICONE.png";
@@ -255,7 +301,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       updateFavicon(defaultIcon);
     }
   }, [pathNormalizado, st, isVitrine, isBriefingClient, isEntregaPortal, isBio]);
-  // ===============================================
 
   const mainPageKey = mainPage !== undefined ? mainPage : (Pages[""] !== undefined ? "" : Object.keys(Pages || {})[0]);
   const MainPage = Pages[mainPageKey];
@@ -278,7 +323,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       <Route path="/vitrine" element={VitrinePage ? <VitrinePage isPublic={true} /> : <PageNotFound />} />
       <Route path="/bio" element={BioPage ? <BioPage isPublic={true} /> : <PageNotFound />} />
       <Route path="/form/:slug" element={<BriefingPublico />} />
-      
       <Route path="/entrega/:driveFolderId" element={EntregaPage ? <EntregaPage isPublic={true} /> : <PageNotFound />} />
 
       <Route
@@ -305,7 +349,6 @@ const AppRoutes = ({ isAuthorized, onLogin, st }) => {
       ))}
 
       <Route path="/:slug" element={<RedirectLink />} />
-
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
