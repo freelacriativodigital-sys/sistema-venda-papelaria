@@ -10,16 +10,16 @@ export const compressImageToBlob = (file) => {
       img.src = event.target.result;
       
       img.onload = async () => {
-        // --- AS NOVAS CONFIGURAÇÕES ULTRA-LIGHT ---
-        const TARGET_SIZE = 20 * 1024; // Nova Meta: 20 KB (em bytes)
+        // --- CONFIGURAÇÃO EQUILIBRADA (50KB e 800px) ---
+        const TARGET_SIZE = 50 * 1024; // Meta: 50 KB (em bytes)
         let quality = 0.8; // Qualidade inicial (80%)
-        const MAX_WIDTH = 500; // Limite perfeito para telas de smartphones
-        const MAX_HEIGHT = 500;
+        const MAX_WIDTH = 800; // Tamanho ideal para nitidez no celular e PC
+        const MAX_HEIGHT = 800;
 
         let currentWidth = img.width;
         let currentHeight = img.height;
 
-        // Ajuste inicial (Garante que a imagem crua nunca passe de 500px)
+        // Ajuste inicial (Garante que a imagem crua nunca passe de 800px)
         if (currentWidth > currentHeight) {
           if (currentWidth > MAX_WIDTH) { currentHeight *= MAX_WIDTH / currentWidth; currentWidth = MAX_WIDTH; }
         } else {
@@ -43,24 +43,24 @@ export const compressImageToBlob = (file) => {
         let blob = await compress(currentWidth, currentHeight, quality);
 
         // A MÁGICA: O "Looping da Teimosia"
-        // Fica tentando até ficar menor ou igual a 20KB
+        // Fica tentando até ficar menor ou igual a 50KB
         let tentativas = 0;
-        while (blob.size > TARGET_SIZE && tentativas < 15) { // 15 tentativas para ter uma margem maior
+        while (blob.size > TARGET_SIZE && tentativas < 15) { 
           tentativas++;
           
           // Tira 10% de qualidade por rodada para tentar salvar os pixels
           if (quality > 0.3) {
             quality -= 0.10; 
           } else {
-            // Se a qualidade já chegou no mínimo (30%), a única saída é diminuir o tamanho físico da foto em 15%
-            currentWidth *= 0.85;
-            currentHeight *= 0.85;
+            // Se a qualidade já chegou no mínimo (30%), diminui o tamanho físico da foto em 10%
+            currentWidth *= 0.90;
+            currentHeight *= 0.90;
           }
 
           blob = await compress(currentWidth, currentHeight, quality);
         }
 
-        console.log(`Foto ultra-comprimida com sucesso: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas extras.`);
+        console.log(`Foto comprimida com sucesso: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas extras.`);
         resolve(blob);
       };
     };
@@ -103,5 +103,19 @@ export const deletarImagensDoProduto = async (produto) => {
   if (pathsParaDeletar.length > 0) {
     const { error } = await supabase.storage.from('produtos').remove(pathsParaDeletar);
     if (error) console.error("Erro ao deletar imagens do storage:", error);
+  }
+};
+
+// --- NOVA FUNÇÃO ---
+// Apaga uma única imagem do Storage (ideal para o botão X da galeria e exclusões pontuais)
+export const deletarImagemUnica = async (url) => {
+  const caminho = extrairCaminhoStorage(url);
+  if (caminho) {
+    const { error } = await supabase.storage.from('produtos').remove([caminho]);
+    if (error) {
+      console.error("Erro ao deletar imagem individual do storage:", error);
+    } else {
+      console.log("Imagem excluída definitivamente do servidor!");
+    }
   }
 };
