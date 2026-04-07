@@ -10,15 +10,16 @@ export const compressImageToBlob = (file) => {
       img.src = event.target.result;
       
       img.onload = async () => {
-        const TARGET_SIZE = 40 * 1024; // Meta estrita: 40 KB (em bytes)
+        // --- AS NOVAS CONFIGURAÇÕES ULTRA-LIGHT ---
+        const TARGET_SIZE = 20 * 1024; // Nova Meta: 20 KB (em bytes)
         let quality = 0.8; // Qualidade inicial (80%)
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
+        const MAX_WIDTH = 500; // Limite perfeito para telas de smartphones
+        const MAX_HEIGHT = 500;
 
         let currentWidth = img.width;
         let currentHeight = img.height;
 
-        // Ajuste inicial (Garante que a imagem crua nunca passe de 800px)
+        // Ajuste inicial (Garante que a imagem crua nunca passe de 500px)
         if (currentWidth > currentHeight) {
           if (currentWidth > MAX_WIDTH) { currentHeight *= MAX_WIDTH / currentWidth; currentWidth = MAX_WIDTH; }
         } else {
@@ -42,17 +43,16 @@ export const compressImageToBlob = (file) => {
         let blob = await compress(currentWidth, currentHeight, quality);
 
         // A MÁGICA: O "Looping da Teimosia"
-        // Fica tentando até ficar menor ou igual a 40KB (limite de 10 tentativas para não travar o navegador)
+        // Fica tentando até ficar menor ou igual a 20KB
         let tentativas = 0;
-        while (blob.size > TARGET_SIZE && tentativas < 10) {
+        while (blob.size > TARGET_SIZE && tentativas < 15) { // 15 tentativas para ter uma margem maior
           tentativas++;
           
-          // Primeiro, tenta baixar a "resolução de cor/compressão" (até 30% de qualidade mínima aceitável)
+          // Tira 10% de qualidade por rodada para tentar salvar os pixels
           if (quality > 0.3) {
-            quality -= 0.15; // Tira 15% de qualidade por rodada
+            quality -= 0.10; 
           } else {
-            // Se a qualidade já chegou no mínimo e AINDA tá pesada (ex: foto hiper detalhada),
-            // a única saída é diminuir as dimensões físicas da foto em 15%
+            // Se a qualidade já chegou no mínimo (30%), a única saída é diminuir o tamanho físico da foto em 15%
             currentWidth *= 0.85;
             currentHeight *= 0.85;
           }
@@ -60,7 +60,7 @@ export const compressImageToBlob = (file) => {
           blob = await compress(currentWidth, currentHeight, quality);
         }
 
-        console.log(`Foto comprimida com sucesso: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas extras.`);
+        console.log(`Foto ultra-comprimida com sucesso: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas extras.`);
         resolve(blob);
       };
     };
