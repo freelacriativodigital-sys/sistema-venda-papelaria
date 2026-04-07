@@ -1,32 +1,70 @@
 import { supabase } from "../../lib/supabase";
 
 export const compressImageToBlob = (file) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
+    
     reader.onload = (event) => {
       const img = new window.Image(); 
       img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+      
+      img.onload = async () => {
+        // --- AS NOVAS CONFIGURAÇÕES ULTRA-LIGHT ---
+        const TARGET_SIZE = 20 * 1024; // Nova Meta: 20 KB (em bytes)
+        let quality = 0.8; // Qualidade inicial (80%)
+        const MAX_WIDTH = 500; // Limite perfeito para telas de smartphones
+        const MAX_HEIGHT = 500;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        let currentWidth = img.width;
+        let currentHeight = img.height;
+
+        // Ajuste inicial (Garante que a imagem crua nunca passe de 500px)
+        if (currentWidth > currentHeight) {
+          if (currentWidth > MAX_WIDTH) { currentHeight *= MAX_WIDTH / currentWidth; currentWidth = MAX_WIDTH; }
         } else {
-          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          if (currentHeight > MAX_HEIGHT) { currentWidth *= MAX_HEIGHT / currentHeight; currentHeight = MAX_HEIGHT; }
         }
 
-        canvas.width = width;
-        canvas.height = height;
+        const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.8);
+
+        // Função auxiliar encapsulada para gerar o Blob e medir
+        const compress = (w, h, q) => {
+          return new Promise((res) => {
+            canvas.width = w;
+            canvas.height = h;
+            ctx.drawImage(img, 0, 0, w, h);
+            canvas.toBlob((blob) => res(blob), 'image/webp', q);
+          });
+        };
+
+        // 1ª Tentativa de compressão
+        let blob = await compress(currentWidth, currentHeight, quality);
+
+        // A MÁGICA: O "Looping da Teimosia"
+        // Fica tentando até ficar menor ou igual a 20KB
+        let tentativas = 0;
+        while (blob.size > TARGET_SIZE && tentativas < 15) { // 15 tentativas para ter uma margem maior
+          tentativas++;
+          
+          // Tira 10% de qualidade por rodada para tentar salvar os pixels
+          if (quality > 0.3) {
+            quality -= 0.10; 
+          } else {
+            // Se a qualidade já chegou no mínimo (30%), a única saída é diminuir o tamanho físico da foto em 15%
+            currentWidth *= 0.85;
+            currentHeight *= 0.85;
+          }
+
+          blob = await compress(currentWidth, currentHeight, quality);
+        }
+
+        console.log(`Foto ultra-comprimida com sucesso: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas extras.`);
+        resolve(blob);
       };
     };
+    reader.onerror = (err) => reject(err);
   });
 };
 
