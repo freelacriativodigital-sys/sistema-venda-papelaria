@@ -8,7 +8,7 @@ import TabEmpresa from '../components/Configuracoes/TabEmpresa';
 import TabAtendimento from '../components/Configuracoes/TabAtendimento';
 import TabOperacao from '../components/Configuracoes/TabOperacao';
 import TabSeguranca from '../components/Configuracoes/TabSeguranca';
-import TabMarketing from '../components/Configuracoes/TabMarketing'; // NOSSA NOVA ABA
+import TabMarketing from '../components/Configuracoes/TabMarketing';
 
 export default function Configuracoes() {
   const [activeTab, setActiveTab] = useState('empresa');
@@ -23,6 +23,8 @@ export default function Configuracoes() {
         const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (data && !error) {
           setSt(data);
+          // --- ATUALIZA O TÍTULO DA ABA DO NAVEGADOR ---
+          document.title = `ORGANIZE - ${data.nome_loja || 'Sua Loja'}`;
         }
       } catch (err) {
         console.error("Erro ao buscar configurações:", err);
@@ -39,6 +41,9 @@ export default function Configuracoes() {
       const { error } = await supabase.from('configuracoes').update(st).eq('id', 1);
       if (error) throw error;
       
+      // Atualiza o título caso o nome da loja tenha mudado
+      document.title = `ORGANIZE - ${st.nome_loja || 'Sua Loja'}`;
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -69,7 +74,7 @@ export default function Configuracoes() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 animate-in fade-in">
         
         {/* HEADER DA PÁGINA (COMPACTO) */}
-        <div className="flex items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-3">
+        <div className="flex items-center justify-between gap-4 mb-4 md:mb-6 border-b border-slate-200 pb-3">
           <div>
             <h1 className="text-sm md:text-lg font-semibold text-slate-800 uppercase tracking-tight">Configurações Gerais</h1>
             <p className="text-[9px] font-medium text-slate-500 uppercase tracking-widest mt-0.5">Gerencie os dados do seu negócio</p>
@@ -85,38 +90,33 @@ export default function Configuracoes() {
           </Button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6 items-start">
+        <div className="flex flex-col gap-4">
           
-          {/* NAVEGAÇÃO DESKTOP (SIDEBAR VERTICAL) */}
-          <div className="hidden md:flex flex-col w-48 shrink-0 space-y-1">
+          {/* NAVEGAÇÃO DESKTOP (BARRA HORIZONTAL NO TOPO) - CONFORME PEDIDO */}
+          <div className="hidden md:flex flex-row overflow-x-auto no-scrollbar gap-1.5 w-full bg-slate-200/60 p-1.5 rounded-xl border border-slate-200 shadow-sm">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all text-left w-full border ${
+                  className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all whitespace-nowrap ${
                     isActive 
-                      ? 'bg-white border-slate-200 shadow-sm text-blue-600' 
-                      : 'bg-transparent border-transparent hover:bg-slate-200/50 text-slate-500 hover:text-slate-700'
+                      ? 'bg-white border-white shadow-sm text-blue-600' 
+                      : 'bg-transparent border-transparent hover:bg-slate-300/50 text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   <tab.icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest">
-                      {tab.label}
-                    </span>
-                    <span className="text-[9px] font-medium text-slate-400">
-                      {tab.desc}
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                    {tab.label}
+                  </span>
                 </button>
               )
             })}
           </div>
 
           {/* ÁREA DE CONTEÚDO */}
-          <div className="flex-1 w-full bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm min-h-[400px]">
+          <div className="w-full bg-white border border-slate-200 rounded-xl p-4 md:p-5 shadow-sm min-h-[400px]">
              
             {activeTab === 'empresa' && TabEmpresa && <TabEmpresa st={st} setSt={setSt} />}
             {activeTab === 'atendimento' && TabAtendimento && <TabAtendimento st={st} setSt={setSt} />}
@@ -136,7 +136,7 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      {/* BOTTOM NAVIGATION (MOBILE FIXO NA BASE) */}
+      {/* BOTTOM NAVIGATION (MOBILE FIXO NA BASE) - MANTIDO COMO ESTAVA */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-around items-center px-2 py-2 z-[90] shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
