@@ -139,7 +139,14 @@ export default function Catalogo({ isPublic = false }) {
         const { data: configData } = await supabase.from('configuracoes').select('*').eq('id', 1).single();
         if (configData) setSt(configData);
 
-        const { data: prodData } = await supabase.from('produtos').select('*').eq('status_online', true).order('created_at', { ascending: false });
+        // CORREÇÃO: Buscando do banco de dados já ordenado pela coluna 'ordem'
+        const { data: prodData } = await supabase
+          .from('produtos')
+          .select('*')
+          .eq('status_online', true)
+          .order('ordem', { ascending: true })
+          .order('created_at', { ascending: false });
+          
         if (prodData) {
           setProdutos(prodData);
           const uniqueCats = [...new Set(prodData.map(p => p.categoria))];
@@ -334,6 +341,7 @@ export default function Catalogo({ isPublic = false }) {
     }
   };
 
+  // CORREÇÃO: Aplicando a regra de ordenação visual do catálogo
   const filtered = produtos
     .filter(p => {
       const matchSearch = p.nome?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -343,9 +351,19 @@ export default function Catalogo({ isPublic = false }) {
       return matchSearch && matchCategory;
     })
     .sort((a, b) => {
+      // 1. Destaques primeiro
       if (a.destaque && !b.destaque) return -1;
       if (!a.destaque && b.destaque) return 1;
-      return 0;
+      
+      // 2. Ordenação manual escolhida no cadastro (menor número = aparece antes)
+      const ordemA = a.ordem || 999;
+      const ordemB = b.ordem || 999;
+      if (ordemA !== ordemB) {
+        return ordemA - ordemB;
+      }
+      
+      // 3. Desempate pela data de criação (mais novos primeiro)
+      return new Date(b.created_at) - new Date(a.created_at);
     });
 
   const calcularDesconto = (preco, promo) => {
@@ -398,10 +416,8 @@ export default function Catalogo({ isPublic = false }) {
        
        if (item.respostasPersonalizadas && Object.keys(item.respostasPersonalizadas).length > 0) {
           textoPersonalizado = '\n*Personalização:*\n' + Object.entries(item.respostasPersonalizadas).map(([k, v]) => {
-             // CORREÇÃO: Comparando como String para evitar bug de ID numérico não bater com a chave string
              const campo = item.produto.campos_personalizados?.find(c => String(c.id) === String(k));
              
-             // BÔNUS: Se for data (YYYY-MM-DD), inverte para o padrão Brasil no Zap (DD/MM/YYYY)
              let valorExibido = v;
              if (campo?.tipo === 'data' && v.includes('-')) {
                  const [year, month, day] = v.split('-');
@@ -719,13 +735,13 @@ export default function Catalogo({ isPublic = false }) {
                 {/* DESCRIÇÃO - MOBILE (Abaixo do Título e Valor com Sanfona) */}
                 {selectedProduct.descricao && (
                   <div className="block md:hidden mb-6 pb-6 border-b border-slate-100">
-                    <h3 className="text-[11px] font-semibold text-slate-800 uppercase tracking-widest mb-2">Descrição do Produto</h3>
-                    <div className={`text-xs text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
+                    <h3 className="text-[11px] md:text-xs font-semibold text-slate-800 uppercase tracking-widest mb-2 md:mb-3">Descrição do Produto</h3>
+                    <div className={`text-xs md:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap transition-all duration-300 ${!isDescExpanded ? 'line-clamp-4' : ''}`}>
                       {selectedProduct.descricao}
                     </div>
                     <button 
                       onClick={() => setIsDescExpanded(!isDescExpanded)} 
-                      className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
+                      className="mt-2 flex items-center gap-1 text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors"
                     >
                       {isDescExpanded ? 'Menos detalhes' : 'Ler mais'} 
                       <ChevronLeft size={12} className={`transition-transform duration-300 ${isDescExpanded ? 'rotate-90' : '-rotate-90'}`} />

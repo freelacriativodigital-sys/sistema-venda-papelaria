@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Tag, CheckSquare, Square, Eye, EyeOff, Edit3, 
-  Star, Layers, FileText, Copy, Trash2, X, Lock, Plus, Loader2 
+  Star, Layers, FileText, Copy, Trash2, X, Lock, Plus, Loader2,
+  ArrowUpDown // <-- Adicionado o ícone para o botão de organizar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import { supabase } from "../lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { deletarImagensDoProduto } from '../components/Produtos/produtosUtils';
 import CategoriaModal from '../components/Produtos/CategoriaModal';
 import ProdutoModal from '../components/Produtos/ProdutoModal';
+import ReordenarVitrine from '../components/Produtos/ReordenarVitrine'; // <-- Importando nosso novo módulo
 
 const LIMITE_PRODUTOS = 50;
 
@@ -22,6 +24,7 @@ export default function Produtos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBulkCategoryModalOpen, setIsBulkCategoryModalOpen] = useState(false);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false); // <-- Estado para o modal de reordenar
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -43,11 +46,16 @@ export default function Produtos() {
     localStorage.setItem("sistema_categorias", JSON.stringify(categorias));
   }, [categorias]);
 
-  // BUSCA OS PRODUTOS
+  // BUSCA OS PRODUTOS (Agora ordenando pela coluna Ordem também)
   const { data: produtos = [], isLoading } = useQuery({
     queryKey: ["sistema-produtos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("*").neq('arquivado', true).order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("produtos")
+        .select("*")
+        .neq('arquivado', true)
+        .order("ordem", { ascending: true }) // Respeita a ordem manual
+        .order("created_at", { ascending: false }); // Desempata pela data
       if (error) throw error;
       return data || [];
     },
@@ -87,6 +95,7 @@ export default function Produtos() {
         imagem_url: prod.imagens?.[0] || '',
         status_online: prod.statusOnline ?? true,
         destaque: prod.destaque ?? false,
+        ordem: prod.ordem ?? 999, // Mantém a ordem existente ou joga pro final
         variacoes: prod.variacoes || { ativa: false, atributos: [] },
         atacado: prod.atacado || { ativa: false, regras: [] },
         campos_personalizados: prod.campos_personalizados || [],
@@ -197,14 +206,14 @@ export default function Produtos() {
   const handleDuplicate = (prod) => {
     if (produtos.length >= LIMITE_PRODUTOS) return alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
     const { id, created_at, ...rest } = prod;
-    saveMutation.mutate({ ...rest, nome: `${prod.nome} (Cópia)`, sku: prod.sku ? `${prod.sku}-COPY` : '' });
+    saveMutation.mutate({ ...rest, nome: `${prod.nome} (Cópia)`, sku: prod.sku ? `${prod.sku}-COPY` : '', ordem: 999 });
   };
 
   const handleNewProduct = () => {
     if (produtos.length >= LIMITE_PRODUTOS) return alert(`Limite de ${LIMITE_PRODUTOS} produtos atingido.`);
     setEditingProduct({
       nome: '', preco: 0, preco_promocional: 0, custo: 0, qtd_minima: 1, sku: '',
-      imagens: [], categoria: 'Sem Categoria', statusOnline: true, destaque: false, 
+      imagens: [], categoria: 'Sem Categoria', statusOnline: true, destaque: false, ordem: 999,
       variacoes: { ativa: false, atributos: [] }, atacado: { ativa: false, regras: [] }, campos_personalizados: [],
       receita: { insumos: [], tempo_minutos: 0, margem: 30, taxa: 5 }
     });
@@ -249,9 +258,16 @@ export default function Produtos() {
                Gerencie seu catálogo • <span className={limiteAtingido ? "text-red-500 font-semibold" : "text-blue-500 font-semibold"}>{produtos.length}/{LIMITE_PRODUTOS}</span>
              </p>
           </div>
-          <Button onClick={handleNewProduct} disabled={limiteAtingido} className={`h-9 text-white rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 shadow-sm transition-all w-full sm:w-auto ${limiteAtingido ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-            {limiteAtingido ? <Lock size={14} /> : <Plus size={14} />} <span className="inline">{limiteAtingido ? 'Limite Atingido' : 'Novo Produto'}</span>
-          </Button>
+          
+          {/* --- BOTÕES DO TOPO --- */}
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+             <Button onClick={() => setIsReorderModalOpen(true)} variant="outline" className="h-9 border-slate-200 text-slate-700 hover:bg-slate-100 rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 transition-all w-full sm:w-auto shadow-sm">
+               <ArrowUpDown size={14} /> Organizar Vitrine
+             </Button>
+             <Button onClick={handleNewProduct} disabled={limiteAtingido} className={`h-9 text-white rounded-md font-semibold uppercase text-[10px] gap-1.5 px-4 shadow-sm transition-all w-full sm:w-auto ${limiteAtingido ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+               {limiteAtingido ? <Lock size={14} /> : <Plus size={14} />} <span className="inline">{limiteAtingido ? 'Limite Atingido' : 'Novo Produto'}</span>
+             </Button>
+          </div>
         </div>
 
         <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -408,6 +424,17 @@ export default function Produtos() {
           />
         )}
       </AnimatePresence>
+      
+      {/* RENDERIZANDO NOSSO NOVO MÓDULO DE REORDENAR */}
+      <ReordenarVitrine 
+         isOpen={isReorderModalOpen} 
+         onClose={() => {
+           setIsReorderModalOpen(false);
+           // Atualiza os dados assim que o modal fecha para refletir a nova ordem
+           queryClient.invalidateQueries({ queryKey: ["sistema-produtos"] }); 
+         }} 
+      />
+
     </div>
   );
 }
