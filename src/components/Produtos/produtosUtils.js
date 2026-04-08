@@ -3,15 +3,15 @@ import { supabase } from "../../lib/supabase";
 export const compressImageToBlob = (file) => {
   return new Promise((resolve, reject) => {
     
-    const TARGET_SIZE = 45 * 1024; // O alvo rigoroso: 45 KB
+    const TARGET_SIZE = 50 * 1024; // Novo alvo rigoroso: 50 KB
 
-    // 1. PASSE LIVRE: Se a foto JÁ FOR MENOR ou igual a 45KB, não mexe em absolutamente nada!
+    // 1. PASSE LIVRE: Se a foto JÁ FOR MENOR ou igual a 50KB, não mexe em absolutamente nada!
     if (file.size <= TARGET_SIZE) {
       console.log(`A foto já tem ${(file.size / 1024).toFixed(2)} KB. Passou direto sem compressão!`);
       return resolve(file); 
     }
 
-    // 2. DESCIDA SUAVE: Se for maior que 45KB (ex: 55KB, 1MB), vai descer bem devagar.
+    // 2. DESCIDA SUAVE: Se for maior que 50KB, vai descer bem devagar para preservar a qualidade.
     const reader = new FileReader();
     reader.readAsDataURL(file);
     
@@ -48,12 +48,12 @@ export const compressImageToBlob = (file) => {
         let blob = await compress(currentWidth, currentHeight, quality);
 
         let tentativas = 0;
-        // O loop para NA HORA que a foto bater o limite de 45KB.
+        // O loop para NA HORA que a foto bater o limite de 50KB.
         while (blob.size > TARGET_SIZE && tentativas < 30) { 
           tentativas++;
           
           if (quality > 0.6) {
-            quality -= 0.02; // Tira só 2% de cada vez (passo de formiguinha) para parar o mais perto possível dos 45KB
+            quality -= 0.02; // Tira só 2% de cada vez (passo de formiguinha) para parar o mais perto possível dos 50KB
           } else {
             currentWidth *= 0.95; // Se a qualidade chegou a 60%, reduz o tamanho muito pouquinho
             currentHeight *= 0.95;
