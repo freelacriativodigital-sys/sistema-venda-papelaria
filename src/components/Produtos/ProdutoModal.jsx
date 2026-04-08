@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Save, Trash2, Plus, X, Layers, Box, FileText, Image, 
-  GripVertical, Loader2, Star, Calculator, DollarSign, Clock, ArrowLeft
+  GripVertical, Loader2, Star, Calculator, DollarSign, Clock, ArrowLeft,
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../lib/supabase";
-import { compressImageToBlob } from './produtosUtils';
+import { compressImageToBlob, deletarImagemUnica } from './produtosUtils';
 import { useQuery } from "@tanstack/react-query";
 
 const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -86,6 +87,51 @@ export default function ProdutoModal({
     });
   };
 
+  // --- NOVAS FUNÇÕES: EXCLUSÃO E ORDENAÇÃO ---
+  const handleRemoveImage = async (index, imgUrl) => {
+    setEditingProduct(prev => ({...prev, imagens: prev.imagens.filter((_, i) => i !== index)}));
+    if (imgUrl) {
+      try {
+        await deletarImagemUnica(imgUrl);
+      } catch (err) {
+        console.error("Erro ao limpar imagem do storage:", err);
+      }
+    }
+  };
+
+  const moveImage = (index, direction) => {
+    setEditingProduct(prev => {
+      const novasImagens = [...(prev.imagens || [])];
+      if (direction === 'left' && index > 0) {
+        [novasImagens[index - 1], novasImagens[index]] = [novasImagens[index], novasImagens[index - 1]];
+      } else if (direction === 'right' && index < novasImagens.length - 1) {
+        [novasImagens[index], novasImagens[index + 1]] = [novasImagens[index + 1], novasImagens[index]];
+      }
+      return { ...prev, imagens: novasImagens };
+    });
+  };
+
+  const moverOpcao = (atribId, index, direction) => {
+    setEditingProduct(prev => ({
+      ...prev,
+      variacoes: {
+        ...prev.variacoes,
+        atributos: prev.variacoes.atributos.map(atrib => {
+          if (atrib.id === atribId) {
+            const novasOpcoes = [...atrib.opcoes];
+            if (direction === 'up' && index > 0) {
+              [novasOpcoes[index - 1], novasOpcoes[index]] = [novasOpcoes[index], novasOpcoes[index - 1]];
+            } else if (direction === 'down' && index < novasOpcoes.length - 1) {
+              [novasOpcoes[index], novasOpcoes[index + 1]] = [novasOpcoes[index + 1], novasOpcoes[index]];
+            }
+            return { ...atrib, opcoes: novasOpcoes };
+          }
+          return atrib;
+        })
+      }
+    }));
+  };
+
   const adicionarAtributo = () => { if (!novoAtributoNome) return; const novoAtributo = { id: Date.now(), nome: novoAtributoNome, obrigatorio: true, opcoes: [{ id: Date.now() + 1, nome: 'Opção 1', preco: 0, custo: 0, imagem: null }] }; setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: [...(prev.variacoes.atributos || []), novoAtributo] } })); setNovoAtributoNome(''); };
   const adicionarOpcao = (atribId) => { setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: prev.variacoes.atributos.map(atrib => atrib.id === atribId ? { ...atrib, opcoes: [...atrib.opcoes, { id: Date.now(), nome: `Nova Opção`, preco: 0, custo: 0, imagem: null }] } : atrib) } })); };
   const removerOpcao = (atribId, opcaoId) => { setEditingProduct(prev => ({ ...prev, variacoes: { ...prev.variacoes, atributos: prev.variacoes.atributos.map(atrib => atrib.id === atribId ? { ...atrib, opcoes: atrib.opcoes.filter(o => o.id !== opcaoId) } : atrib) } })); };
@@ -98,7 +144,6 @@ export default function ProdutoModal({
   const updateCampoPersonalizado = (id, field, value) => { setEditingProduct(prev => ({ ...prev, campos_personalizados: prev.campos_personalizados.map(c => c.id === id ? { ...c, [field]: value } : c) })); };
   const removerCampoPersonalizado = (id) => { setEditingProduct(prev => ({ ...prev, campos_personalizados: prev.campos_personalizados.filter(c => c.id !== id) })); };
 
-  // BLOQUEIO SE PASSAR DE 5 VARIAÇÕES
   const totalVariaoes = editingProduct?.variacoes?.atributos?.reduce((acc, atrib) => acc + atrib.opcoes.length, 0) || 0;
   const blockVariationPhotos = totalVariaoes > 5;
   const limiteFotosAtingido = (editingProduct?.imagens?.length || 0) >= 5;
@@ -354,7 +399,22 @@ export default function ProdutoModal({
                     {editingProduct?.imagens?.map((img, index) => (
                       <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-slate-200 group shadow-sm">
                         <img src={img} className="w-full h-full object-cover" />
-                        <button onClick={() => setEditingProduct(prev => ({...prev, imagens: prev.imagens.filter((_, i) => i !== index)}))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-105"><X size={10} /></button>
+                        
+                        <button onClick={() => handleRemoveImage(index, img)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-105 z-10"><X size={10} /></button>
+                        
+                        {/* SETAS DE ORDENAÇÃO */}
+                        <div className="absolute top-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                          {index > 0 && (
+                            <button onClick={() => moveImage(index, 'left')} className="bg-slate-900/70 text-white p-1 rounded hover:bg-blue-600 shadow-md">
+                              <ChevronLeft size={10} />
+                            </button>
+                          )}
+                          {index < (editingProduct?.imagens?.length || 0) - 1 && (
+                            <button onClick={() => moveImage(index, 'right')} className="bg-slate-900/70 text-white p-1 rounded hover:bg-blue-600 shadow-md">
+                              <ChevronRight size={10} />
+                            </button>
+                          )}
+                        </div>
                         
                         {index === 0 ? (
                            <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[7px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest shadow-sm">Principal</span>
@@ -512,9 +572,26 @@ export default function ProdutoModal({
                        </div>
 
                        <div className="grid grid-cols-1 gap-3">
-                         {atrib.opcoes.map((opcao) => (
+                         {atrib.opcoes.map((opcao, idx) => (
                            <div key={opcao.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm relative flex flex-col sm:flex-row items-center gap-4 group hover:border-blue-300 transition-colors">
                              
+                             {/* CONTROLES DE ORDENAÇÃO E EXCLUSÃO (TOPO DIREITO) */}
+                             <div className="absolute -top-2 -right-2 flex items-center gap-1 z-10">
+                               {idx > 0 && (
+                                 <button onClick={() => moverOpcao(atrib.id, idx, 'up')} className="p-1 bg-slate-200 text-slate-600 rounded-md shadow-sm transition-transform active:scale-90 hover:bg-slate-300">
+                                   <ChevronUp size={10} />
+                                 </button>
+                               )}
+                               {idx < atrib.opcoes.length - 1 && (
+                                 <button onClick={() => moverOpcao(atrib.id, idx, 'down')} className="p-1 bg-slate-200 text-slate-600 rounded-md shadow-sm transition-transform active:scale-90 hover:bg-slate-300">
+                                   <ChevronDown size={10} />
+                                 </button>
+                               )}
+                               <button onClick={() => removerOpcao(atrib.id, opcao.id)} className="p-1 bg-red-500 text-white rounded-md shadow-sm transition-transform active:scale-90 hover:bg-red-600">
+                                 <X size={10} />
+                               </button>
+                             </div>
+
                              {blockVariationPhotos ? (
                                 <div title="Bloqueado: Máximo de 5 variações para usar fotos" className="w-14 h-14 md:w-16 md:h-16 rounded-md bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 opacity-50 cursor-not-allowed shrink-0">
                                    <Image size={14} className="mb-0.5"/>
@@ -526,7 +603,7 @@ export default function ProdutoModal({
                                 </div>
                              )}
 
-                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mt-2 sm:mt-0">
                                <div className="space-y-1">
                                  <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest ml-0.5">Nome da Opção</p>
                                  <Input 
@@ -568,12 +645,6 @@ export default function ProdutoModal({
                                </div>
                              </div>
 
-                             <button 
-                               onClick={() => removerOpcao(atrib.id, opcao.id)} 
-                               className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-md shadow-sm transition-transform active:scale-90 hover:bg-red-600"
-                             >
-                               <X size={10} />
-                             </button>
                            </div>
                          ))}
                          
