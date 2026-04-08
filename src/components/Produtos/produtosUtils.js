@@ -70,48 +70,34 @@ export const compressImageToBlob = (file) => {
   });
 };
 
-// Extrai apenas o nome do ficheiro da URL pública do Supabase
+// Extrai apenas o nome do ficheiro da URL pública (Agora à prova de falhas e maiúsculas)
 export const extrairCaminhoStorage = (url) => {
   if (!url) return null;
-  const partes = url.split('/produtos/');
-  return partes.length > 1 ? partes[1] : null;
+  // O "match" procura por "/produtos/" não importando se está em maiúscula ou minúscula
+  const match = url.match(/\/produtos\/(.+)/i);
+  return match ? match[1] : null;
 };
 
-// LIXEIRA TOTAL: Apaga TODAS as fotos quando você exclui o produto
-export const deletarImagensDoProduto = async (produto) => {
-  let pathsParaDeletar = [];
-  
-  if (produto.imagem_url) pathsParaDeletar.push(extrairCaminhoStorage(produto.imagem_url));
-  
-  if (produto.imagens && Array.isArray(produto.imagens)) {
-    produto.imagens.forEach(img => pathsParaDeletar.push(extrairCaminhoStorage(img)));
-  }
-  
-  if (produto.variacoes?.ativa && Array.isArray(produto.variacoes.atributos)) {
-    produto.variacoes.atributos.forEach(atrib => {
-      atrib.opcoes?.forEach(opcao => {
-        if (opcao.imagem) pathsParaDeletar.push(extrairCaminhoStorage(opcao.imagem));
-      });
-    });
-  }
-  
-  pathsParaDeletar = [...new Set(pathsParaDeletar.filter(Boolean))];
-  
-  if (pathsParaDeletar.length > 0) {
-    const { error } = await supabase.storage.from('produtos').remove(pathsParaDeletar);
-    if (error) console.error("Erro ao deletar imagens do storage:", error);
-  }
-};
-
-// LIXEIRA INDIVIDUAL: Apaga UMA única foto (usado no botão X vermelho ou ao editar)
+// LIXEIRA INDIVIDUAL (Agora com Alarme na tela!)
 export const deletarImagemUnica = async (url) => {
-  const caminho = extrairCaminhoStorage(url);
-  if (caminho) {
-    const { error } = await supabase.storage.from('produtos').remove([caminho]);
-    if (error) {
-      console.error("Erro ao deletar imagem individual do storage:", error);
-    } else {
-      console.log("Imagem excluída definitivamente do servidor Supabase!");
+  try {
+    const caminho = extrairCaminhoStorage(url);
+    
+    if (!caminho) {
+      alert("🚨 ERRO DE LINK: O sistema não conseguiu encontrar o caminho na URL:\n" + url);
+      return;
     }
+
+    const { data, error } = await supabase.storage.from('produtos').remove([caminho]);
+    
+    if (error) {
+      alert("🔒 BLOQUEIO DO SUPABASE:\n" + error.message);
+      console.error("Erro exato do Supabase:", error);
+    } else {
+      alert("✅ SUCESSO: A foto foi destruída do servidor!");
+      console.log("Arquivo apagado do Supabase:", data);
+    }
+  } catch (err) {
+    alert("🚨 ERRO NO CÓDIGO:\n" + err.message);
   }
 };
