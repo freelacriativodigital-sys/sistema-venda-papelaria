@@ -2,6 +2,15 @@ import { supabase } from "../../lib/supabase";
 
 export const compressImageToBlob = (file) => {
   return new Promise((resolve, reject) => {
+    
+    // 1. PASSE LIVRE PARA TRÁFEGO MÁXIMO:
+    // Se a foto já tem 45KB ou menos (otimizada no Photoshop/Corel), o sistema envia intacta!
+    if (file.size <= 45 * 1024) {
+      console.log(`Foto já otimizada (${(file.size / 1024).toFixed(2)} KB). Enviando intacta!`);
+      return resolve(file); 
+    }
+
+    // 2. O ESPREMEDOR: Se a foto for pesada, força a compressão
     const reader = new FileReader();
     reader.readAsDataURL(file);
     
@@ -10,11 +19,10 @@ export const compressImageToBlob = (file) => {
       img.src = event.target.result;
       
       img.onload = async () => {
-        // --- CONFIGURAÇÃO FOCADA 100% NA NITIDEZ ---
-        const TARGET_SIZE = 150 * 1024; // Teto de segurança: 150 KB
-        let quality = 0.98; // COMEÇA COM QUALIDADE MÁXIMA (98%)
-        const MAX_WIDTH = 1200; // Resolução gigante para telas Retina/Full HD
-        const MAX_HEIGHT = 1200;
+        const TARGET_SIZE = 45 * 1024; // Teto rígido: 45 KB
+        let quality = 0.90; // Qualidade inicial alta
+        const MAX_WIDTH = 800; // Tamanho perfeito para telemóveis
+        const MAX_HEIGHT = 800;
 
         let currentWidth = img.width;
         let currentHeight = img.height;
@@ -33,29 +41,25 @@ export const compressImageToBlob = (file) => {
             canvas.width = w;
             canvas.height = h;
             ctx.drawImage(img, 0, 0, w, h);
-            // Mantendo WebP, mas agora exigindo qualidade extrema
             canvas.toBlob((blob) => res(blob), 'image/webp', q);
           });
         };
 
         let blob = await compress(currentWidth, currentHeight, quality);
 
-        // Só vai tirar a qualidade se a foto, por algum milagre, passar de 150KB
         let tentativas = 0;
         while (blob.size > TARGET_SIZE && tentativas < 15) { 
           tentativas++;
-          
-          if (quality > 0.5) {
-            quality -= 0.05; 
+          if (quality > 0.6) {
+            quality -= 0.05; // Tira só 5% de cada vez
           } else {
-            currentWidth *= 0.95;
-            currentHeight *= 0.95;
+            currentWidth *= 0.90; // Se a qualidade chegou a 60%, reduz o tamanho físico
+            currentHeight *= 0.90;
           }
-
           blob = await compress(currentWidth, currentHeight, quality);
         }
 
-        console.log(`Foto salva com nitidez máxima: ${(blob.size / 1024).toFixed(2)} KB em ${tentativas} tentativas.`);
+        console.log(`Foto pesada reduzida para máximo tráfego: ${(blob.size / 1024).toFixed(2)} KB.`);
         resolve(blob);
       };
     };
@@ -63,12 +67,14 @@ export const compressImageToBlob = (file) => {
   });
 };
 
+// Extrai apenas o nome do ficheiro da URL pública do Supabase
 export const extrairCaminhoStorage = (url) => {
   if (!url) return null;
   const partes = url.split('/produtos/');
   return partes.length > 1 ? partes[1] : null;
 };
 
+// LIXEIRA TOTAL: Apaga TODAS as fotos quando exclui o produto
 export const deletarImagensDoProduto = async (produto) => {
   let pathsParaDeletar = [];
   
@@ -94,6 +100,7 @@ export const deletarImagensDoProduto = async (produto) => {
   }
 };
 
+// LIXEIRA INDIVIDUAL: Apaga UMA única foto (Ex: botão X vermelho da galeria)
 export const deletarImagemUnica = async (url) => {
   const caminho = extrairCaminhoStorage(url);
   if (caminho) {
@@ -101,7 +108,7 @@ export const deletarImagemUnica = async (url) => {
     if (error) {
       console.error("Erro ao deletar imagem individual do storage:", error);
     } else {
-      console.log("Imagem excluída definitivamente do servidor!");
+      console.log("Imagem excluída definitivamente do servidor Supabase!");
     }
   }
 };
