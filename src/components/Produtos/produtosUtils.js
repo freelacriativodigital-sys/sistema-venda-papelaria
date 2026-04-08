@@ -3,15 +3,15 @@ import { supabase } from "../../lib/supabase";
 export const compressImageToBlob = (file) => {
   return new Promise((resolve, reject) => {
     
-    const TARGET_SIZE = 50 * 1024; // Novo alvo rigoroso: 50 KB
+    const TARGET_SIZE = 50 * 1024; // Alvo rigoroso: 50 KB
 
-    // 1. PASSE LIVRE: Se a foto JÁ FOR MENOR ou igual a 50KB, não mexe em absolutamente nada!
+    // 1. PASSE LIVRE
     if (file.size <= TARGET_SIZE) {
       console.log(`A foto já tem ${(file.size / 1024).toFixed(2)} KB. Passou direto sem compressão!`);
       return resolve(file); 
     }
 
-    // 2. DESCIDA SUAVE: Se for maior que 50KB, vai descer bem devagar para preservar a qualidade.
+    // 2. DESCIDA SUAVE
     const reader = new FileReader();
     reader.readAsDataURL(file);
     
@@ -20,8 +20,8 @@ export const compressImageToBlob = (file) => {
       img.src = event.target.result;
       
       img.onload = async () => {
-        let quality = 0.99; // Começa quase no 100% para não perder peso bruscamente
-        const MAX_WIDTH = 800; // Tamanho ideal para celular
+        let quality = 0.99; 
+        const MAX_WIDTH = 800; 
         const MAX_HEIGHT = 800;
 
         let currentWidth = img.width;
@@ -48,14 +48,13 @@ export const compressImageToBlob = (file) => {
         let blob = await compress(currentWidth, currentHeight, quality);
 
         let tentativas = 0;
-        // O loop para NA HORA que a foto bater o limite de 50KB.
         while (blob.size > TARGET_SIZE && tentativas < 30) { 
           tentativas++;
           
           if (quality > 0.6) {
-            quality -= 0.02; // Tira só 2% de cada vez (passo de formiguinha) para parar o mais perto possível dos 50KB
+            quality -= 0.02; 
           } else {
-            currentWidth *= 0.95; // Se a qualidade chegou a 60%, reduz o tamanho muito pouquinho
+            currentWidth *= 0.95; 
             currentHeight *= 0.95;
           }
           
@@ -70,15 +69,40 @@ export const compressImageToBlob = (file) => {
   });
 };
 
-// Extrai apenas o nome do ficheiro da URL pública (Agora à prova de falhas e maiúsculas)
+// Extrai apenas o nome do ficheiro da URL pública (À prova de falhas)
 export const extrairCaminhoStorage = (url) => {
   if (!url) return null;
-  // O "match" procura por "/produtos/" não importando se está em maiúscula ou minúscula
   const match = url.match(/\/produtos\/(.+)/i);
   return match ? match[1] : null;
 };
 
-// LIXEIRA INDIVIDUAL (Agora com Alarme na tela!)
+// LIXEIRA TOTAL: Apaga TODAS as fotos quando você exclui o produto
+export const deletarImagensDoProduto = async (produto) => {
+  let pathsParaDeletar = [];
+  
+  if (produto.imagem_url) pathsParaDeletar.push(extrairCaminhoStorage(produto.imagem_url));
+  
+  if (produto.imagens && Array.isArray(produto.imagens)) {
+    produto.imagens.forEach(img => pathsParaDeletar.push(extrairCaminhoStorage(img)));
+  }
+  
+  if (produto.variacoes?.ativa && Array.isArray(produto.variacoes.atributos)) {
+    produto.variacoes.atributos.forEach(atrib => {
+      atrib.opcoes?.forEach(opcao => {
+        if (opcao.imagem) pathsParaDeletar.push(extrairCaminhoStorage(opcao.imagem));
+      });
+    });
+  }
+  
+  pathsParaDeletar = [...new Set(pathsParaDeletar.filter(Boolean))];
+  
+  if (pathsParaDeletar.length > 0) {
+    const { error } = await supabase.storage.from('produtos').remove(pathsParaDeletar);
+    if (error) console.error("Erro ao deletar imagens do storage:", error);
+  }
+};
+
+// LIXEIRA INDIVIDUAL (Com Alarme na tela!)
 export const deletarImagemUnica = async (url) => {
   try {
     const caminho = extrairCaminhoStorage(url);
