@@ -260,7 +260,7 @@ export default function Catalogo({ isPublic = false }) {
         content_name: prod.nome,
         content_ids: [prod.id],
         content_type: 'product',
-        value: prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco,
+        value: Number(prod.preco_promocional) > 0 ? Number(prod.preco_promocional) : Number(prod.preco || 0),
         currency: 'BRL'
       });
     }
@@ -269,7 +269,7 @@ export default function Catalogo({ isPublic = false }) {
     if (st?.google_analytics_id && isPublic && window.gtag) {
       window.gtag('event', 'view_item', {
         currency: 'BRL',
-        value: prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco,
+        value: Number(prod.preco_promocional) > 0 ? Number(prod.preco_promocional) : Number(prod.preco || 0),
         items: [{ item_id: prod.id, item_name: prod.nome, item_category: prod.categoria }]
       });
     }
@@ -390,8 +390,10 @@ export default function Catalogo({ isPublic = false }) {
     });
 
   const calcularDesconto = (preco, promo) => {
-    if (!promo || promo >= preco || preco === 0) return 0;
-    return Math.round(((preco - promo) / preco) * 100);
+    const p = Number(preco || 0);
+    const pr = Number(promo || 0);
+    if (!pr || pr >= p || p === 0) return 0;
+    return Math.round(((p - pr) / p) * 100);
   };
 
   const selecionarOpcao = (nomeAtributo, opcao) => {
@@ -451,7 +453,7 @@ export default function Catalogo({ isPublic = false }) {
           }).join('\n');
        }
 
-       const itemTotal = item.precoTotal;
+       const itemTotal = Number(item.precoTotal || 0);
        totalGeral += itemTotal;
 
        const descItem = `🛍️ *${item.tituloDinamico}*\n${textoVars}${textoPersonalizado ? '\n' + textoPersonalizado : ''}\n*Qtd:* ${item.quantidade} un. | *Subtotal:* R$ ${itemTotal.toFixed(2)}${item.wholesaleApplied ? ' (Atacado)' : ''}\n\n`;
@@ -489,7 +491,7 @@ export default function Catalogo({ isPublic = false }) {
     const aspectClass = st?.formato_imagens === 'retrato' ? 'aspect-[4/5]' : 'aspect-square';
 
     if (view === 'detalhe' && selectedProduct) {
-      let baseProductPrice = selectedProduct.preco_promocional > 0 ? selectedProduct.preco_promocional : selectedProduct.preco;
+      let baseProductPrice = Number(selectedProduct.preco_promocional) > 0 ? Number(selectedProduct.preco_promocional) : Number(selectedProduct.preco || 0);
       let currentPrice = baseProductPrice;
       let hasVariationPrice = false;
       let variationPriceSum = 0;
@@ -502,10 +504,10 @@ export default function Catalogo({ isPublic = false }) {
 
       const getWholesalePrice = (rulePrice) => {
         if (hasVariationPrice && baseProductPrice > 0) {
-          const absoluteDiscount = baseProductPrice - rulePrice;
+          const absoluteDiscount = baseProductPrice - Number(rulePrice || 0);
           return Math.max(0, currentPrice - absoluteDiscount);
         }
-        return rulePrice;
+        return Number(rulePrice || 0);
       };
 
       let unitPriceFinal = currentPrice;
@@ -577,7 +579,7 @@ export default function Catalogo({ isPublic = false }) {
             <div key={atrib.id}>
               <h3 className="text-[11px] md:text-xs font-semibold text-slate-700 mb-2">{atrib.nome}:</h3>
               <div className="flex flex-wrap gap-2 md:gap-2.5">
-                {atrib.opcoes.map(opcao => {
+                {atrib.opcoes?.map(opcao => {
                   const isSelected = selecoes[atrib.nome]?.id === opcao.id;
                   return (
                     <button key={opcao.id} onClick={() => selecionarOpcao(atrib.nome, opcao)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-semibold transition-all border flex items-center gap-2.5 ${isSelected ? 'border-slate-800 bg-slate-900 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
@@ -680,8 +682,8 @@ export default function Catalogo({ isPublic = false }) {
                 
                 <div className="mb-6 pb-6 border-b border-slate-100">
                    <div className="flex items-end gap-3 mb-1">
-                     <span className="text-3xl md:text-4xl font-semibold transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {unitPriceFinal.toFixed(2)}</span>
-                     {selectedProduct.preco_promocional > 0 && !wholesaleApplied && !hasVariationPrice && <span className="text-sm text-slate-400 line-through font-medium mb-1.5">R$ {selectedProduct.preco.toFixed(2)}</span>}
+                     <span className="text-3xl md:text-4xl font-semibold transition-colors duration-300" style={{ color: st?.cor_principal }}>R$ {Number(unitPriceFinal || 0).toFixed(2)}</span>
+                     {Number(selectedProduct.preco_promocional) > 0 && !wholesaleApplied && !hasVariationPrice && <span className="text-sm text-slate-400 line-through font-medium mb-1.5">R$ {Number(selectedProduct.preco || 0).toFixed(2)}</span>}
                    </div>
                    {wholesaleApplied && <span className="font-semibold text-[10px] uppercase flex items-center gap-1 mt-1" style={{ color: st?.cor_etiqueta_atacado || '#fb923c' }}><Box size={12}/> Preço de Atacado Aplicado</span>}
                 </div>
@@ -703,7 +705,7 @@ export default function Catalogo({ isPublic = false }) {
                     <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Box size={14}/> Descontos por Quantidade</h3>
                     {atacadoData.nextRule ? (
                       <div className="mb-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                         <p className="text-[11px] font-medium text-slate-600 mb-2">🔥 Faltam só <span className="font-semibold text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-semibold text-emerald-600">R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</span></p>
+                         <p className="text-[11px] font-medium text-slate-600 mb-2">🔥 Faltam só <span className="font-semibold text-emerald-600">{atacadoData.nextRule.min - qtdSafe} un.</span> para pagar <span className="font-semibold text-emerald-600">R$ {Number(getWholesalePrice(atacadoData.nextRule.preco) || 0).toFixed(2)}/un</span></p>
                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1"><div className="bg-emerald-500 h-2 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
                       </div>
                     ) : (
@@ -715,7 +717,7 @@ export default function Catalogo({ isPublic = false }) {
                          return (
                            <div key={i} className={`flex justify-between items-center text-[10px] px-3 py-2 rounded-md border ${isCurrent ? 'bg-amber-100/50 border-amber-200 text-amber-900 font-semibold shadow-sm' : 'bg-white border-slate-100 text-slate-500'}`}>
                              <span>Acima de {r.min} un.</span>
-                             <span className={isCurrent ? 'font-semibold' : 'font-medium'}>R$ {getWholesalePrice(r.preco).toFixed(2)} /un</span>
+                             <span className={isCurrent ? 'font-semibold' : 'font-medium'}>R$ {Number(getWholesalePrice(r.preco) || 0).toFixed(2)} /un</span>
                            </div>
                          )
                       })}
@@ -736,7 +738,7 @@ export default function Catalogo({ isPublic = false }) {
                          </div>
                          <div className="text-right">
                            <p className="text-[9px] md:text-[10px] font-semibold uppercase text-slate-400 tracking-widest mb-0.5">Subtotal</p>
-                           <p className="text-xl md:text-2xl font-semibold text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
+                           <p className="text-xl md:text-2xl font-semibold text-slate-900 tracking-tighter leading-none">R$ {Number(precoTotal || 0).toFixed(2)}</p>
                          </div>
                        </div>
                        
@@ -764,7 +766,7 @@ export default function Catalogo({ isPublic = false }) {
                         <h3 className="text-xs font-semibold text-slate-800 line-clamp-2 leading-tight mb-2 min-h-[32px] md:min-h-[36px]">{prod.nome}</h3>
                         <div className="mt-auto pt-3 flex flex-col gap-3">
                            <div className="flex flex-col">
-                             <span className="text-sm font-semibold text-slate-900 leading-none">R$ {Number(prod.preco_promocional > 0 ? prod.preco_promocional : prod.preco).toFixed(2)}</span>
+                             <span className="text-sm font-semibold text-slate-900 leading-none">R$ {Number(Number(prod.preco_promocional) > 0 ? prod.preco_promocional : (prod.preco || 0)).toFixed(2)}</span>
                            </div>
                            <button className="w-full py-2 rounded-lg text-white text-[10px] font-semibold uppercase transition-colors duration-300" style={{ backgroundColor: st?.cor_principal }}>Ver Detalhes</button>
                         </div>
@@ -782,7 +784,7 @@ export default function Catalogo({ isPublic = false }) {
              <div className="flex flex-col w-full max-w-6xl mx-auto">
                {atacadoData && atacadoData.nextRule && (
                  <div className="flex flex-col gap-1.5 mb-3 px-1">
-                    <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest text-center">🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {getWholesalePrice(atacadoData.nextRule.preco).toFixed(2)}/un</p>
+                    <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest text-center">🔥 Faltam só {atacadoData.nextRule.min - qtdSafe} un. para pagar R$ {Number(getWholesalePrice(atacadoData.nextRule.preco) || 0).toFixed(2)}/un</p>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"><div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${atacadoData.progress}%` }}></div></div>
                  </div>
                )}
@@ -796,7 +798,7 @@ export default function Catalogo({ isPublic = false }) {
                    </div>
                    <div className="text-right">
                      <p className="text-[9px] font-semibold uppercase text-slate-400 tracking-widest mb-0.5">Subtotal</p>
-                     <p className="text-xl font-semibold text-slate-900 tracking-tighter leading-none">R$ {precoTotal.toFixed(2)}</p>
+                     <p className="text-xl font-semibold text-slate-900 tracking-tighter leading-none">R$ {Number(precoTotal || 0).toFixed(2)}</p>
                    </div>
                  </div>
                  
@@ -842,7 +844,7 @@ export default function Catalogo({ isPublic = false }) {
                             <div className="flex flex-col justify-center flex-1">
                                <h4 className="text-xs font-semibold text-slate-800 line-clamp-2 leading-tight">{item.tituloDinamico || item.produto.nome}</h4>
                                <p className="text-[10px] text-slate-500 mt-1 font-medium">Qtd: {item.quantidade} un.</p>
-                               <p className="text-sm font-semibold text-slate-900 mt-1">R$ {item.precoTotal.toFixed(2)}</p>
+                               <p className="text-sm font-semibold text-slate-900 mt-1">R$ {Number(item.precoTotal || 0).toFixed(2)}</p>
                             </div>
                          </div>
                        ))
@@ -853,7 +855,7 @@ export default function Catalogo({ isPublic = false }) {
                     <div className="p-5 bg-white border-t border-slate-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
                       <div className="flex justify-between items-end mb-4">
                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Total do Pedido:</span>
-                         <span className="text-2xl font-semibold text-slate-900">R$ {carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0).toFixed(2)}</span>
+                         <span className="text-2xl font-semibold text-slate-900">R$ {Number(carrinho.reduce((acc, curr) => acc + curr.precoTotal, 0) || 0).toFixed(2)}</span>
                       </div>
                       <Button onClick={finalizarPedido} className="w-full h-14 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-semibold uppercase text-[11px] gap-2 shadow-md transition-all border-none">
                         <MessageCircle size={20} fill="currentColor" /> Finalizar Pedido
@@ -916,10 +918,10 @@ export default function Catalogo({ isPublic = false }) {
                             <h3 className="text-xs font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[36px]">{prod.nome}</h3>
                             <div className="mt-auto pt-3 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
-                                {prod.preco_promocional > 0 ? (
-                                  <><span className="text-[9px] text-slate-400 line-through font-semibold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-sm font-semibold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                                {Number(prod.preco_promocional) > 0 ? (
+                                  <><span className="text-[9px] text-slate-400 line-through font-semibold leading-none">R$ {Number(prod.preco || 0).toFixed(2)}</span><span className="text-sm font-semibold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
                                 ) : (
-                                  <span className="text-sm font-semibold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                                  <span className="text-sm font-semibold text-slate-900 leading-none">R$ {Number(prod.preco || 0).toFixed(2)}</span>
                                 )}
                               </div>
                               <button className="w-full h-8 rounded-lg text-white text-[10px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>Ver Detalhes</button>
@@ -949,10 +951,10 @@ export default function Catalogo({ isPublic = false }) {
                             <h3 className="text-xs md:text-sm font-semibold text-slate-700 line-clamp-2 leading-tight min-h-[32px] md:min-h-[40px]">{prod.nome}</h3>
                             <div className="mt-auto pt-4 flex flex-col gap-3 justify-end">
                               <div className="flex flex-col">
-                                {prod.preco_promocional > 0 ? (
-                                  <><span className="text-[10px] text-slate-400 line-through font-semibold leading-none">R$ {Number(prod.preco).toFixed(2)}</span><span className="text-base md:text-lg font-semibold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
+                                {Number(prod.preco_promocional) > 0 ? (
+                                  <><span className="text-[10px] text-slate-400 line-through font-semibold leading-none">R$ {Number(prod.preco || 0).toFixed(2)}</span><span className="text-base md:text-lg font-semibold text-slate-900 leading-none mt-1">R$ {Number(prod.preco_promocional).toFixed(2)}</span></>
                                 ) : (
-                                  <span className="text-base md:text-lg font-semibold text-slate-900 leading-none">R$ {Number(prod.preco).toFixed(2)}</span>
+                                  <span className="text-base md:text-lg font-semibold text-slate-900 leading-none">R$ {Number(prod.preco || 0).toFixed(2)}</span>
                                 )}
                               </div>
                               <button className="w-full h-9 md:h-10 rounded-lg text-white text-[11px] font-semibold uppercase transition-colors duration-300 shadow-sm flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: st?.cor_principal || '#f472b6' }}>Ver Detalhes</button>
